@@ -1,0 +1,9 @@
+config/settings.json
+*.pkl
+qr/output/
+python/member_risk_scores.csv
+python/chore_risk_scores.csv
+python/smart_assignments.csv
+__pycache__/
+*.pyc
+.DS_Store

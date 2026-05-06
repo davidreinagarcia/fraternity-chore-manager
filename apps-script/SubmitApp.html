@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Chore Submission</title>
+<style>
+  :root {
+    --primary: #093D20;
+    --gold: #FFB71D;
+    --green: #16a34a;
+    --red: #dc2626;
+    --yellow: #ca8a04;
+    --bg: #f0f4f1;
+    --card-bg: #ffffff;
+    --text: #1a202c;
+    --muted: #64748b;
+    --radius: 16px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--primary);
+    min-height: 100vh;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px 16px 40px;
+    font-family: 'Segoe UI', -apple-system, Arial, sans-serif;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px 24px;
+    width: 100%; max-width: 440px;
+  }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 24px; }
+  .header .badge {
+    display: inline-block;
+    background: var(--primary); color: var(--gold);
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 1px;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .header h1 {
+    font-size: 1.6rem; font-weight: 800;
+    color: var(--text); line-height: 1.2; margin-bottom: 6px;
+  }
+  .header .week-label {
+    font-size: 0.85rem; color: var(--muted);
+  }
+
+  /* Form sections */
+  .section { margin-bottom: 20px; }
+  .section label {
+    display: block; font-size: 0.8rem; font-weight: 700;
+    color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  select, .file-label {
+    width: 100%; padding: 14px 16px;
+    border: 2px solid #e2e8f0; border-radius: 10px;
+    font-size: 1rem; color: var(--text);
+    background: #f8fafc; cursor: pointer;
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+  }
+  select:focus { outline: none; border-color: var(--primary); }
+
+  /* Photo section */
+  .photo-area {
+    border: 2px dashed #cbd5e1; border-radius: 12px;
+    padding: 20px; text-align: center; cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: #f8fafc;
+    position: relative;
+  }
+  .photo-area.has-photo { border-color: var(--green); border-style: solid; background: #f0fdf4; }
+  .photo-area:hover { border-color: var(--primary); background: #eff6ff; }
+  .photo-icon { font-size: 2.5rem; margin-bottom: 8px; }
+  .photo-area p { font-size: 0.9rem; color: var(--muted); margin-bottom: 4px; }
+  .photo-area .photo-hint { font-size: 0.75rem; color: #94a3b8; }
+  input[type="file"] { display: none; }
+
+  #preview-wrap { margin-top: 14px; display: none; }
+  #preview-wrap img {
+    width: 100%; border-radius: 10px;
+    max-height: 240px; object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  #preview-wrap .photo-meta {
+    margin-top: 6px; font-size: 0.75rem; color: var(--muted); text-align: center;
+  }
+  #change-photo {
+    display: block; text-align: center; margin-top: 10px;
+    color: var(--primary); font-size: 0.85rem; font-weight: 600;
+    cursor: pointer; text-decoration: underline;
+  }
+
+  /* Submit button */
+  #submit-btn {
+    width: 100%; padding: 16px;
+    background: var(--primary); color: var(--gold);
+    border: none; border-radius: 12px;
+    font-size: 1.1rem; font-weight: 800; cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    margin-top: 8px; letter-spacing: 0.5px;
+  }
+  #submit-btn:hover:not(:disabled) { background: #0a5c2e; }
+  #submit-btn:active:not(:disabled) { transform: scale(0.98); }
+  #submit-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+
+  /* Loading */
+  #loading {
+    display: none; text-align: center; padding: 20px;
+  }
+  .spinner {
+    width: 44px; height: 44px; border: 4px solid #e2e8f0;
+    border-top-color: var(--primary); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Result */
+  #result {
+    display: none; text-align: center; padding: 16px 0;
+  }
+  .result-icon { font-size: 3.5rem; margin-bottom: 12px; }
+  .result-title { font-size: 1.4rem; font-weight: 800; margin-bottom: 8px; }
+  .result-msg { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
+  .result-id { font-size: 0.7rem; color: #94a3b8; margin-top: 10px; font-family: monospace; }
+
+  #submit-another {
+    display: none; width: 100%; padding: 12px;
+    border: 2px solid var(--primary); color: var(--primary); background: white;
+    border-radius: 10px; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+    margin-top: 14px;
+  }
+
+  /* Warnings */
+  .warning-box {
+    background: #fefce8; border: 1px solid #fde68a;
+    border-radius: 10px; padding: 12px 14px;
+    font-size: 0.85rem; color: #92400e; margin-bottom: 16px; display: none;
+  }
+
+  /* No members notice */
+  #no-members {
+    text-align:center; color: var(--muted); padding: 16px 0;
+    font-size: 0.9rem; display: none;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+
+  <!-- Header -->
+  <div class="header">
+    <img src="https://www.lambdachi.org/wp-content/uploads/2025/05/lca-logo-primary.svg"
+         alt="Lambda Chi Alpha" style="height:52px;width:auto;margin-bottom:10px"
+         onerror="this.style.display='none'">
+    <div class="badge">Chore Submission</div>
+    <h1 id="chore-title">Loading...</h1>
+    <div class="week-label" id="week-label">Week of —</div>
+  </div>
+
+  <!-- Main form -->
+  <div id="form-area">
+    <div class="warning-box" id="assign-warning">
+      You are not assigned to this chore. If you think this is wrong, contact an officer.
+    </div>
+
+    <!-- Member selector -->
+    <div class="section">
+      <label>Your Name</label>
+      <select id="member-select">
+        <option value="">Select your name...</option>
+      </select>
+      <div id="no-members">No members found for this chore. Contact an officer.</div>
+    </div>
+
+    <!-- Photo -->
+    <div class="section">
+      <label>Photo Proof</label>
+      <div class="photo-area" id="photo-area" onclick="document.getElementById('photo-input').click()">
+        <div class="photo-icon">📸</div>
+        <p>Tap to take a photo or upload</p>
+        <div class="photo-hint">JPEG / PNG — max 10MB</div>
+        <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="handlePhoto(event)">
+      </div>
+      <div id="preview-wrap">
+        <img id="preview-img" src="" alt="Preview">
+        <div class="photo-meta" id="photo-meta"></div>
+        <span id="change-photo" onclick="document.getElementById('photo-input').click()">Change photo</span>
+      </div>
+    </div>
+
+    <button id="submit-btn" onclick="submitForm()" disabled>Submit Chore</button>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <p style="color:var(--muted);font-size:0.95rem">Uploading photo and verifying...</p>
+  </div>
+
+  <!-- Result -->
+  <div id="result">
+    <div class="result-icon" id="result-icon"></div>
+    <div class="result-title" id="result-title"></div>
+    <div class="result-msg" id="result-msg"></div>
+    <div class="result-id" id="result-id"></div>
+  </div>
+  <button id="submit-another" onclick="resetForm()">Submit Another</button>
+
+</div>
+
+<script>
+const CHORE_NAME = '<?= choreName ?>';
+let selectedFile = null;
+let membersForChore = [];
+
+// ---- Init --------------------------------------------------
+window.addEventListener('load', function() {
+  if (!CHORE_NAME) {
+    document.getElementById('chore-title').textContent = 'No Chore Specified';
+    document.getElementById('week-label').textContent = 'Check your QR code';
+    return;
+  }
+
+  document.getElementById('chore-title').textContent = CHORE_NAME;
+
+  // Load week
+  google.script.run
+    .withSuccessHandler(function(v) {
+      document.getElementById('week-label').textContent = 'Week of ' + (v ? String(v).substring(0, 10) : '—');
+    }).getConfigValue('week_start');
+
+  // Load members assigned to this chore
+  google.script.run
+    .withSuccessHandler(onChoreMembers)
+    .withFailureHandler(function(e) { console.error(e); })
+    .getChoreMembers(CHORE_NAME);
+});
+
+function onChoreMembers(json) {
+  try {
+    membersForChore = JSON.parse(json);
+    const sel = document.getElementById('member-select');
+    sel.innerHTML = '<option value="">Select your name...</option>';
+
+    if (!membersForChore.length) {
+      document.getElementById('no-members').style.display = 'block';
+      sel.style.display = 'none';
+      return;
+    }
+
+    membersForChore.sort((a, b) => a.name.localeCompare(b.name));
+    for (const m of membersForChore) {
+      const opt = document.createElement('option');
+      opt.value = m.id;
+      opt.textContent = m.name;
+      sel.appendChild(opt);
+    }
+    sel.addEventListener('change', checkSubmitReady);
+  } catch(e) { console.error(e); }
+}
+
+// ---- Photo handling ----------------------------------------
+function handlePhoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (file.size > 10 * 1024 * 1024) {
+    alert('Photo too large (max 10MB). Please compress or take a new photo.');
+    return;
+  }
+
+  selectedFile = file;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('preview-img').src = e.target.result;
+    document.getElementById('preview-wrap').style.display = 'block';
+    document.getElementById('photo-area').classList.add('has-photo');
+    document.getElementById('photo-area').querySelector('p').textContent = 'Photo selected';
+
+    const kb = Math.round(file.size / 1024);
+    document.getElementById('photo-meta').textContent =
+      file.name + ' (' + kb + ' KB)';
+  };
+  reader.readAsDataURL(file);
+  checkSubmitReady();
+}
+
+function checkSubmitReady() {
+  const hasName  = !!document.getElementById('member-select').value;
+  const hasPhoto = !!selectedFile;
+  document.getElementById('submit-btn').disabled = !(hasName && hasPhoto);
+}
+
+// ---- Submit ------------------------------------------------
+function submitForm() {
+  const memberId   = document.getElementById('member-select').value;
+  const memberName = document.getElementById('member-select').options[
+    document.getElementById('member-select').selectedIndex
+  ].textContent;
+
+  if (!memberId || !selectedFile) return;
+
+  // Show loading
+  document.getElementById('form-area').style.display = 'none';
+  document.getElementById('loading').style.display = 'block';
+
+  // Read file as base64
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    // e.target.result is "data:image/jpeg;base64,XXXX"
+    const full     = e.target.result;
+    const b64      = full.split(',')[1];
+    const mimeType = full.split(';')[0].split(':')[1];
+
+    // Try to get file last-modified date for EXIF age check
+    const clientDate = selectedFile.lastModified
+      ? new Date(selectedFile.lastModified).toISOString()
+      : null;
+
+    google.script.run
+      .withSuccessHandler(onSubmitResult)
+      .withFailureHandler(onSubmitError)
+      .processPhotoSubmission(memberId, CHORE_NAME, b64, mimeType, clientDate);
+  };
+  reader.readAsDataURL(selectedFile);
+}
+
+function onSubmitResult(json) {
+  const res = JSON.parse(json);
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('result').style.display = 'block';
+
+  if (res.autoStatus === 'rejected') {
+    document.getElementById('result-icon').textContent = '🚫';
+    document.getElementById('result-title').textContent = 'Duplicate Detected';
+    document.getElementById('result-title').style.color = '#dc2626';
+    document.getElementById('submit-another').style.display = 'block';
+  } else if (res.autoStatus === 'flagged') {
+    document.getElementById('result-icon').textContent = '⚠️';
+    document.getElementById('result-title').textContent = 'Submitted — Under Review';
+    document.getElementById('result-title').style.color = '#ca8a04';
+    document.getElementById('submit-another').style.display = 'block';
+  } else {
+    document.getElementById('result-icon').textContent = '✅';
+    document.getElementById('result-title').textContent = 'Submitted!';
+    document.getElementById('result-title').style.color = '#16a34a';
+  }
+
+  document.getElementById('result-msg').textContent = res.message || '';
+  document.getElementById('result-id').textContent = res.submissionId ? 'ID: ' + res.submissionId : '';
+}
+
+function onSubmitError(err) {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('result').style.display = 'block';
+  document.getElementById('result-icon').textContent = '❌';
+  document.getElementById('result-title').textContent = 'Submission Failed';
+  document.getElementById('result-title').style.color = '#dc2626';
+  document.getElementById('result-msg').textContent = 'Please try again or contact an officer.';
+  document.getElementById('submit-another').style.display = 'block';
+}
+
+function resetForm() {
+  selectedFile = null;
+  document.getElementById('photo-input').value = '';
+  document.getElementById('preview-wrap').style.display = 'none';
+  document.getElementById('photo-area').classList.remove('has-photo');
+  document.getElementById('photo-area').querySelector('p').textContent = 'Tap to take a photo or upload';
+  document.getElementById('member-select').value = '';
+  document.getElementById('submit-btn').disabled = true;
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('submit-another').style.display = 'none';
+  document.getElementById('form-area').style.display = 'block';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Officer Dashboard</title>
+<style>
+  :root {
+    --primary: #093D20;
+    --primary-light: #0f5c2e;
+    --gold: #FFB71D;
+    --bg: #f0f4f1;
+    --card: #ffffff;
+    --border: #dde8de;
+    --text: #0f172a;
+    --muted: #64748b;
+    --green: #16a34a;
+    --green-bg: #f0fdf4;
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --yellow: #ca8a04;
+    --yellow-bg: #fefce8;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; }
+
+  /* ---- Topbar ---- */
+  #topbar {
+    background: var(--primary); color: var(--gold);
+    padding: 0 24px; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 200;
+    border-bottom: 3px solid var(--gold);
+  }
+  #topbar h1 { font-size: 1.1rem; font-weight: 800; letter-spacing: 0.5px; }
+  #topbar .meta { font-size: 0.75rem; color: #aac; margin-top: 2px; }
+  .top-btn {
+    background: rgba(255,255,255,0.15); color: var(--gold);
+    border: 1px solid rgba(255,215,0,0.4); padding: 6px 14px;
+    border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600;
+    margin-left: 8px;
+  }
+  .top-btn:hover { background: rgba(255,255,255,0.25); }
+
+  /* ---- PIN screen ---- */
+  #pin-screen {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: var(--primary);
+  }
+  .pin-card {
+    background: white; border-radius: var(--radius); padding: 40px 32px;
+    text-align: center; width: 320px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .pin-card .pin-logo { height: 56px; width: auto; margin-bottom: 12px; }
+  .pin-card h2 { color: var(--primary); margin-bottom: 6px; font-size: 1.4rem; }
+  .pin-card p { color: var(--muted); margin-bottom: 24px; font-size: 0.9rem; }
+  #pin-input {
+    width: 100%; padding: 14px; font-size: 1.5rem; text-align: center;
+    border: 2px solid var(--border); border-radius: 10px;
+    letter-spacing: 8px; font-family: monospace;
+    margin-bottom: 16px;
+  }
+  #pin-input:focus { outline: none; border-color: var(--primary); }
+  #pin-btn {
+    width: 100%; padding: 14px; background: var(--primary); color: var(--gold);
+    border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer;
+  }
+  #pin-error { color: var(--red); font-size: 0.85rem; margin-top: 10px; display: none; }
+
+  /* ---- Main layout ---- */
+  #main { display: none; }
+  .container { max-width: 1280px; margin: 0 auto; padding: 20px 20px; }
+
+  /* ---- Tabs ---- */
+  .tabs {
+    display: flex; gap: 2px; background: var(--card);
+    border-radius: var(--radius); padding: 6px;
+    margin-bottom: 20px; box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+  .tab-btn {
+    flex: 1; min-width: 130px; padding: 10px 16px;
+    border: none; border-radius: 8px; cursor: pointer;
+    font-size: 0.85rem; font-weight: 600; color: var(--muted);
+    background: transparent; white-space: nowrap;
+    transition: all 0.15s;
+  }
+  .tab-btn.active { background: var(--primary); color: var(--gold); }
+  .tab-btn:hover:not(.active) { background: var(--bg); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* ---- Cards ---- */
+  .card {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px;
+  }
+  .card-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px;
+  }
+  .card-header h2 { font-size: 1rem; font-weight: 700; }
+  .card-body { padding: 0; }
+
+  /* ---- Tables ---- */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    padding: 10px 14px; text-align: left;
+    background: #f8fafc; color: var(--muted);
+    font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 56px; z-index: 1;
+    cursor: pointer; user-select: none;
+  }
+  .data-table th:hover { background: #f1f5f9; }
+  .data-table td {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    vertical-align: middle; font-size: 0.85rem;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: #fafbff; }
+
+  /* ---- Status badges ---- */
+  .badge {
+    display: inline-block; padding: 3px 10px;
+    border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  }
+  .badge-passed  { background: var(--green-bg);  color: var(--green);  }
+  .badge-verified{ background: var(--green-bg);  color: var(--green);  }
+  .badge-flagged { background: var(--yellow-bg); color: var(--yellow); }
+  .badge-rejected{ background: var(--red-bg);    color: var(--red);    }
+  .badge-pending { background: #f1f5f9;          color: var(--muted);  }
+  .badge-failed  { background: var(--red-bg);    color: var(--red);    }
+  .badge-none    { color: var(--muted); font-size: 0.75rem; }
+
+  /* ---- Row highlight rules ---- */
+  tr.row-flagged td { background: #fffbeb; }
+  tr.row-rejected td { background: #fef2f2; }
+  tr.row-verified td { background: #f0fdf4; }
+
+  /* ---- Action buttons ---- */
+  .action-btn {
+    padding: 5px 12px; border-radius: 6px; border: none;
+    font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+    white-space: nowrap; margin: 0 2px;
+  }
+  .action-btn:hover { opacity: 0.8; }
+  .btn-verify  { background: var(--green-bg); color: var(--green); border: 1px solid #bbf7d0; }
+  .btn-fail    { background: var(--red-bg);   color: var(--red);   border: 1px solid #fecaca; }
+  .btn-photo   { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+  .btn-primary { background: var(--primary); color: var(--gold); border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+  .btn-danger  { background: var(--red); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+  .btn-outline { background: white; color: var(--primary); border: 2px solid var(--primary); padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+
+  /* ---- Summary stats ---- */
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .stat-card { background: var(--card); border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow); }
+  .stat-card .label { font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .stat-card .value { font-size: 2rem; font-weight: 800; color: var(--primary); }
+  .stat-card .sub   { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
+  /* ---- Admin panel ---- */
+  .admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 16px; }
+  .admin-card { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+  .admin-card h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 6px; }
+  .admin-card p  { font-size: 0.8rem; color: var(--muted); margin-bottom: 14px; line-height: 1.4; }
+
+  /* ---- Loading / empty ---- */
+  .loading-row td { text-align: center; padding: 30px; color: var(--muted); }
+  .empty-state { text-align: center; padding: 40px; color: var(--muted); }
+
+  /* ---- Modal ---- */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 500; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: var(--radius); padding: 28px; width: 400px; max-width: 95vw; }
+  .modal h3 { margin-bottom: 12px; }
+  .modal textarea {
+    width: 100%; padding: 10px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 0.9rem; resize: vertical; min-height: 80px;
+    margin-bottom: 14px;
+  }
+  .modal .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+
+  /* ---- Toast ---- */
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: #0f172a; color: white; padding: 10px 20px;
+    border-radius: 8px; font-size: 0.9rem; font-weight: 600;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999;
+    white-space: nowrap;
+  }
+  #toast.show { opacity: 1; }
+
+  /* ---- Compliance bar ---- */
+  .compliance-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .compliance-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+</style>
+</head>
+<body>
+
+<!-- PIN Screen -->
+<div id="pin-screen">
+  <div class="pin-card">
+    <img class="pin-logo" src="https://www.lambdachi.org/wp-content/uploads/2025/05/lca-logo-primary.svg"
+         alt="Lambda Chi Alpha" onerror="this.style.display='none'">
+    <h2>Officer Dashboard</h2>
+    <p>Enter your officer PIN to continue</p>
+    <input type="password" id="pin-input" maxlength="8" placeholder="••••"
+           onkeydown="if(event.key==='Enter')checkPin()">
+    <button id="pin-btn" onclick="checkPin()">Unlock Dashboard</button>
+    <div id="pin-error">Incorrect PIN. Try again.</div>
+  </div>
+</div>
+
+<!-- Main Dashboard -->
+<div id="main">
+  <div id="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <img src="https://www.lambdachi.org/wp-content/uploads/2025/06/logo-white.svg"
+           alt="ΛΧΑ" style="height:34px;width:auto" onerror="this.style.display='none'">
+      <div>
+        <h1>Officer Dashboard</h1>
+        <div class="meta" id="meta-line">Loading...</div>
+      </div>
+    </div>
+    <div>
+      <button class="top-btn" onclick="refreshAll()">↻ Refresh</button>
+      <button class="top-btn" onclick="logout()">Lock</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Summary stats -->
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card"><div class="label">Total Chores</div><div class="value" id="stat-total-chores">—</div></div>
+      <div class="stat-card"><div class="label">Submitted</div><div class="value" id="stat-submitted">—</div></div>
+      <div class="stat-card"><div class="label">Flagged</div><div class="value" id="stat-flagged" style="color:var(--yellow)">—</div></div>
+      <div class="stat-card"><div class="label">Pending Fines</div><div class="value" id="stat-pending-fines" style="color:var(--red)">—</div></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('tab-status')">This Week</button>
+      <button class="tab-btn" onclick="showTab('tab-fines')">Fine Preview</button>
+      <button class="tab-btn" onclick="showTab('tab-members')">Member Stats</button>
+      <button class="tab-btn" onclick="showTab('tab-admin')">Admin</button>
+    </div>
+
+    <!-- Tab: This Week's Status -->
+    <div id="tab-status" class="tab-pane active">
+      <div class="card">
+        <div class="card-header">
+          <h2>Submission Status — <span id="week-label">Week of —</span></h2>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="status-search" placeholder="Filter chores..."
+                   style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem"
+                   oninput="filterStatusTable()">
+          </div>
+        </div>
+        <div class="card-body" style="overflow-x:auto">
+          <table class="data-table" id="status-table">
+            <thead>
+              <tr>
+                <th onclick="sortTable('status-table',0)">Chore</th>
+                <th onclick="sortTable('status-table',1)">Assigned Members</th>
+                <th onclick="sortTable('status-table',2)">Submitted</th>
+                <th onclick="sortTable('status-table',3)">Auto Status</th>
+                <th onclick="sortTable('status-table',4)">Human Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="status-tbody">
+              <tr class="loading-row"><td colspan="6">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Fine Preview -->
+    <div id="tab-fines" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <h2>Fine Preview (would be issued on Monday reset)</h2>
+          <button class="btn-danger" onclick="confirmMondayReset()">Send Fine List Now</button>
+        </div>
+        <div class="card-body" style="overflow-x:auto">
+          <table class="data-table" id="fine-preview-table">
+            <thead>
+              <tr>
+                <th>Member</th>
+                <th>Chore</th>
+                <th>Week</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody id="fine-preview-tbody">
+              <tr class="loading-row"><td colspan="4">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Member Stats -->
+    <div id="tab-members" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <h2>Member Stats — This Semester</h2>
+          <input type="text" id="member-filter" placeholder="Search..."
+                 style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem"
+                 oninput="filterMemberTable()">
+        </div>
+        <div class="card-body" style="overflow-x:auto">
+          <table class="data-table" id="members-table">
+            <thead>
+              <tr>
+                <th onclick="sortTable('members-table',0)">Member</th>
+                <th onclick="sortTable('members-table',1)">Assignments</th>
+                <th onclick="sortTable('members-table',2)">Verified Submissions</th>
+                <th onclick="sortTable('members-table',3)">Fines</th>
+                <th onclick="sortTable('members-table',4)">Compliance Rate</th>
+              </tr>
+            </thead>
+            <tbody id="members-tbody">
+              <tr class="loading-row"><td colspan="5">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Admin -->
+    <div id="tab-admin" class="tab-pane">
+      <div class="admin-grid">
+        <div class="admin-card">
+          <h3>Import Members</h3>
+          <p>Upload a CSV file to add or update members for this semester.</p>
+          <button class="btn-primary" onclick="callImportMembers()">Import Members CSV</button>
+        </div>
+        <div class="admin-card">
+          <h3>Auto-Split Members</h3>
+          <p>Randomly distribute all unassigned active members into open chore slots.</p>
+          <button class="btn-primary" onclick="callAutoSplit()">Run Auto-Split</button>
+        </div>
+        <div class="admin-card">
+          <h3>Sync to BigQuery</h3>
+          <p>Push all current submission, fine, and assignment data to BigQuery.</p>
+          <button class="btn-outline" onclick="callBQSync()">Sync to BigQuery</button>
+        </div>
+        <div class="admin-card">
+          <h3>End of Semester</h3>
+          <p>Archive data to BigQuery and clear this semester's records. Irreversible.</p>
+          <button class="btn-danger" onclick="confirmEndSemester()">End of Semester Archive</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Verification Modal -->
+<div class="modal-overlay" id="verify-modal">
+  <div class="modal">
+    <h3 id="modal-title">Verify Submission</h3>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:12px" id="modal-sub"></p>
+    <textarea id="modal-notes" placeholder="Notes (optional)..."></textarea>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="closeModal()">Cancel</button>
+      <button id="modal-confirm-btn" class="btn-primary" onclick="confirmVerify()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ---- PIN Auth ----------------------------------------------
+let correctPin = '1234';
+
+google.script.run
+  .withSuccessHandler(function(p) { correctPin = String(p || '1234'); })
+  .getConfigPin();
+
+function checkPin() {
+  const val = document.getElementById('pin-input').value;
+  if (val === correctPin) {
+    document.getElementById('pin-screen').style.display = 'none';
+    document.getElementById('main').style.display = 'block';
+    initDashboard();
+  } else {
+    document.getElementById('pin-error').style.display = 'block';
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-input').focus();
+  }
+}
+
+function logout() {
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('pin-screen').style.display = 'flex';
+  document.getElementById('pin-input').value = '';
+}
+
+// ---- Dashboard init ----------------------------------------
+let weeklyData  = null;
+let memberData  = null;
+let currentSort = {};
+let verifyPending = null;
+
+function initDashboard() {
+  google.script.run.withSuccessHandler(function(v) {
+    document.getElementById('meta-line').textContent = 'Semester: ' + (v || '—');
+    document.getElementById('week-label').textContent = 'Week of —';
+  }).getConfigValue('semester');
+
+  google.script.run.withSuccessHandler(function(v) {
+    document.getElementById('week-label').textContent = 'Week of ' + (v ? String(v).substring(0, 10) : '—');
+  }).getConfigValue('week_start');
+
+  refreshAll();
+}
+
+function refreshAll() {
+  loadWeeklyStatus();
+  loadMemberStats();
+}
+
+// ---- Weekly Status tab -------------------------------------
+function loadWeeklyStatus() {
+  google.script.run
+    .withSuccessHandler(onWeeklyStatus)
+    .withFailureHandler(onError)
+    .getWeeklyStatus();
+}
+
+function onWeeklyStatus(json) {
+  weeklyData = JSON.parse(json);
+  if (weeklyData.error) { showToast('Error: ' + weeklyData.error); return; }
+
+  const tbody = document.getElementById('status-tbody');
+  const fineTbody = document.getElementById('fine-preview-tbody');
+  tbody.innerHTML = '';
+  fineTbody.innerHTML = '';
+
+  let totalChores = 0, submitted = 0, flagged = 0, pendingFines = 0;
+
+  for (const chore of weeklyData.status) {
+    totalChores++;
+    const anySubmitted = chore.members.some(m => m.submitted);
+    if (anySubmitted) submitted++;
+
+    chore.members.forEach(m => {
+      if (m.autoStatus === 'flagged') flagged++;
+      if (!m.submitted || (m.humanStatus !== 'verified' && m.autoStatus !== 'passed')) {
+        // potential fine — show in fine preview for non-submitted only
+      }
+    });
+
+    // Determine row class
+    let rowClass = '';
+    const anyFlagged = chore.members.some(m => m.autoStatus === 'flagged' || m.autoStatus === 'rejected');
+    const allVerified = chore.members.every(m => m.humanStatus === 'verified');
+    if (allVerified) rowClass = 'row-verified';
+    else if (anyFlagged) rowClass = 'row-flagged';
+
+    const memberCells = chore.members.map(m => {
+      const autoB = m.autoStatus ? `<span class="badge badge-${m.autoStatus}">${m.autoStatus}</span>` : '<span class="badge-none">—</span>';
+      const humanB = `<span class="badge badge-${m.humanStatus || 'pending'}">${m.humanStatus || 'pending'}</span>`;
+      const actions = m.submitted ? `
+        <button class="action-btn btn-photo" onclick="viewPhoto('${m.submissionId}')">Photo</button>
+        <button class="action-btn btn-verify" onclick="openVerify('${m.submissionId}','${esc(m.memberName)}','${esc(chore.choreName)}','verified')">✓ Verify</button>
+        <button class="action-btn btn-fail" onclick="openVerify('${m.submissionId}','${esc(m.memberName)}','${esc(chore.choreName)}','failed')">✗ Fail</button>
+      ` : '<span class="badge-none">Not submitted</span>';
+
+      if (!m.submitted) pendingFines++;
+
+      return `
+        <tr class="${rowClass}">
+          <td>${esc(chore.choreName)}</td>
+          <td>${esc(m.memberName)}</td>
+          <td>${m.submitted ? '<span style="color:var(--green)">Yes</span>' : '<span style="color:var(--red)">No</span>'}</td>
+          <td>${autoB}</td>
+          <td>${humanB}</td>
+          <td>${actions}</td>
+        </tr>`;
+    }).join('');
+    tbody.insertAdjacentHTML('beforeend', memberCells);
+
+    // Fine preview rows (not submitted)
+    chore.members.filter(m => !m.submitted).forEach(m => {
+      fineTbody.insertAdjacentHTML('beforeend', `
+        <tr>
+          <td>${esc(m.memberName)}</td>
+          <td>${esc(chore.choreName)}</td>
+          <td>${esc(weeklyData.weekStart || '')}</td>
+          <td>Missed submission</td>
+        </tr>`);
+    });
+  }
+
+  if (!fineTbody.children.length) {
+    fineTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--green)">No pending fines — everyone submitted!</td></tr>';
+  }
+
+  document.getElementById('stat-total-chores').textContent = totalChores;
+  document.getElementById('stat-submitted').textContent = submitted;
+  document.getElementById('stat-flagged').textContent = flagged;
+  document.getElementById('stat-pending-fines').textContent = pendingFines;
+}
+
+// ---- Member Stats tab --------------------------------------
+function loadMemberStats() {
+  google.script.run
+    .withSuccessHandler(onMemberStats)
+    .withFailureHandler(onError)
+    .getMemberStats();
+}
+
+function onMemberStats(json) {
+  memberData = JSON.parse(json);
+  if (memberData.error) return;
+  renderMemberTable(memberData);
+}
+
+function renderMemberTable(data) {
+  const tbody = document.getElementById('members-tbody');
+  tbody.innerHTML = '';
+  const sorted = data.slice().sort((a, b) => b.complianceRate - a.complianceRate);
+  for (const m of sorted) {
+    const color = m.complianceRate >= 80 ? 'var(--green)' : m.complianceRate >= 50 ? 'var(--yellow)' : 'var(--red)';
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td><strong>${esc(m.name)}</strong></td>
+        <td>${m.assignments}</td>
+        <td>${m.submissions}</td>
+        <td style="color:${m.fines > 0 ? 'var(--red)' : 'inherit'}">${m.fines}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="compliance-bar" style="width:80px">
+              <div class="compliance-fill" style="width:${m.complianceRate}%;background:${color}"></div>
+            </div>
+            <span style="color:${color};font-weight:700">${m.complianceRate}%</span>
+          </div>
+        </td>
+      </tr>`);
+  }
+}
+
+function filterMemberTable() {
+  if (!memberData) return;
+  const q = document.getElementById('member-filter').value.toLowerCase();
+  const filtered = memberData.filter(m => m.name.toLowerCase().includes(q));
+  renderMemberTable(filtered);
+}
+
+function filterStatusTable() {
+  const q = document.getElementById('status-search').value.toLowerCase();
+  const rows = document.querySelectorAll('#status-tbody tr');
+  rows.forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+// ---- Verify modal ------------------------------------------
+function openVerify(subId, memberName, choreName, action) {
+  verifyPending = { subId, action };
+  document.getElementById('modal-title').textContent = action === 'verified' ? 'Verify Submission' : 'Fail Submission';
+  document.getElementById('modal-sub').textContent = `${memberName} — ${choreName}`;
+  document.getElementById('modal-notes').value = '';
+  document.getElementById('modal-confirm-btn').textContent = action === 'verified' ? 'Verify' : 'Mark Failed';
+  document.getElementById('modal-confirm-btn').style.background = action === 'verified' ? 'var(--green)' : 'var(--red)';
+  document.getElementById('verify-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('verify-modal').classList.remove('open');
+  verifyPending = null;
+}
+
+function confirmVerify() {
+  if (!verifyPending) return;
+  const notes = document.getElementById('modal-notes').value;
+  const { subId, action } = verifyPending;
+  closeModal();
+
+  google.script.run
+    .withSuccessHandler(function(json) {
+      const r = JSON.parse(json);
+      showToast(r.success ? 'Updated!' : 'Error: ' + r.message);
+      if (r.success) loadWeeklyStatus();
+    })
+    .withFailureHandler(onError)
+    .updateHumanVerification(subId, action, 'Officer', notes, correctPin);
+}
+
+function viewPhoto(subId) {
+  google.script.run
+    .withSuccessHandler(function(json) {
+      const r = JSON.parse(json);
+      if (r.photoUrl) window.open(r.photoUrl, '_blank');
+      else showToast('No photo available.');
+    })
+    .withFailureHandler(onError)
+    .getSubmissionPhoto(subId);
+}
+
+// ---- Admin actions -----------------------------------------
+function confirmMondayReset() {
+  if (!confirm('Send fine list NOW and advance the week? This emails all officers.')) return;
+  showToast('Running Monday Reset...');
+  google.script.run
+    .withSuccessHandler(function() { showToast('Monday Reset complete!'); refreshAll(); })
+    .withFailureHandler(onError)
+    .runMondayResetWeb(correctPin);
+}
+
+function confirmEndSemester() {
+  if (!confirm('END OF SEMESTER: This syncs to BigQuery and clears all assignment/submission data. Are you sure?')) return;
+  if (!confirm('This CANNOT be undone. Confirm?')) return;
+  showToast('Archiving — this may take a minute...');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      const r = JSON.parse(json);
+      showToast(r.success ? 'Semester archived!' : 'Error: ' + r.error);
+      if (r.success) refreshAll();
+    })
+    .withFailureHandler(onError)
+    .endOfSemesterArchiveWeb(correctPin);
+}
+
+function callBQSync() {
+  if (!confirm('Sync all data to BigQuery now?')) return;
+  showToast('Syncing...');
+  google.script.run
+    .withSuccessHandler(function() { showToast('BigQuery sync complete!'); })
+    .withFailureHandler(onError)
+    .syncToBigQueryWeb(correctPin);
+}
+
+function callAutoSplit() {
+  if (!confirm('Auto-split all unassigned members into open chore slots?')) return;
+  showToast('Running auto-split...');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      const r = JSON.parse(json);
+      if (!r.success) { showToast(r.message || 'Failed'); return; }
+      if (confirm('Auto-split found ' + r.count + ' assignments. Save all?')) {
+        google.script.run
+          .withSuccessHandler(function(sj) {
+            const s = JSON.parse(sj);
+            showToast('Saved ' + s.saved + ' assignments!');
+          })
+          .withFailureHandler(onError)
+          .saveAutoSplitProposals(JSON.stringify(r.proposals), correctPin);
+      }
+    })
+    .withFailureHandler(onError)
+    .autoSplitMembers();
+}
+
+function callImportMembers() {
+  const fileId = prompt(
+    'Paste the Google Drive File ID of your members CSV.\n\n' +
+    'CSV format: name, email, pledge_class (one row per member)\n\n' +
+    'Find the file ID in the Drive URL: .../d/FILE_ID/view'
+  );
+  if (!fileId || !fileId.trim()) return;
+  showToast('Importing members...');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      const r = JSON.parse(json);
+      if (r.success) {
+        showToast('Done! Added: ' + r.added + '  Updated: ' + r.updated + '  Deactivated: ' + r.deactivated);
+      } else {
+        showToast('Import failed: ' + (r.error || 'unknown error'));
+      }
+    })
+    .withFailureHandler(onError)
+    .importMembersFromCSVWeb(fileId.trim(), correctPin);
+}
+
+// ---- Tabs --------------------------------------------------
+function showTab(id) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ---- Sort --------------------------------------------------
+function sortTable(tableId, colIdx) {
+  const key = tableId + '_' + colIdx;
+  const asc = currentSort[key] !== true;
+  currentSort[key] = asc;
+  const tbody = document.querySelector('#' + tableId + ' tbody');
+  const rows  = Array.from(tbody.querySelectorAll('tr'));
+  rows.sort((a, b) => {
+    const av = (a.cells[colIdx] ? a.cells[colIdx].textContent : '').trim();
+    const bv = (b.cells[colIdx] ? b.cells[colIdx].textContent : '').trim();
+    const an = parseFloat(av), bn = parseFloat(bv);
+    if (!isNaN(an) && !isNaN(bn)) return asc ? an - bn : bn - an;
+    return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  rows.forEach(r => tbody.appendChild(r));
+}
+
+// ---- Utils -------------------------------------------------
+function onError(err) { showToast('Error: ' + (err.message || err)); console.error(err); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>

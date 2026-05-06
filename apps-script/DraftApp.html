@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Draft Night — Chore Assignment</title>
+<style>
+  :root {
+    --primary: #093D20;
+    --gold: #FFB71D;
+    --bg-dark: #050f08;
+    --bg-card: #0d1f12;
+    --border: #1a3d24;
+    --text: #e8f0ea;
+    --muted: #7a9e82;
+    --green: #22c55e;
+    --yellow: #FFB71D;
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-dark);
+    color: var(--text);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ===== TOP BAR ===== */
+  #topbar {
+    background: var(--primary);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    border-bottom: 3px solid var(--gold);
+  }
+  #topbar h1 { font-size: 1.3rem; color: var(--gold); letter-spacing: 1px; }
+  #topbar .meta { font-size: 0.85rem; color: #9dbfa5; }
+  #topbar .logo { height: 38px; width: auto; margin-right: 12px; filter: brightness(0) invert(1); }
+  #mode-toggle {
+    background: var(--gold); color: #000;
+    border: none; padding: 8px 16px; border-radius: 6px;
+    font-weight: 700; cursor: pointer; font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  #mode-toggle:hover { background: #ffe44d; }
+
+  /* ===== STATUS BAR ===== */
+  #statusbar {
+    background: #081808;
+    padding: 6px 20px;
+    display: flex; gap: 20px; align-items: center;
+    font-size: 0.8rem; color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  #statusbar .stat-val { color: var(--gold); font-weight: 700; font-size: 1rem; }
+
+  /* ===== DISPLAY MODE (TV Board) ===== */
+  #display-view { padding: 16px; }
+  #chore-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
+  .chore-card {
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .chore-card.full {
+    border-color: var(--green);
+    background: #0d2618;
+  }
+  .chore-fill-bar {
+    position: absolute; bottom: 0; left: 0; height: 4px;
+    background: var(--green); transition: width 0.5s ease;
+  }
+  .chore-name {
+    font-size: 0.95rem; font-weight: 700; color: var(--gold);
+    margin-bottom: 6px; line-height: 1.3;
+  }
+  .chore-slots {
+    font-size: 0.75rem; color: var(--muted); margin-bottom: 8px;
+  }
+  .chore-slots .filled-count { color: var(--green); font-weight: 700; font-size: 1rem; }
+  .member-chips { display: flex; flex-wrap: wrap; gap: 4px; min-height: 24px; }
+  .chip {
+    background: var(--primary); color: #cde;
+    border-radius: 20px; padding: 3px 10px;
+    font-size: 0.72rem; font-weight: 600;
+    animation: chipIn 0.3s ease;
+  }
+  .chip.new { background: #1a4d2e; color: #86efac; }
+  @keyframes chipIn { from { opacity:0; transform:scale(0.7); } to { opacity:1; transform:scale(1); } }
+
+  /* ===== MANAGE MODE ===== */
+  #manage-view {
+    display: flex;
+    height: calc(100vh - 96px);
+    overflow: hidden;
+  }
+
+  /* Left: unassigned members */
+  #members-panel {
+    width: 280px; min-width: 220px;
+    background: #081808;
+    border-right: 2px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .panel-header {
+    background: var(--primary); color: var(--gold);
+    padding: 10px 14px; font-weight: 700;
+    font-size: 0.9rem; letter-spacing: 0.5px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .panel-search {
+    padding: 8px; border-bottom: 1px solid var(--border);
+  }
+  .panel-search input {
+    width: 100%; padding: 6px 10px;
+    background: #0f2417; border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 0.85rem;
+  }
+  .panel-list { flex: 1; overflow-y: auto; padding: 6px; }
+  .member-item {
+    padding: 10px 12px; border-radius: 8px;
+    cursor: pointer; margin-bottom: 4px;
+    font-size: 0.9rem; color: var(--text);
+    border: 2px solid transparent;
+    transition: all 0.15s;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .member-item:hover { background: #0f2c17; border-color: var(--border); }
+  .member-item.selected { background: #1a4d28; border-color: var(--gold); color: var(--gold); }
+  .member-item .pledge { font-size: 0.7rem; color: var(--muted); }
+
+  /* Right: chore board */
+  #chores-panel {
+    flex: 1; overflow-y: auto; padding: 12px;
+  }
+  #chores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+  }
+  .manage-chore-card {
+    background: var(--bg-card);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px; cursor: pointer;
+    transition: all 0.15s; position: relative; overflow: hidden;
+  }
+  .manage-chore-card:hover { border-color: #4477aa; }
+  .manage-chore-card.full { border-color: var(--green); cursor: default; opacity: 0.7; }
+  .manage-chore-card.highlighted { border-color: var(--gold); box-shadow: 0 0 12px rgba(255,215,0,0.3); }
+  .manage-chore-card .chore-fill-bar { position: absolute; bottom: 0; left: 0; height: 3px; background: var(--green); }
+
+  /* Bottom toolbar */
+  #bottom-bar {
+    background: #081808; border-top: 2px solid var(--border);
+    padding: 10px 16px; display: flex; gap: 10px; align-items: center;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 9px 18px; border-radius: 7px;
+    border: none; font-weight: 700; cursor: pointer; font-size: 0.85rem;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn-primary { background: var(--primary); color: var(--gold); }
+  .btn-gold    { background: var(--gold);    color: #000; }
+  .btn-green   { background: #166534;        color: #86efac; }
+  .btn-red     { background: #7f1d1d;        color: #fca5a5; }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: #1a3a5c; color: var(--gold); border: 1px solid var(--gold);
+    padding: 10px 22px; border-radius: 8px; font-weight: 700;
+    font-size: 0.9rem; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; z-index: 999;
+  }
+  #toast.show { opacity: 1; }
+
+  /* Printable view */
+  @media print {
+    #topbar, #statusbar, #manage-view, #bottom-bar, #mode-toggle { display: none !important; }
+    #print-view { display: block !important; }
+  }
+  #print-view { display: none; }
+  #print-view h2 { font-size: 1.4rem; margin-bottom: 12px; }
+  #print-view table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  #print-view th, #print-view td { border: 1px solid #333; padding: 6px 10px; text-align: left; }
+  #print-view th { background: #003087; color: #FFD700; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0a1a; }
+  ::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div style="display:flex;align-items:center">
+    <img class="logo" src="https://www.lambdachi.org/wp-content/uploads/2025/05/lca-logo-primary.svg" alt="ΛΧΑ" onerror="this.style.display='none'">
+    <div>
+      <h1>Draft Night Board</h1>
+      <div class="meta" id="semester-label">Loading...</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <span id="clock" style="font-size:1rem;color:#aac"></span>
+    <button id="mode-toggle" onclick="toggleMode()">Switch to Manager Mode</button>
+  </div>
+</div>
+
+<div id="statusbar">
+  <span>Slots filled: <span class="stat-val" id="stat-filled">0</span> / <span class="stat-val" id="stat-total">0</span></span>
+  <span>Members assigned: <span class="stat-val" id="stat-members">0</span></span>
+  <span id="last-update" style="margin-left:auto"></span>
+</div>
+
+<!-- DISPLAY MODE -->
+<div id="display-view">
+  <div id="chore-grid"></div>
+</div>
+
+<!-- MANAGE MODE -->
+<div id="manage-view" style="display:none">
+  <div id="members-panel">
+    <div class="panel-header">
+      <span>Unassigned Members</span>
+      <span id="unassigned-count" style="font-size:0.8rem;background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:12px">0</span>
+    </div>
+    <div class="panel-search">
+      <input type="text" id="member-search" placeholder="Search members..." oninput="filterMembers()">
+    </div>
+    <div class="panel-list" id="member-list"></div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div style="padding:8px 12px;background:#0d1b2e;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+      <span style="font-size:0.85rem;color:var(--muted)">
+        Click a member → then click a chore to assign
+      </span>
+      <span id="selected-member-label" style="font-weight:700;color:var(--gold);font-size:0.9rem"></span>
+    </div>
+    <div id="chores-panel">
+      <div id="chores-grid"></div>
+    </div>
+    <div id="bottom-bar">
+      <button class="btn btn-gold" onclick="runAutoSplit()">Auto-Split Remaining</button>
+      <button class="btn btn-green" onclick="exportReferenceSheet()">Export Reference Sheet</button>
+      <button class="btn btn-primary" onclick="refreshAll()">Refresh</button>
+      <span id="action-status" style="font-size:0.8rem;color:var(--muted);margin-left:auto"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Print view -->
+<div id="print-view">
+  <h2>Chore Assignments — <span id="print-semester"></span></h2>
+  <table id="print-table">
+    <thead><tr><th>Chore</th><th>Members</th><th>Slots</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ---- State -------------------------------------------------
+const MODE_DISPLAY = 'display', MODE_MANAGE = 'manage';
+let currentMode = '<?= mode ?>' || MODE_DISPLAY;
+let allChores = [];       // [{name, people, filled, available, members:[]}]
+let allMembers = [];      // all active members
+let selectedMember = null;
+let refreshTimer = null;
+
+// ---- Init --------------------------------------------------
+window.addEventListener('load', function() {
+  updateClock();
+  setInterval(updateClock, 1000);
+  applyMode();
+  refreshAll();
+  // Auto-refresh every 5s in display mode, 10s in manage mode
+  refreshTimer = setInterval(refreshAll, currentMode === MODE_DISPLAY ? 5000 : 10000);
+});
+
+function updateClock() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit' });
+}
+
+function applyMode() {
+  if (currentMode === MODE_DISPLAY) {
+    document.getElementById('display-view').style.display = 'block';
+    document.getElementById('manage-view').style.display = 'none';
+    document.getElementById('mode-toggle').textContent = 'Switch to Manager Mode';
+  } else {
+    document.getElementById('display-view').style.display = 'none';
+    document.getElementById('manage-view').style.display = 'flex';
+    document.getElementById('mode-toggle').textContent = 'Switch to Display Mode';
+  }
+}
+
+function toggleMode() {
+  currentMode = currentMode === MODE_DISPLAY ? MODE_MANAGE : MODE_DISPLAY;
+  clearInterval(refreshTimer);
+  applyMode();
+  refreshAll();
+  refreshTimer = setInterval(refreshAll, currentMode === MODE_DISPLAY ? 5000 : 10000);
+}
+
+// ---- Data loading ------------------------------------------
+function refreshAll() {
+  document.getElementById('last-update').textContent = 'Refreshing...';
+
+  // Load chore ratios (has filled counts)
+  google.script.run
+    .withSuccessHandler(onChoreRatios)
+    .withFailureHandler(onError)
+    .getChoreRatios();
+
+  // Load all assignments for member listing
+  google.script.run
+    .withSuccessHandler(onAssignments)
+    .withFailureHandler(onError)
+    .getAssignments();
+
+  // Load member list
+  google.script.run
+    .withSuccessHandler(onMembers)
+    .withFailureHandler(onError)
+    .getActiveMembers();
+}
+
+function onChoreRatios(json) {
+  try {
+    const ratios = JSON.parse(json);
+    if (ratios.error) { console.error(ratios.error); return; }
+    allChores = ratios.map(r => ({ ...r, assignedMembers: [] }));
+    document.getElementById('last-update').textContent = 'Updated ' + new Date().toLocaleTimeString();
+    // Merge member data if already loaded
+    if (allAssignmentsData) mergeAssignments();
+  } catch(e) { console.error(e); }
+}
+
+let allAssignmentsData = null;
+function onAssignments(json) {
+  try {
+    allAssignmentsData = JSON.parse(json);
+    if (allChores.length) mergeAssignments();
+  } catch(e) { console.error(e); }
+}
+
+function mergeAssignments() {
+  for (const c of allChores) {
+    c.assignedMembers = allAssignmentsData[c.name] || [];
+  }
+  renderDisplayBoard();
+  renderManageBoard();
+  updateStats();
+}
+
+function onMembers(json) {
+  try {
+    allMembers = JSON.parse(json);
+    renderMemberList();
+  } catch(e) { console.error(e); }
+}
+
+function onError(err) {
+  console.error('Apps Script error:', err);
+  document.getElementById('last-update').textContent = 'Error loading data';
+}
+
+// ---- Stats -------------------------------------------------
+function updateStats() {
+  let filled = 0, total = 0, members = new Set();
+  for (const c of allChores) {
+    total += c.people;
+    filled += Math.min(c.filled || 0, c.people);
+    (c.assignedMembers || []).forEach(m => members.add(m.memberId));
+  }
+  document.getElementById('stat-filled').textContent = filled;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-members').textContent = members.size;
+}
+
+// ---- Display board rendering --------------------------------
+function renderDisplayBoard() {
+  const grid = document.getElementById('chore-grid');
+  grid.innerHTML = '';
+  for (const c of allChores) {
+    const filled = c.assignedMembers ? c.assignedMembers.length : 0;
+    const pct = Math.min(100, Math.round((filled / c.people) * 100));
+    const isFull = filled >= c.people;
+    const card = document.createElement('div');
+    card.className = 'chore-card' + (isFull ? ' full' : '');
+    card.innerHTML = `
+      <div class="chore-name">${esc(c.name)}</div>
+      <div class="chore-slots">
+        <span class="filled-count">${filled}</span> / ${c.people} filled
+      </div>
+      <div class="member-chips">
+        ${(c.assignedMembers || []).map(m =>
+          `<span class="chip">${esc(firstName(m.memberName))}</span>`
+        ).join('')}
+        ${filled < c.people ? `<span style="color:var(--muted);font-size:0.7rem;align-self:center">${c.people - filled} open</span>` : ''}
+      </div>
+      <div class="chore-fill-bar" style="width:${pct}%"></div>
+    `;
+    grid.appendChild(card);
+  }
+}
+
+// ---- Manage board rendering ---------------------------------
+function renderManageBoard() {
+  const grid = document.getElementById('chores-grid');
+  grid.innerHTML = '';
+  for (const c of allChores) {
+    const filled = c.assignedMembers ? c.assignedMembers.length : 0;
+    const isFull = filled >= c.people;
+    const pct = Math.min(100, Math.round((filled / c.people) * 100));
+    const card = document.createElement('div');
+    card.className = 'manage-chore-card' + (isFull ? ' full' : '');
+    card.dataset.chore = c.name;
+    if (!isFull) card.onclick = () => assignSelected(c.name);
+    card.innerHTML = `
+      <div class="chore-name">${esc(c.name)}</div>
+      <div class="chore-slots" style="margin-bottom:6px">
+        <span style="color:${isFull ? 'var(--green)' : 'var(--gold)'};">${filled}/${c.people}</span>
+        ${isFull ? '<span style="color:var(--green);font-size:0.7rem"> FULL</span>' : ''}
+      </div>
+      <div class="member-chips">
+        ${(c.assignedMembers || []).map(m =>
+          `<span class="chip">${esc(firstName(m.memberName))}</span>`
+        ).join('')}
+      </div>
+      <div class="chore-fill-bar" style="width:${pct}%"></div>
+    `;
+    grid.appendChild(card);
+  }
+}
+
+// ---- Member list --------------------------------------------
+let memberFilter = '';
+function filterMembers() {
+  memberFilter = document.getElementById('member-search').value.toLowerCase();
+  renderMemberList();
+}
+
+function renderMemberList() {
+  const assigned = new Set();
+  for (const c of allChores) (c.assignedMembers || []).forEach(m => assigned.add(m.memberId));
+
+  const unassigned = allMembers.filter(m =>
+    !assigned.has(m.id) &&
+    (!memberFilter || m.name.toLowerCase().includes(memberFilter))
+  );
+
+  document.getElementById('unassigned-count').textContent = unassigned.length;
+
+  const list = document.getElementById('member-list');
+  list.innerHTML = '';
+
+  if (!unassigned.length) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">All members assigned!</div>';
+    return;
+  }
+
+  unassigned.sort((a, b) => a.name.localeCompare(b.name));
+  for (const m of unassigned) {
+    const item = document.createElement('div');
+    item.className = 'member-item' + (selectedMember && selectedMember.id === m.id ? ' selected' : '');
+    item.dataset.id = m.id;
+    item.innerHTML = `
+      <span>${esc(m.name)}</span>
+      <span class="pledge">${esc(m.pledgeClass || '')}</span>
+    `;
+    item.onclick = () => selectMember(m);
+    list.appendChild(item);
+  }
+}
+
+function selectMember(m) {
+  selectedMember = m;
+  document.getElementById('selected-member-label').textContent = m ? '→ ' + m.name : '';
+  renderMemberList();
+  // Highlight chores with open slots
+  document.querySelectorAll('.manage-chore-card:not(.full)').forEach(card => {
+    card.classList.add('highlighted');
+  });
+}
+
+// ---- Assignment ---------------------------------------------
+function assignSelected(choreName) {
+  if (!selectedMember) {
+    showToast('Select a member first!');
+    return;
+  }
+  const chore = allChores.find(c => c.name === choreName);
+  if (!chore || chore.filled >= chore.people) return;
+
+  document.getElementById('action-status').textContent = 'Saving...';
+
+  google.script.run
+    .withSuccessHandler(function(json) {
+      const res = JSON.parse(json);
+      if (res.success) {
+        showToast(selectedMember.name + ' → ' + choreName);
+        selectedMember = null;
+        document.getElementById('selected-member-label').textContent = '';
+        refreshAll();
+      } else {
+        showToast('Error: ' + (res.message || res.error));
+      }
+      document.getElementById('action-status').textContent = '';
+    })
+    .withFailureHandler(function(e) {
+      showToast('Failed to save.');
+      document.getElementById('action-status').textContent = '';
+    })
+    .saveAssignment(selectedMember.id, choreName);
+}
+
+// ---- Auto-split --------------------------------------------
+function runAutoSplit() {
+  if (!confirm('Auto-split all unassigned members? You can review before saving.')) return;
+  document.getElementById('action-status').textContent = 'Auto-splitting...';
+
+  google.script.run
+    .withSuccessHandler(function(json) {
+      const res = JSON.parse(json);
+      if (!res.success) { showToast(res.message || res.error); return; }
+
+      const ok = confirm(
+        `Auto-split found ${res.count} assignments.\n\nSave all of them?`
+      );
+      if (!ok) { document.getElementById('action-status').textContent = ''; return; }
+
+      google.script.run
+        .withSuccessHandler(function(saveJson) {
+          const s = JSON.parse(saveJson);
+          showToast('Saved ' + s.saved + ' assignments!');
+          refreshAll();
+          document.getElementById('action-status').textContent = '';
+        })
+        .withFailureHandler(function(e) { showToast('Save failed.'); })
+        .saveAutoSplitProposals(JSON.stringify(res.proposals), draftPin);
+    })
+    .withFailureHandler(function(e) {
+      showToast('Auto-split failed.');
+      document.getElementById('action-status').textContent = '';
+    })
+    .autoSplitMembers();
+}
+
+// ---- Export reference sheet --------------------------------
+function exportReferenceSheet() {
+  const tbody = document.querySelector('#print-table tbody');
+  tbody.innerHTML = '';
+  for (const c of allChores) {
+    const names = (c.assignedMembers || []).map(m => m.memberName).join(', ') || '—';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${esc(c.name)}</td><td>${esc(names)}</td><td>${c.assignedMembers ? c.assignedMembers.length : 0}/${c.people}</td>`;
+    tbody.appendChild(tr);
+  }
+  document.getElementById('print-semester').textContent = document.getElementById('semester-label').textContent;
+  window.print();
+}
+
+// Load semester label and officer PIN (needed for saveAutoSplitProposals)
+let draftPin = '';
+google.script.run.withSuccessHandler(function(v) {
+  document.getElementById('semester-label').textContent = v || '';
+}).getConfigValue('semester');
+google.script.run.withSuccessHandler(function(p) { draftPin = String(p || ''); }).getConfigPin();
+
+// ---- Utils -------------------------------------------------
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function firstName(name) {
+  if (!name) return '?';
+  return name.split(' ')[0];
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>

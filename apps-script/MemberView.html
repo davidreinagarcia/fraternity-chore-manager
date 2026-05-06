@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>House Chores — This Week</title>
+<style>
+  :root {
+    --primary: #093D20;
+    --gold: #FFB71D;
+    --green: #16a34a;
+    --red: #dc2626;
+    --yellow: #d97706;
+    --bg: #f0f4f1;
+    --card: #ffffff;
+    --border: #dde8de;
+    --text: #0f172a;
+    --muted: #64748b;
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', -apple-system, Arial, sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ---- Header ---- */
+  header {
+    background: var(--primary);
+    padding: 16px 20px 14px;
+    color: white;
+    position: sticky; top: 0; z-index: 100;
+    border-bottom: 3px solid var(--gold);
+  }
+  header .inner { max-width: 900px; margin: 0 auto; }
+  header h1 { font-size: 1.2rem; color: var(--gold); font-weight: 800; }
+  header p  { font-size: 0.8rem; color: #aac; margin-top: 2px; }
+  .header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+  /* ---- Search / filter ---- */
+  .controls {
+    max-width: 900px; margin: 16px auto 0; padding: 0 16px;
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  }
+  .search-box {
+    flex: 1; min-width: 180px; padding: 10px 14px;
+    border: 1px solid var(--border); border-radius: 10px;
+    font-size: 0.9rem; background: var(--card); color: var(--text);
+  }
+  .search-box:focus { outline: none; border-color: var(--primary); }
+  .filter-btn {
+    padding: 8px 14px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--card);
+    font-size: 0.8rem; font-weight: 600; cursor: pointer; color: var(--muted);
+    transition: all 0.15s;
+  }
+  .filter-btn.active { background: var(--primary); color: var(--gold); border-color: var(--primary); }
+
+  /* ---- Grid ---- */
+  .grid {
+    max-width: 900px; margin: 16px auto 40px; padding: 0 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+  }
+
+  /* ---- Card ---- */
+  .chore-card {
+    background: var(--card);
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .chore-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+  .chore-card.card-submitted { border-color: #bbf7d0; }
+  .chore-card.card-flagged   { border-color: #fde68a; }
+  .chore-card.card-missing   { border-color: #fecaca; }
+
+  .card-img-wrap {
+    width: 100%; height: 160px; overflow: hidden;
+    background: #f8fafc; position: relative;
+  }
+  .card-img-wrap img {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block;
+  }
+  .card-img-placeholder {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    color: var(--muted); font-size: 2rem;
+    gap: 6px;
+  }
+  .card-img-placeholder span { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px; }
+
+  .status-ribbon {
+    position: absolute; top: 10px; right: 10px;
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
+  }
+  .ribbon-submitted { background: #dcfce7; color: var(--green); }
+  .ribbon-flagged   { background: #fef3c7; color: var(--yellow); }
+  .ribbon-missing   { background: #fee2e2; color: var(--red); }
+  .ribbon-pending   { background: #f1f5f9; color: var(--muted); }
+
+  .card-body { padding: 14px 16px; }
+  .card-body h3 {
+    font-size: 0.95rem; font-weight: 700; color: var(--text);
+    margin-bottom: 8px; line-height: 1.3;
+  }
+
+  .member-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+  .member-pill {
+    background: #eff6ff; color: #1d4ed8;
+    border-radius: 20px; padding: 3px 10px;
+    font-size: 0.72rem; font-weight: 600;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .member-pill.submitted { background: #dcfce7; color: var(--green); }
+  .member-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .submit-time { font-size: 0.72rem; color: var(--muted); margin-bottom: 10px; }
+
+  .flag-btn {
+    width: 100%; padding: 8px;
+    border: 1px solid #fde68a; background: #fffbeb; color: var(--yellow);
+    border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .flag-btn:hover { background: #fef3c7; }
+  .flag-btn:disabled { opacity: 0.5; cursor: default; }
+
+  /* ---- Summary stats ---- */
+  .summary-bar {
+    max-width: 900px; margin: 16px auto 0; padding: 0 16px;
+    display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .summary-pill {
+    background: var(--card); border-radius: 20px; padding: 8px 16px;
+    font-size: 0.8rem; font-weight: 600; color: var(--muted);
+    border: 1px solid var(--border); display: flex; gap: 6px; align-items: center;
+  }
+  .summary-pill .num { font-size: 1rem; font-weight: 800; color: var(--primary); }
+
+  /* ---- Loading ---- */
+  .loading-state {
+    text-align: center; padding: 60px 20px; color: var(--muted);
+  }
+  .spinner {
+    width: 40px; height: 40px; border: 3px solid var(--border);
+    border-top-color: var(--primary); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- Flag modal ---- */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    z-index: 500; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal { background: white; border-radius: var(--radius); padding: 24px; width: 360px; max-width: 95vw; }
+  .modal h3 { margin-bottom: 8px; }
+  .modal p  { font-size: 0.85rem; color: var(--muted); margin-bottom: 12px; }
+  .modal textarea {
+    width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 0.9rem; resize: vertical; min-height: 70px; margin-bottom: 12px;
+  }
+  .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+  .btn-cancel { padding: 8px 16px; border: 1px solid var(--border); border-radius: 8px; background: white; cursor: pointer; font-size: 0.85rem; }
+  .btn-flag   { padding: 8px 16px; background: var(--yellow); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; }
+
+  /* ---- Toast ---- */
+  #toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #0f172a; color: white; padding: 10px 20px; border-radius: 8px;
+    font-size: 0.9rem; font-weight: 600; opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; z-index: 999;
+  }
+  #toast.show { opacity: 1; }
+
+  @media (max-width: 480px) {
+    .grid { grid-template-columns: 1fr; }
+    .card-img-wrap { height: 120px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <div class="header-row">
+      <div style="display:flex;align-items:center;gap:12px">
+        <img src="https://www.lambdachi.org/wp-content/uploads/2025/06/logo-white.svg"
+             alt="ΛΧΑ" style="height:38px;width:auto;flex-shrink:0" onerror="this.style.display='none'">
+        <div>
+          <h1>House Chores</h1>
+          <p id="meta-line">Loading...</p>
+        </div>
+      </div>
+      <button onclick="refreshData()"
+              style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,215,0,0.3);
+                     color:var(--gold);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:600">
+        ↻ Refresh
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="summary-bar">
+  <div class="summary-pill"><span class="num" id="sum-total">—</span> total chores</div>
+  <div class="summary-pill"><span class="num" id="sum-done" style="color:var(--green)">—</span> submitted</div>
+  <div class="summary-pill"><span class="num" id="sum-missing" style="color:var(--red)">—</span> missing</div>
+  <div class="summary-pill"><span class="num" id="sum-flagged" style="color:var(--yellow)">—</span> flagged</div>
+</div>
+
+<div class="controls">
+  <input class="search-box" type="text" placeholder="Search chores or members..." oninput="applyFilters(this.value)">
+  <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)">All</button>
+  <button class="filter-btn" data-filter="submitted" onclick="setFilter('submitted',this)">Submitted</button>
+  <button class="filter-btn" data-filter="missing" onclick="setFilter('missing',this)">Missing</button>
+  <button class="filter-btn" data-filter="flagged" onclick="setFilter('flagged',this)">Flagged</button>
+</div>
+
+<div class="grid" id="chore-grid">
+  <div class="loading-state" style="grid-column:1/-1">
+    <div class="spinner"></div>
+    <p>Loading this week's chores...</p>
+  </div>
+</div>
+
+<!-- Flag modal -->
+<div class="modal-overlay" id="flag-modal">
+  <div class="modal">
+    <h3>Flag for Officer Review</h3>
+    <p id="flag-modal-sub">Add a note explaining what looks wrong.</p>
+    <textarea id="flag-note" placeholder="e.g. Photo is from a different room..."></textarea>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeFlagModal()">Cancel</button>
+      <button class="btn-flag" onclick="submitFlag()">Submit Flag</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let allChores   = [];
+let showPhotos  = true;
+let activeFilter = 'all';
+let searchQuery  = '';
+let flagTarget   = null;
+
+window.addEventListener('load', function() {
+  // Check photo privacy config
+  google.script.run
+    .withSuccessHandler(function(v) { showPhotos = String(v) !== 'false'; })
+    .getShowPhotos();
+
+  refreshData();
+});
+
+function refreshData() {
+  document.getElementById('chore-grid').innerHTML =
+    '<div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div><p>Loading...</p></div>';
+
+  google.script.run
+    .withSuccessHandler(onWeeklyStatus)
+    .withFailureHandler(function(e) {
+      document.getElementById('chore-grid').innerHTML =
+        '<div class="loading-state" style="grid-column:1/-1">Failed to load. <button onclick="refreshData()">Retry</button></div>';
+    })
+    .getWeeklyStatus();
+
+  google.script.run
+    .withSuccessHandler(function(v) { document.getElementById('meta-line').textContent = 'Week of ' + (v ? String(v).substring(0, 10) : '—'); })
+    .getConfigValue('week_start');
+}
+
+function onWeeklyStatus(json) {
+  try {
+    const data = JSON.parse(json);
+    if (data.error) { document.getElementById('chore-grid').innerHTML = '<p style="padding:20px;color:red">' + data.error + '</p>'; return; }
+
+    allChores = data.status || [];
+    updateSummary();
+    renderGrid();
+  } catch(e) { console.error(e); }
+}
+
+function updateSummary() {
+  let submitted = 0, missing = 0, flagged = 0;
+  for (const c of allChores) {
+    const anySubmitted = c.members.some(m => m.submitted);
+    if (anySubmitted) {
+      submitted++;
+      if (c.members.some(m => m.autoStatus === 'flagged')) flagged++;
+    } else {
+      missing++;
+    }
+  }
+  document.getElementById('sum-total').textContent = allChores.length;
+  document.getElementById('sum-done').textContent = submitted;
+  document.getElementById('sum-missing').textContent = missing;
+  document.getElementById('sum-flagged').textContent = flagged;
+}
+
+function setFilter(f, btn) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function applyFilters(q) {
+  searchQuery = q.toLowerCase();
+  renderGrid();
+}
+
+function renderGrid() {
+  const grid = document.getElementById('chore-grid');
+  grid.innerHTML = '';
+
+  const visible = allChores.filter(c => {
+    const anySubmitted = c.members.some(m => m.submitted);
+    const anyFlagged   = c.members.some(m => m.autoStatus === 'flagged');
+    if (activeFilter === 'submitted' && !anySubmitted) return false;
+    if (activeFilter === 'missing'   && anySubmitted)  return false;
+    if (activeFilter === 'flagged'   && !anyFlagged)   return false;
+    if (searchQuery) {
+      const text = c.choreName.toLowerCase() + c.members.map(m=>m.memberName).join(' ').toLowerCase();
+      if (!text.includes(searchQuery)) return false;
+    }
+    return true;
+  });
+
+  if (!visible.length) {
+    grid.innerHTML = '<div class="loading-state" style="grid-column:1/-1"><p>No chores match your filter.</p></div>';
+    return;
+  }
+
+  // Sort: missing first, then flagged, then submitted
+  visible.sort((a, b) => {
+    const score = c => {
+      const anySubmitted = c.members.some(m => m.submitted);
+      if (!anySubmitted) return 0;
+      if (c.members.some(m => m.autoStatus === 'flagged')) return 1;
+      return 2;
+    };
+    return score(a) - score(b);
+  });
+
+  for (const c of visible) {
+    grid.appendChild(buildCard(c));
+  }
+}
+
+function buildCard(chore) {
+  const anySubmitted = chore.members.some(m => m.submitted);
+  const anyFlagged   = chore.members.some(m => m.autoStatus === 'flagged' || m.autoStatus === 'rejected');
+
+  let cardClass = 'chore-card';
+  if (anySubmitted && !anyFlagged) cardClass += ' card-submitted';
+  else if (anyFlagged) cardClass += ' card-flagged';
+  else cardClass += ' card-missing';
+
+  let ribbonClass = 'ribbon-missing', ribbonText = 'Missing';
+  if (anySubmitted && !anyFlagged) { ribbonClass = 'ribbon-submitted'; ribbonText = 'Submitted'; }
+  else if (anyFlagged)             { ribbonClass = 'ribbon-flagged';   ribbonText = 'Flagged'; }
+
+  // Find a submitted member to show photo
+  const submittedMem = chore.members.find(m => m.submitted && m.photoUrl);
+
+  const imgSection = (() => {
+    if (anySubmitted && submittedMem && showPhotos && submittedMem.photoUrl) {
+      return `<div class="card-img-wrap">
+        <img src="${esc(submittedMem.photoUrl)}" alt="Chore photo" loading="lazy"
+             onerror="this.parentElement.innerHTML='<div class=\\'card-img-placeholder\\'><span>📷</span><span>Photo submitted</span></div>'">
+        <div class="status-ribbon ${ribbonClass}">${ribbonText}</div>
+      </div>`;
+    } else if (anySubmitted) {
+      return `<div class="card-img-wrap">
+        <div class="card-img-placeholder">
+          <span>📷</span><span>Photo submitted</span>
+        </div>
+        <div class="status-ribbon ${ribbonClass}">${ribbonText}</div>
+      </div>`;
+    } else {
+      return `<div class="card-img-wrap">
+        <div class="card-img-placeholder">
+          <span>❌</span><span>Not submitted</span>
+        </div>
+        <div class="status-ribbon ${ribbonClass}">${ribbonText}</div>
+      </div>`;
+    }
+  })();
+
+  const memberPills = chore.members.map(m => {
+    const cls = m.submitted ? 'member-pill submitted' : 'member-pill';
+    return `<span class="${cls}"><span class="dot"></span>${esc(m.memberName)}</span>`;
+  }).join('');
+
+  const submitTime = (() => {
+    const sub = chore.members.find(m => m.submittedAt);
+    if (!sub) return '';
+    try {
+      const d = new Date(sub.submittedAt);
+      return `Submitted ${d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' })} at ${d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', timeZone:'America/New_York' })}`;
+    } catch(_) { return ''; }
+  })();
+
+  const submissionId = submittedMem ? submittedMem.submissionId : null;
+  const flagDisabled = !anySubmitted || !submissionId ? 'disabled' : '';
+
+  const card = document.createElement('div');
+  card.className = cardClass;
+  card.innerHTML = `
+    ${imgSection}
+    <div class="card-body">
+      <h3>${esc(chore.choreName)}</h3>
+      <div class="member-list">${memberPills}</div>
+      ${submitTime ? `<div class="submit-time">${submitTime}</div>` : ''}
+      <button class="flag-btn" ${flagDisabled}
+        onclick="openFlagModal('${submissionId ? esc(submissionId) : ''}', '${esc(chore.choreName)}')">
+        ⚑ Flag for Review
+      </button>
+    </div>
+  `;
+  return card;
+}
+
+// ---- Flag modal --------------------------------------------
+function openFlagModal(submissionId, choreName) {
+  if (!submissionId) return;
+  flagTarget = submissionId;
+  document.getElementById('flag-modal-sub').textContent = choreName;
+  document.getElementById('flag-note').value = '';
+  document.getElementById('flag-modal').classList.add('open');
+}
+
+function closeFlagModal() {
+  document.getElementById('flag-modal').classList.remove('open');
+  flagTarget = null;
+}
+
+function submitFlag() {
+  if (!flagTarget) return;
+  const note = document.getElementById('flag-note').value.trim();
+  if (!note) { alert('Please enter a note explaining the issue.'); return; }
+  closeFlagModal();
+
+  google.script.run
+    .withSuccessHandler(function(json) {
+      const r = JSON.parse(json);
+      showToast(r.success ? 'Flagged for officer review!' : 'Error: ' + r.message);
+      if (r.success) refreshData();
+    })
+    .withFailureHandler(function(e) { showToast('Failed to flag.'); })
+    .flagSubmission(flagTarget, note);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>
