@@ -222,28 +222,6 @@ The notebook needs at least 1 semester to produce risk scores, and 2+ semesters 
 
 ---
 
-## GitHub / Security Notes
-
-**Never commit to version control:**
-- Any file containing real member names or emails
-- The service account JSON key
-- Your `config/settings.json` after you've filled in real values
-- Screenshots of the Officer Dashboard or member data
-
-Add to `.gitignore`:
-```
-config/settings.json
-*.pkl
-qr/output/
-python/member_risk_scores.csv
-python/chore_risk_scores.csv
-python/smart_assignments.csv
-```
-
-The Apps Script code itself (the `.gs` and `.html` files) is safe to commit — it contains no secrets because all sensitive values are stored in Script Properties and the Sheets config tab.
-
----
-
 ## Future Improvements
 
 - **Better photo hashing**: The current hash uses byte sampling. A true perceptual hash (pHash) would require an external image processing service or Cloud Function. Consider Cloud Run + Python `imagehash` library for more accurate duplicate detection.
