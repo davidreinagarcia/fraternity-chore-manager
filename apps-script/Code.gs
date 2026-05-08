@@ -912,3 +912,205 @@ function getChoreMembers(choreName) {
     return JSON.stringify([]);
   }
 }
+
+// ============================================================
+// Admin Dashboard — new functions
+// ============================================================
+
+// ---- Chore Manager -----------------------------------------
+
+// Returns raw chore_ratios.json data (no fill-count enrichment).
+function getChoreRatiosRaw() {
+  try {
+    const data = _getChoreRatiosData();
+    return JSON.stringify({ success: true, data: data });
+  } catch (err) {
+    logError('getChoreRatiosRaw', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// Overwrites chore_ratios.json with the supplied array of {name, people} objects.
+function saveChoreRatios(chorePairsJson) {
+  try {
+    const chores = JSON.parse(chorePairsJson);
+    const jsonStr = JSON.stringify({ chores: chores }, null, 2);
+    const files = DriveApp.getFilesByName('chore_ratios.json');
+    if (files.hasNext()) {
+      files.next().setContent(jsonStr);
+    } else {
+      DriveApp.createFile('chore_ratios.json', jsonStr, 'application/json');
+    }
+    logInfo('saveChoreRatios', 'Saved ' + chores.length + ' chores.');
+    return JSON.stringify({ success: true });
+  } catch (err) {
+    logError('saveChoreRatios', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// ---- Member Manager ----------------------------------------
+
+// Returns all members (all statuses) from the members sheet.
+function getMembers() {
+  try {
+    const data = getSpreadsheet().getSheetByName('members').getDataRange().getValues();
+    const members = [];
+    for (var i = 1; i < data.length; i++) {
+      var r = data[i];
+      members.push({ memberId: r[0], name: r[1], email: r[2], status: r[3], pledgeClass: r[4] });
+    }
+    return JSON.stringify({ success: true, data: members });
+  } catch (err) {
+    logError('getMembers', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// Adds a new active member. Returns error if email already exists.
+function addMember(name, email, pledgeClass) {
+  try {
+    if (!name || !email) return JSON.stringify({ success: false, error: 'Name and email are required.' });
+    var sheet = getSpreadsheet().getSheetByName('members');
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][2]).toLowerCase() === String(email).toLowerCase()) {
+        return JSON.stringify({ success: false, error: 'A member with this email already exists.' });
+      }
+    }
+    var mid = 'M' + Utilities.getUuid().replace(/-/g, '').substring(0, 8).toUpperCase();
+    sheet.appendRow([mid, name, email, 'active', pledgeClass || '', new Date().toISOString()]);
+    logInfo('addMember', 'Added: ' + email);
+    return JSON.stringify({ success: true, memberId: mid });
+  } catch (err) {
+    logError('addMember', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// Toggles a member between 'active' and 'inactive'.
+function updateMemberStatus(memberId, status) {
+  try {
+    if (status !== 'active' && status !== 'inactive') {
+      return JSON.stringify({ success: false, error: 'Invalid status value.' });
+    }
+    var sheet = getSpreadsheet().getSheetByName('members');
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === memberId) {
+        sheet.getRange(i + 1, 4).setValue(status);
+        logInfo('updateMemberStatus', memberId + ' → ' + status);
+        return JSON.stringify({ success: true });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) {
+    logError('updateMemberStatus', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// Permanently deletes a member row by memberId.
+function deleteMember(memberId) {
+  try {
+    var sheet = getSpreadsheet().getSheetByName('members');
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === memberId) {
+        sheet.deleteRow(i + 1);
+        logInfo('deleteMember', 'Deleted: ' + memberId);
+        return JSON.stringify({ success: true });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) {
+    logError('deleteMember', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// ---- Config Editor -----------------------------------------
+
+// Returns all key-value rows from the config sheet.
+function getConfig() {
+  try {
+    var data = getSpreadsheet().getSheetByName('config').getDataRange().getValues();
+    var config = [];
+    for (var i = 0; i < data.length; i++) {
+      if (data[i][0]) config.push({ key: String(data[i][0]), value: data[i][1] });
+    }
+    return JSON.stringify({ success: true, data: config });
+  } catch (err) {
+    logError('getConfig', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// Writes a single config key-value pair back to the config sheet.
+function saveConfig(key, value) {
+  try {
+    setConfigValue(key, value);
+    logInfo('saveConfig', key + ' = ' + value);
+    return JSON.stringify({ success: true });
+  } catch (err) {
+    logError('saveConfig', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// ---- Semester Tools: CSV text import -----------------------
+
+// Accepts raw CSV text (not a Drive file ID) pasted directly from the UI.
+function importMembersFromCSVText(csvText, pin) {
+  if (!_checkOfficerPin(pin)) {
+    logError('importMembersFromCSVText', 'Unauthorized attempt — wrong PIN');
+    return JSON.stringify({ success: false, error: 'Unauthorized: incorrect officer PIN.' });
+  }
+  try {
+    if (!csvText || !csvText.trim()) return JSON.stringify({ success: false, error: 'No CSV text provided.' });
+    var lines = csvText.split(/\r?\n/).filter(function(l) { return l.trim(); });
+    var parseRow = function(row) { return row.split(',').map(function(c) { return c.trim().replace(/^"|"$/g, ''); }); };
+
+    var startIdx = 0;
+    var first = parseRow(lines[0]);
+    if (first[0].toLowerCase() === 'name' || first[0].toLowerCase() === 'full name') startIdx = 1;
+
+    var ss = getSpreadsheet();
+    var sheet = ss.getSheetByName('members');
+    var existing = sheet.getDataRange().getValues();
+    var emailMap = {};
+    for (var i = 1; i < existing.length; i++) emailMap[existing[i][2]] = i + 1;
+
+    var csvEmails = new Set();
+    var added = 0, updated = 0;
+    for (var j = startIdx; j < lines.length; j++) {
+      var cols = parseRow(lines[j]);
+      if (cols.length < 2 || !cols[1]) continue;
+      var name = cols[0], email = cols[1], pledgeClass = cols[2] || '';
+      csvEmails.add(email);
+      if (emailMap[email]) {
+        sheet.getRange(emailMap[email], 2).setValue(name);
+        sheet.getRange(emailMap[email], 4).setValue('active');
+        sheet.getRange(emailMap[email], 5).setValue(pledgeClass);
+        updated++;
+      } else {
+        var mid = 'M' + Utilities.getUuid().replace(/-/g, '').substring(0, 8).toUpperCase();
+        sheet.appendRow([mid, name, email, 'active', pledgeClass, new Date().toISOString()]);
+        added++;
+      }
+    }
+    var fresh = sheet.getDataRange().getValues();
+    var deactivated = 0;
+    for (var k = 1; k < fresh.length; k++) {
+      if (!csvEmails.has(fresh[k][2]) && fresh[k][3] === 'active') {
+        sheet.getRange(k + 1, 4).setValue('inactive');
+        deactivated++;
+      }
+    }
+    logInfo('importMembersFromCSVText', 'Added:' + added + ' Updated:' + updated + ' Deactivated:' + deactivated);
+    return JSON.stringify({ success: true, added: added, updated: updated, deactivated: deactivated });
+  } catch (err) {
+    logError('importMembersFromCSVText', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}

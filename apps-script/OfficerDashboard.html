@@ -200,6 +200,41 @@
   /* ---- Compliance bar ---- */
   .compliance-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
   .compliance-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+
+  /* ---- Admin sections ---- */
+  .admin-section { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; overflow: hidden; }
+  .admin-section-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none;
+  }
+  .admin-section-header:hover { background: #fafbff; }
+  .admin-section-header h2 { font-size: 1rem; font-weight: 700; }
+  .admin-section-toggle { font-size: 0.85rem; color: var(--muted); transition: transform 0.15s; }
+  .admin-section-body { padding: 20px; }
+  .admin-loading { text-align: center; padding: 24px; color: var(--muted); font-size: 0.85rem; }
+  .inline-input {
+    padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 0.85rem; font-family: inherit; background: white;
+  }
+  .inline-input:focus { outline: none; border-color: var(--primary); }
+  .config-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap;
+  }
+  .config-row:last-child { border-bottom: none; }
+  .config-key { min-width: 170px; }
+  .config-key-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 3px; }
+  .config-important {
+    font-size: 0.68rem; background: var(--yellow-bg); color: var(--yellow);
+    padding: 1px 7px; border-radius: 4px; font-weight: 700; text-transform: uppercase;
+  }
+  .config-val-input {
+    flex: 1; min-width: 180px; padding: 7px 10px;
+    border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; font-family: inherit;
+  }
+  .config-val-input:focus { outline: none; border-color: var(--primary); }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -249,7 +284,7 @@
       <button class="tab-btn active" onclick="showTab('tab-status')">This Week</button>
       <button class="tab-btn" onclick="showTab('tab-fines')">Fine Preview</button>
       <button class="tab-btn" onclick="showTab('tab-members')">Member Stats</button>
-      <button class="tab-btn" onclick="showTab('tab-admin')">Admin</button>
+      <button class="tab-btn" onclick="showTab('tab-admin');initAdminTab()">Admin</button>
     </div>
 
     <!-- Tab: This Week's Status -->
@@ -338,12 +373,9 @@
 
     <!-- Tab: Admin -->
     <div id="tab-admin" class="tab-pane">
-      <div class="admin-grid">
-        <div class="admin-card">
-          <h3>Import Members</h3>
-          <p>Upload a CSV file to add or update members for this semester.</p>
-          <button class="btn-primary" onclick="callImportMembers()">Import Members CSV</button>
-        </div>
+
+      <!-- Quick actions -->
+      <div class="admin-grid" style="margin-bottom:20px">
         <div class="admin-card">
           <h3>Auto-Split Members</h3>
           <p>Randomly distribute all unassigned active members into open chore slots.</p>
@@ -354,12 +386,136 @@
           <p>Push all current submission, fine, and assignment data to BigQuery.</p>
           <button class="btn-outline" onclick="callBQSync()">Sync to BigQuery</button>
         </div>
-        <div class="admin-card">
-          <h3>End of Semester</h3>
-          <p>Archive data to BigQuery and clear this semester's records. Irreversible.</p>
-          <button class="btn-danger" onclick="confirmEndSemester()">End of Semester Archive</button>
+      </div>
+
+      <!-- 1. Chore Manager -->
+      <div class="admin-section">
+        <div class="admin-section-header" onclick="toggleAdminSection('admin-chores')">
+          <h2>Chore Manager</h2>
+          <span class="admin-section-toggle" id="admin-chores-toggle">▲</span>
+        </div>
+        <div class="admin-section-body" id="admin-chores-body">
+          <div class="admin-loading" id="admin-chores-loading">Loading chores...</div>
+          <div id="admin-chores-content" style="display:none">
+            <div style="overflow-x:auto">
+              <table class="data-table" id="chores-table">
+                <thead>
+                  <tr>
+                    <th>Chore Name</th>
+                    <th style="width:140px">Members Required</th>
+                    <th style="width:90px">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="chores-tbody"></tbody>
+              </table>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;background:#f8fafc;padding:14px;border-radius:8px">
+              <div>
+                <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Chore Name</label>
+                <input type="text" id="new-chore-name" class="inline-input" placeholder="e.g. Kitchen Cleanup" style="width:210px">
+              </div>
+              <div>
+                <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Members Required</label>
+                <input type="number" id="new-chore-count" class="inline-input" min="1" value="2" style="width:80px">
+              </div>
+              <button class="btn-primary" onclick="addChore()">+ Add Chore</button>
+            </div>
+            <div style="margin-top:14px;display:flex;justify-content:flex-end">
+              <button class="btn-primary" onclick="saveChores()">Save All Chores</button>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- 2. Member Manager -->
+      <div class="admin-section">
+        <div class="admin-section-header" onclick="toggleAdminSection('admin-members')">
+          <h2>Member Manager</h2>
+          <span class="admin-section-toggle" id="admin-members-toggle">▲</span>
+        </div>
+        <div class="admin-section-body" id="admin-members-body">
+          <div class="admin-loading" id="admin-members-loading">Loading members...</div>
+          <div id="admin-members-content" style="display:none">
+            <div style="margin-bottom:12px">
+              <input type="text" id="admin-member-search" class="inline-input" placeholder="Search by name, email, or pledge class..." style="width:280px" oninput="filterAdminMembers()">
+            </div>
+            <div style="overflow-x:auto">
+              <table class="data-table" id="admin-members-table">
+                <thead>
+                  <tr>
+                    <th>Member ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Pledge Class</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-members-tbody"></tbody>
+              </table>
+            </div>
+            <div style="margin-top:18px;background:#f8fafc;border-radius:8px;padding:16px">
+              <div style="font-size:0.85rem;font-weight:700;margin-bottom:12px;color:var(--primary)">Add New Member</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+                <div>
+                  <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Full Name</label>
+                  <input type="text" id="new-member-name" class="inline-input" placeholder="John Smith" style="width:160px">
+                </div>
+                <div>
+                  <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Email</label>
+                  <input type="email" id="new-member-email" class="inline-input" placeholder="jsmith@email.com" style="width:200px">
+                </div>
+                <div>
+                  <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Pledge Class</label>
+                  <input type="text" id="new-member-pledge" class="inline-input" placeholder="Spring 2025" style="width:130px">
+                </div>
+                <button class="btn-primary" onclick="addAdminMember()">+ Add Member</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Config Editor -->
+      <div class="admin-section">
+        <div class="admin-section-header" onclick="toggleAdminSection('admin-config')">
+          <h2>Config Editor</h2>
+          <span class="admin-section-toggle" id="admin-config-toggle">▲</span>
+        </div>
+        <div class="admin-section-body" id="admin-config-body">
+          <div class="admin-loading" id="admin-config-loading">Loading config...</div>
+          <div id="admin-config-content" style="display:none">
+            <div id="config-rows"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Semester Tools -->
+      <div class="admin-section">
+        <div class="admin-section-header" onclick="toggleAdminSection('admin-semester')">
+          <h2>Semester Tools</h2>
+          <span class="admin-section-toggle" id="admin-semester-toggle">▲</span>
+        </div>
+        <div class="admin-section-body" id="admin-semester-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+              <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Import Members CSV</div>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">
+                Paste CSV rows (name, email, pledge_class) to batch-add or update members. Members NOT in the CSV will be deactivated.
+              </p>
+              <button class="btn-primary" onclick="openCSVImportModal()">Paste &amp; Import CSV</button>
+            </div>
+            <div style="background:var(--red-bg);border-radius:8px;padding:16px;border:1px solid #fecaca">
+              <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px;color:var(--red)">End of Semester Archive</div>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">
+                Syncs all data to BigQuery, then clears assignments, submissions, fines, and weekly_status. <strong>This is irreversible.</strong>
+              </p>
+              <button class="btn-danger" onclick="openEndSemesterModal()">End of Semester Archive</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -373,6 +529,54 @@
     <div class="modal-btns">
       <button class="btn-outline" onclick="closeModal()">Cancel</button>
       <button id="modal-confirm-btn" class="btn-primary" onclick="confirmVerify()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- CSV Import Modal -->
+<div class="modal-overlay" id="csv-import-modal">
+  <div class="modal" style="width:560px;max-width:96vw">
+    <h3>Import Members CSV</h3>
+    <p style="font-size:0.82rem;color:var(--muted);margin-bottom:12px;line-height:1.5">
+      Paste CSV rows below. Format: <code style="background:#f1f5f9;padding:1px 6px;border-radius:3px;font-size:0.8rem">name, email, pledge_class</code>
+      (header row optional). Members <strong>not</strong> in this list will be deactivated.
+    </p>
+    <textarea id="csv-textarea" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;resize:vertical;min-height:120px;font-family:monospace;margin-bottom:10px" placeholder="John Smith, jsmith@email.com, Spring 2025&#10;Jane Doe, jdoe@email.com, Fall 2024"></textarea>
+    <div style="margin-bottom:12px">
+      <button class="btn-outline" onclick="previewCSV()" style="font-size:0.82rem;padding:6px 14px">Preview Rows</button>
+    </div>
+    <div id="csv-preview-section" style="display:none;margin-bottom:14px;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+      <div id="csv-preview" style="padding:10px"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="closeCSVModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmCSVImport()">Import Members</button>
+    </div>
+  </div>
+</div>
+
+<!-- End of Semester Double-Confirm Modal -->
+<div class="modal-overlay" id="end-semester-modal">
+  <div class="modal" style="max-width:96vw">
+    <h3 style="color:var(--red)">End of Semester Archive</h3>
+    <div style="background:var(--red-bg);border:1px solid #fecaca;border-radius:8px;padding:14px;margin:12px 0 16px">
+      <div style="font-weight:700;color:var(--red);margin-bottom:8px">WARNING — This action cannot be undone</div>
+      <ul style="font-size:0.84rem;padding-left:18px;line-height:1.8;color:var(--text)">
+        <li>All data will be synced to BigQuery</li>
+        <li>All chore assignments will be deleted</li>
+        <li>All submissions will be deleted</li>
+        <li>All fine records will be deleted</li>
+        <li>Weekly status will be cleared</li>
+        <li>Member list will <strong>not</strong> be affected</li>
+      </ul>
+    </div>
+    <p style="font-size:0.85rem;margin-bottom:8px">Type <strong>ARCHIVE</strong> to enable the confirm button:</p>
+    <input type="text" id="end-semester-confirm-input" class="inline-input" placeholder="ARCHIVE"
+           style="width:100%;margin-bottom:16px;font-size:1rem;letter-spacing:2px;text-align:center"
+           oninput="checkEndSemesterInput()">
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="closeEndSemesterModal()">Cancel</button>
+      <button id="end-semester-confirm-btn" class="btn-danger" onclick="doEndSemesterArchive()" disabled>Archive Semester</button>
     </div>
   </div>
 </div>
@@ -721,6 +925,345 @@ function showToast(msg) {
 
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ---- Admin Tab --------------------------------------------
+var _adminTabOpened = false;
+var adminChores = [];
+var adminMembersData = [];
+var adminConfigData = [];
+var IMPORTANT_KEYS = ['semester', 'week_start', 'officer_emails', 'fine_amount', 'officer_pin'];
+
+function initAdminTab() {
+  if (_adminTabOpened) return;
+  _adminTabOpened = true;
+  loadAdminChores();
+  loadAdminMembers();
+  loadAdminConfig();
+}
+
+function toggleAdminSection(id) {
+  var body   = document.getElementById(id + '-body');
+  var toggle = document.getElementById(id + '-toggle');
+  var isOpen = body.style.display !== 'none';
+  body.style.display   = isOpen ? 'none' : 'block';
+  toggle.textContent   = isOpen ? '▼' : '▲';
+}
+
+// ---- Chore Manager ----------------------------------------
+function loadAdminChores() {
+  document.getElementById('admin-chores-loading').style.display = 'block';
+  document.getElementById('admin-chores-content').style.display = 'none';
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (!r.success) { showToast('Error loading chores: ' + r.error); return; }
+      adminChores = (r.data.chores || []).map(function(c) { return { name: c.name, people: c.people }; });
+      renderChoresTable();
+      document.getElementById('admin-chores-loading').style.display = 'none';
+      document.getElementById('admin-chores-content').style.display = 'block';
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('admin-chores-loading').textContent = 'Failed to load chores.';
+      onError(err);
+    })
+    .getChoreRatiosRaw();
+}
+
+function renderChoresTable() {
+  var tbody = document.getElementById('chores-tbody');
+  tbody.innerHTML = '';
+  if (!adminChores.length) {
+    tbody.innerHTML = '<tr><td colspan="3" class="empty-state">No chores defined. Add one below.</td></tr>';
+    return;
+  }
+  adminChores.forEach(function(c, idx) {
+    tbody.insertAdjacentHTML('beforeend',
+      '<tr>' +
+      '<td><input type="text" class="inline-input" value="' + esc(c.name) + '" style="width:100%;min-width:150px" ' +
+      'onchange="adminChores[' + idx + '].name=this.value.trim()"></td>' +
+      '<td><input type="number" class="inline-input" min="1" value="' + c.people + '" style="width:70px" ' +
+      'onchange="adminChores[' + idx + '].people=parseInt(this.value)||1"></td>' +
+      '<td><button class="action-btn btn-fail" onclick="deleteChore(' + idx + ')">Delete</button></td>' +
+      '</tr>'
+    );
+  });
+}
+
+function addChore() {
+  var name  = document.getElementById('new-chore-name').value.trim();
+  var count = parseInt(document.getElementById('new-chore-count').value) || 1;
+  if (!name) { showToast('Enter a chore name.'); return; }
+  adminChores.push({ name: name, people: count });
+  document.getElementById('new-chore-name').value  = '';
+  document.getElementById('new-chore-count').value = '2';
+  renderChoresTable();
+  showToast('Chore added — click "Save All Chores" to persist.');
+}
+
+function deleteChore(idx) {
+  if (!confirm('Delete "' + adminChores[idx].name + '"?')) return;
+  adminChores.splice(idx, 1);
+  renderChoresTable();
+}
+
+function saveChores() {
+  // Sync any unsaved input values before sending
+  var nameInputs  = document.querySelectorAll('#chores-tbody input[type="text"]');
+  var countInputs = document.querySelectorAll('#chores-tbody input[type="number"]');
+  nameInputs.forEach(function(el, i)  { if (adminChores[i]) adminChores[i].name   = el.value.trim(); });
+  countInputs.forEach(function(el, i) { if (adminChores[i]) adminChores[i].people = parseInt(el.value) || 1; });
+  showToast('Saving chores...');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? 'Chores saved!' : 'Error: ' + r.error);
+    })
+    .withFailureHandler(onError)
+    .saveChoreRatios(JSON.stringify(adminChores));
+}
+
+// ---- Member Manager ----------------------------------------
+function loadAdminMembers() {
+  document.getElementById('admin-members-loading').style.display = 'block';
+  document.getElementById('admin-members-content').style.display = 'none';
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (!r.success) { showToast('Error loading members: ' + r.error); return; }
+      adminMembersData = r.data;
+      renderAdminMembersTable(adminMembersData);
+      document.getElementById('admin-members-loading').style.display = 'none';
+      document.getElementById('admin-members-content').style.display = 'block';
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('admin-members-loading').textContent = 'Failed to load members.';
+      onError(err);
+    })
+    .getMembers();
+}
+
+function renderAdminMembersTable(data) {
+  var tbody = document.getElementById('admin-members-tbody');
+  tbody.innerHTML = '';
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No members found.</td></tr>';
+    return;
+  }
+  data.forEach(function(m) {
+    var badge      = m.status === 'active' ? '<span class="badge badge-verified">active</span>' : '<span class="badge badge-pending">inactive</span>';
+    var toggleLbl  = m.status === 'active' ? 'Deactivate' : 'Activate';
+    var toggleCls  = m.status === 'active' ? 'btn-fail' : 'btn-verify';
+    var newStatus  = m.status === 'active' ? 'inactive' : 'active';
+    var safeName   = esc(m.name);
+    tbody.insertAdjacentHTML('beforeend',
+      '<tr>' +
+      '<td style="font-family:monospace;font-size:0.75rem;color:var(--muted)">' + esc(m.memberId) + '</td>' +
+      '<td><strong>' + safeName + '</strong></td>' +
+      '<td>' + esc(m.email) + '</td>' +
+      '<td>' + esc(m.pledgeClass || '—') + '</td>' +
+      '<td>' + badge + '</td>' +
+      '<td>' +
+      '<button class="action-btn ' + toggleCls + '" onclick="toggleMemberStatus(\'' + m.memberId + '\',\'' + newStatus + '\',\'' + safeName + '\')">' + toggleLbl + '</button> ' +
+      '<button class="action-btn btn-fail" onclick="deleteAdminMember(\'' + m.memberId + '\',\'' + safeName + '\')">Delete</button>' +
+      '</td>' +
+      '</tr>'
+    );
+  });
+}
+
+function filterAdminMembers() {
+  var q = document.getElementById('admin-member-search').value.toLowerCase();
+  renderAdminMembersTable(adminMembersData.filter(function(m) {
+    return m.name.toLowerCase().includes(q) ||
+           m.email.toLowerCase().includes(q) ||
+           (m.pledgeClass || '').toLowerCase().includes(q);
+  }));
+}
+
+function toggleMemberStatus(memberId, newStatus, name) {
+  if (!confirm('Set ' + name + ' to ' + newStatus + '?')) return;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? name + ' is now ' + newStatus + '.' : 'Error: ' + r.error);
+      if (r.success) loadAdminMembers();
+    })
+    .withFailureHandler(onError)
+    .updateMemberStatus(memberId, newStatus);
+}
+
+function deleteAdminMember(memberId, name) {
+  if (!confirm('Delete member "' + name + '"? This cannot be undone.')) return;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? name + ' deleted.' : 'Error: ' + r.error);
+      if (r.success) loadAdminMembers();
+    })
+    .withFailureHandler(onError)
+    .deleteMember(memberId);
+}
+
+function addAdminMember() {
+  var name   = document.getElementById('new-member-name').value.trim();
+  var email  = document.getElementById('new-member-email').value.trim();
+  var pledge = document.getElementById('new-member-pledge').value.trim();
+  if (!name || !email) { showToast('Name and email are required.'); return; }
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (r.success) {
+        showToast('Member added!');
+        document.getElementById('new-member-name').value  = '';
+        document.getElementById('new-member-email').value = '';
+        document.getElementById('new-member-pledge').value = '';
+        loadAdminMembers();
+      } else {
+        showToast('Error: ' + r.error);
+      }
+    })
+    .withFailureHandler(onError)
+    .addMember(name, email, pledge);
+}
+
+// ---- Config Editor ----------------------------------------
+function loadAdminConfig() {
+  document.getElementById('admin-config-loading').style.display = 'block';
+  document.getElementById('admin-config-content').style.display = 'none';
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (!r.success) { showToast('Error loading config: ' + r.error); return; }
+      adminConfigData = r.data;
+      renderConfigEditor();
+      document.getElementById('admin-config-loading').style.display = 'none';
+      document.getElementById('admin-config-content').style.display = 'block';
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('admin-config-loading').textContent = 'Failed to load config.';
+      onError(err);
+    })
+    .getConfig();
+}
+
+function renderConfigEditor() {
+  var container = document.getElementById('config-rows');
+  container.innerHTML = '';
+  if (!adminConfigData.length) {
+    container.innerHTML = '<div class="empty-state">No config values found.</div>';
+    return;
+  }
+  adminConfigData.forEach(function(item, idx) {
+    var isKey = IMPORTANT_KEYS.indexOf(item.key) !== -1;
+    container.insertAdjacentHTML('beforeend',
+      '<div class="config-row">' +
+      '<div class="config-key">' +
+      '<div class="config-key-name">' + esc(item.key) + '</div>' +
+      (isKey ? '<span class="config-important">Key Config</span>' : '') +
+      '</div>' +
+      '<input type="text" class="config-val-input" id="cfg-' + idx + '" value="' + esc(String(item.value)) + '">' +
+      '<button class="action-btn btn-verify" onclick="saveConfigItem(' + idx + ',\'' + esc(item.key) + '\')">Save</button>' +
+      '</div>'
+    );
+  });
+}
+
+function saveConfigItem(idx, key) {
+  var val = document.getElementById('cfg-' + idx).value;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? 'Saved: ' + key : 'Error: ' + r.error);
+    })
+    .withFailureHandler(onError)
+    .saveConfig(key, val);
+}
+
+// ---- CSV Import Modal -------------------------------------
+function openCSVImportModal() {
+  document.getElementById('csv-textarea').value = '';
+  document.getElementById('csv-preview').innerHTML = '';
+  document.getElementById('csv-preview-section').style.display = 'none';
+  document.getElementById('csv-import-modal').classList.add('open');
+}
+
+function closeCSVModal() {
+  document.getElementById('csv-import-modal').classList.remove('open');
+}
+
+function previewCSV() {
+  var text = document.getElementById('csv-textarea').value.trim();
+  if (!text) { showToast('Paste CSV data first.'); return; }
+  var parseRow = function(row) { return row.split(',').map(function(c) { return c.trim().replace(/^"|"$/g, ''); }); };
+  var lines = text.split(/\r?\n/).filter(function(l) { return l.trim(); });
+  var start = 0;
+  var first = parseRow(lines[0]);
+  if (first[0].toLowerCase() === 'name' || first[0].toLowerCase() === 'full name') start = 1;
+  var rows = [];
+  for (var i = start; i < lines.length; i++) {
+    var c = parseRow(lines[i]);
+    if (c.length >= 2 && c[1]) rows.push(c);
+  }
+  if (!rows.length) { showToast('No valid rows found in the CSV.'); return; }
+  var shown = rows.slice(0, 10);
+  var html = '<div style="font-size:0.8rem;font-weight:700;margin-bottom:8px">' + rows.length + ' member(s) found:</div>' +
+    '<table class="data-table" style="font-size:0.78rem"><thead><tr><th>Name</th><th>Email</th><th>Pledge Class</th></tr></thead><tbody>';
+  shown.forEach(function(r) {
+    html += '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td>' + esc(r[2] || '—') + '</td></tr>';
+  });
+  if (rows.length > 10) html += '<tr><td colspan="3" style="text-align:center;color:var(--muted)">… and ' + (rows.length - 10) + ' more</td></tr>';
+  html += '</tbody></table>';
+  document.getElementById('csv-preview').innerHTML = html;
+  document.getElementById('csv-preview-section').style.display = 'block';
+}
+
+function confirmCSVImport() {
+  var text = document.getElementById('csv-textarea').value.trim();
+  if (!text) { showToast('No CSV data entered.'); return; }
+  closeCSVModal();
+  showToast('Importing members...');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (r.success) {
+        showToast('Done! Added: ' + r.added + '  Updated: ' + r.updated + '  Deactivated: ' + r.deactivated);
+        loadAdminMembers();
+      } else {
+        showToast('Import failed: ' + (r.error || 'unknown error'));
+      }
+    })
+    .withFailureHandler(onError)
+    .importMembersFromCSVText(text, correctPin);
+}
+
+// ---- End of Semester Modal --------------------------------
+function openEndSemesterModal() {
+  document.getElementById('end-semester-confirm-input').value = '';
+  document.getElementById('end-semester-confirm-btn').disabled = true;
+  document.getElementById('end-semester-modal').classList.add('open');
+}
+
+function closeEndSemesterModal() {
+  document.getElementById('end-semester-modal').classList.remove('open');
+}
+
+function checkEndSemesterInput() {
+  var ok = document.getElementById('end-semester-confirm-input').value === 'ARCHIVE';
+  document.getElementById('end-semester-confirm-btn').disabled = !ok;
+}
+
+function doEndSemesterArchive() {
+  closeEndSemesterModal();
+  showToast('Archiving — this may take a minute...');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? 'Semester archived!' : 'Error: ' + r.error);
+      if (r.success) refreshAll();
+    })
+    .withFailureHandler(onError)
+    .endOfSemesterArchiveWeb(correctPin);
 }
 </script>
 </body>
