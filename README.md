@@ -32,11 +32,19 @@ The system is deliberately simple under the hood — no frameworks, no servers, 
 │  PhotoCheck.gs ─── Photo upload, perceptual hash, dupe detection   │
 │  BigQuerySync.gs ─── REST API sync to BigQuery                     │
 │                                                                     │
-│  Web Apps (HTML served by Apps Script):                            │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐  ┌───────┐ │
-│  │  DraftApp   │  │  SubmitApp   │  │OfficerDashboard│  │Member │ │
-│  │  (TV board) │  │  (QR scan)   │  │ (review/admin) │  │ View  │ │
-│  └─────────────┘  └──────────────┘  └────────────────┘  └───────┘ │
+│  Web Apps (single deployment URL, routed via ?app= param):         │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │ HomeApp  │  │SubmitApp │  │  DraftApp    │  │   Member     │   │
+│  │  (hub)   │  │(QR/manual│  │ (TV board +  │  │    View      │   │
+│  │          │  │submission│  │  manager)    │  │ (compliance) │   │
+│  └──────────┘  └──────────┘  └──────────────┘  └──────────────┘   │
+│                                                                     │
+│  ┌───────────────────────────────────────┐                         │
+│  │         OfficerDashboard              │                         │
+│  │  This Week · Fine Preview · Member    │                         │
+│  │  Stats · Admin (Chore Manager,        │                         │
+│  │  Member Manager, Config, Semester)    │                         │
+│  └───────────────────────────────────────┘                         │
 └────────────────────────────┬────────────────────────────────────────┘
                              │
               ┌──────────────┼──────────────┐
@@ -44,9 +52,9 @@ The system is deliberately simple under the hood — no frameworks, no servers, 
        Google Sheets    Google Drive    Gmail
        (live database)  (photo store)  (fine emails)
               │
-              ▼ (end of semester / ongoing sync)
+              ▼ (end of semester archive)
        ┌─────────────┐
-       │  BigQuery   │  ← historical warehouse (free tier)
+       │  BigQuery   │  ← historical warehouse (free tier, optional)
        └─────────────┘
               │
               ▼
@@ -63,7 +71,8 @@ The system is deliberately simple under the hood — no frameworks, no servers, 
 1. Create a new Google Sheets workbook.
 2. Create these tabs (exact names): `members`, `chore_assignments`, `submissions`, `fines`, `weekly_status`, `config`, `logs`
 3. Add column headers to each tab:
-   - **members**: `member_id | name | email | status | pledge_class | added_date`
+   - **members**: `member_id | bk_number | name | email | status | pledge_class | added_date`
+     - `status` values: `active`, `associate`, `inactive`, `alumni`
    - **chore_assignments**: `assignment_id | member_id | chore_name | group_id | semester | assigned_date`
    - **submissions**: `submission_id | member_id | chore_name | week_start | submitted_at | photo_url | photo_hash | exif_date | auto_status | human_status | verified_by | notes`
    - **fines**: `fine_id | member_id | chore_name | week_start | reason | issued_at | issued_by`
@@ -78,7 +87,7 @@ The system is deliberately simple under the hood — no frameworks, no servers, 
 2. Create files matching the filenames in `apps-script/`:
    - Paste `Code.gs` content into `Code.gs` (rename the default `Code.gs`)
    - Click **+** > **Script** for `PhotoCheck.gs` and `BigQuerySync.gs`
-   - Click **+** > **HTML** for each of the four HTML files
+   - Click **+** > **HTML** for each HTML file: `HomeApp`, `SubmitApp`, `OfficerDashboard`, `DraftApp`, `MemberView`, `MemberDirectory`
 3. Go to **Project Settings** (gear icon) > **Script Properties** > **Add property**:
    - Key: `SPREADSHEET_ID` — Value: your Spreadsheet ID from Step 1
 4. Save all files.
@@ -129,27 +138,31 @@ Add these rows to your `config` tab (column A = key, column B = value):
 3. Execute as: **Me**
 4. Who has access: **Anyone within [your org]** (or Anyone if chapter emails are not on Google Workspace)
 5. Click **Deploy** and copy the deployment URL.
-6. Add the URL to `config/settings.json` as `deployment_id` (or just note it).
+6. **This URL is permanent — never create a new deployment.** Always use **Deploy > Manage Deployments > Edit** to push updates to the same URL. All navigation links and QR codes depend on this URL staying fixed.
 
 ### Step 8 — Generate QR Codes
 
-```bash
-cd frat-chores/qr
-pip install qrcode[pil] Pillow reportlab
-python generate_qr_codes.py
-```
+QR codes can be generated directly from the app — no Python needed:
 
-Paste your deployment URL when prompted. QR PNGs and a print-ready PDF are saved to `qr/output/`. Print them on cardstock, laminate, and post in each chore area.
+1. Log into the **Officer Dashboard** with your officer PIN
+2. Go to **Admin > Chore Manager**
+3. Click **QR** next to any chore to preview and download a labeled PNG
+4. Click **Download All QR Codes (ZIP)** to get a ZIP of all chores at once
+
+Print on cardstock, laminate, and post in each chore area. When members scan a QR code, SubmitApp pre-fills their chore so they only need to select their name and upload a photo.
+
+**Manual submission fallback:** Members can also navigate to `?app=submit` directly (no QR code) and will be prompted to select their chore from a dropdown first, then their name. This is useful if a QR code is damaged or a member's phone can't scan.
 
 ---
 
 ## Semester Start Workflow
 
-1. **Import members**: Prepare a CSV (`name,email,pledge_class`). Save it to Google Drive. Go to **Chore System > Import Members CSV** and paste the Drive file ID.
-2. **Auto-split or manual draft**:
-   - *Auto-split*: **Chore System > Open Draft App** > Manager Mode > Auto-Split Remaining. Review and save.
-   - *Draft night*: Put Draft App (Display Mode) on the TV via HDMI. House manager uses Manager Mode on a laptop to assign members live.
-3. **Verify config**: Check that `semester` and `week_start` in the `config` tab are correct.
+1. **Import members**: Go to **Officer Dashboard > Admin > Semester Tools > Import Members CSV**. Paste CSV rows in `name, email, pledge_class` format. Members not in the CSV will be deactivated automatically. Alternatively, use **Admin > Member Manager > Import CSV** for the same flow.
+2. **Graduate outgoing brothers**: In **Admin > Member Manager**, filter by Active and click **Graduate** on any brother who has crossed out. This sets their status to Alumni and hides them from all chore views.
+3. **Auto-split or manual draft**:
+   - *Auto-split*: Officer Dashboard > Admin > Quick Actions > **Run Auto-Split**. Or open DraftApp > Manager Mode (PIN required) > **Auto-Split Remaining**.
+   - *Draft night*: Put DraftApp (Display Mode) on the TV via HDMI. House manager uses Manager Mode (PIN-gated) on a laptop to assign members live.
+4. **Verify config**: Check that `semester` and `week_start` in the `config` tab (or Config Editor in Admin) are correct.
 
 ---
 
@@ -167,15 +180,16 @@ Paste your deployment URL when prompted. QR PNGs and a print-ready PDF are saved
 
 ## End of Semester Workflow
 
-1. Go to **Chore System > End of Semester Archive** (or Officer Dashboard > Admin > End of Semester)
-2. Confirm twice (it's irreversible)
+1. Go to **Officer Dashboard > Admin > Semester Tools > End of Semester Archive**
+2. Type `ARCHIVE` in the confirmation box and click the button (irreversible)
 3. The system:
-   - Pushes all data to BigQuery
+   - Pushes all data to BigQuery (optional — BigQuerySync.gs handles this)
    - Clears chore_assignments, submissions, fines, weekly_status
-   - Keeps members tab intact
-4. Update `config` tab: change `semester` and `week_start` to the new semester values
-5. Re-import members CSV (deactivates graduated members, adds new pledges)
-6. Run draft night for the new semester
+   - Keeps the members tab intact
+4. Update `semester` and `week_start` in the Config Editor (Admin tab)
+5. Graduate any brothers who crossed out (Admin > Member Manager > Graduate)
+6. Re-import the new semester's member CSV to add pledges and deactivate inactive members
+7. Run draft night for the new semester
 
 ---
 
@@ -194,11 +208,29 @@ The notebook needs at least 1 semester to produce risk scores, and 2+ semesters 
 
 ---
 
+## Navigation & Access
+
+All pages live under the single deployment URL. Share the base URL with members — they land on HomeApp which routes everything.
+
+| URL parameter | Page | Auth |
+|---|---|---|
+| `?app=home` (default) | HomeApp — navigation hub | None |
+| `?app=submit` | SubmitApp — chore photo upload | None |
+| `?app=submit&chore=Kitchen` | SubmitApp — pre-filled from QR code | None |
+| `?app=member` | MemberView — personal compliance history | None |
+| `?app=officer` | Officer Dashboard | Officer PIN |
+| `?app=draft&mode=display` | Draft Night Board (read-only TV display) | None |
+| `?app=draft&mode=manage` | Draft Night Board (manage assignments) | Officer PIN |
+
+The `officer_pin` config value is the shared PIN used by OfficerDashboard and DraftApp Manager Mode. Change it in **Admin > Config Editor**.
+
+---
+
 ## Troubleshooting
 
 **QR codes scan but show an error page**
 - Check that the web app is deployed with "Anyone" access
-- Re-deploy after any script changes (each deploy creates a new version)
+- Never create a new deployment — always edit the existing one (Deploy > Manage Deployments)
 
 **Monday Reset runs but doesn't email**
 - Verify `officer_emails` in config tab is a comma-separated list with no spaces
