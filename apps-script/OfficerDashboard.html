@@ -53,7 +53,7 @@
     background: white; border-radius: var(--radius); padding: 40px 32px;
     text-align: center; width: 320px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   }
-  .pin-card .pin-logo { height: 56px; width: auto; margin-bottom: 12px; }
+  .pin-card .pin-logo { height: 56px; width: auto; max-width: 100%; margin-bottom: 12px; }
   .pin-card h2 { color: var(--primary); margin-bottom: 6px; font-size: 1.4rem; }
   .pin-card p { color: var(--muted); margin-bottom: 24px; font-size: 0.9rem; }
   #pin-input {
@@ -112,7 +112,6 @@
     background: #f8fafc; color: var(--muted);
     font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
     border-bottom: 1px solid var(--border);
-    position: sticky; top: 56px; z-index: 1;
     cursor: pointer; user-select: none;
   }
   .data-table th:hover { background: #f1f5f9; }
@@ -122,6 +121,9 @@
   }
   .data-table tr:last-child td { border-bottom: none; }
   .data-table tr:hover td { background: #fafbff; }
+  /* BUG 2: ensure wide tables scroll cleanly rather than collapsing columns */
+  #admin-members-table { min-width: 920px; }
+  #members-table { min-width: 580px; }
 
   /* ---- Status badges ---- */
   .badge {
@@ -134,7 +136,8 @@
   .badge-rejected{ background: var(--red-bg);    color: var(--red);    }
   .badge-pending { background: #f1f5f9;          color: var(--muted);  }
   .badge-failed  { background: var(--red-bg);    color: var(--red);    }
-  .badge-none    { color: var(--muted); font-size: 0.75rem; }
+  .badge-none      { color: var(--muted); font-size: 0.75rem; }
+  .badge-associate { background: #eff6ff; color: #2563eb; }
 
   /* ---- Row highlight rules ---- */
   tr.row-flagged td { background: #fffbeb; }
@@ -236,6 +239,9 @@
   .config-val-input:focus { outline: none; border-color: var(--primary); }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
 <body>
 
@@ -381,20 +387,15 @@
           <p>Randomly distribute all unassigned active members into open chore slots.</p>
           <button class="btn-primary" onclick="callAutoSplit()">Run Auto-Split</button>
         </div>
-        <div class="admin-card">
-          <h3>Sync to BigQuery</h3>
-          <p>Push all current submission, fine, and assignment data to BigQuery.</p>
-          <button class="btn-outline" onclick="callBQSync()">Sync to BigQuery</button>
-        </div>
       </div>
 
       <!-- 1. Chore Manager -->
       <div class="admin-section">
         <div class="admin-section-header" onclick="toggleAdminSection('admin-chores')">
           <h2>Chore Manager</h2>
-          <span class="admin-section-toggle" id="admin-chores-toggle">▲</span>
+          <span class="admin-section-toggle" id="admin-chores-toggle">▼</span>
         </div>
-        <div class="admin-section-body" id="admin-chores-body">
+        <div class="admin-section-body" id="admin-chores-body" style="display:none">
           <div class="admin-loading" id="admin-chores-loading">Loading chores...</div>
           <div id="admin-chores-content" style="display:none">
             <div style="overflow-x:auto">
@@ -403,7 +404,7 @@
                   <tr>
                     <th>Chore Name</th>
                     <th style="width:140px">Members Required</th>
-                    <th style="width:90px">Actions</th>
+                    <th style="width:140px">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="chores-tbody"></tbody>
@@ -420,7 +421,8 @@
               </div>
               <button class="btn-primary" onclick="addChore()">+ Add Chore</button>
             </div>
-            <div style="margin-top:14px;display:flex;justify-content:flex-end">
+            <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:10px">
+              <button class="btn-outline" onclick="generateAllQRCodes()">Download All QR Codes (ZIP)</button>
               <button class="btn-primary" onclick="saveChores()">Save All Chores</button>
             </div>
           </div>
@@ -431,46 +433,43 @@
       <div class="admin-section">
         <div class="admin-section-header" onclick="toggleAdminSection('admin-members')">
           <h2>Member Manager</h2>
-          <span class="admin-section-toggle" id="admin-members-toggle">▲</span>
+          <span class="admin-section-toggle" id="admin-members-toggle">▼</span>
         </div>
-        <div class="admin-section-body" id="admin-members-body">
+        <div class="admin-section-body" id="admin-members-body" style="display:none">
           <div class="admin-loading" id="admin-members-loading">Loading members...</div>
           <div id="admin-members-content" style="display:none">
-            <div style="margin-bottom:12px">
-              <input type="text" id="admin-member-search" class="inline-input" placeholder="Search by name, email, or pledge class..." style="width:280px" oninput="filterAdminMembers()">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;justify-content:space-between">
+              <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                <input type="text" id="admin-member-search" class="inline-input" placeholder="Search by name, email, or pledge class..." style="width:280px" oninput="filterAdminMembers()">
+                <div style="display:flex;gap:4px;flex-wrap:wrap">
+                  <button id="amf-btn-all" class="action-btn" onclick="setAdminMemberFilter('all')" style="background:var(--primary);color:var(--gold);border:none">All <span id="amf-count-all" style="font-size:0.7rem;opacity:0.8"></span></button>
+                  <button id="amf-btn-active" class="action-btn" onclick="setAdminMemberFilter('active')" style="background:transparent;color:var(--green);border:1px solid #bbf7d0">Active <span id="amf-count-active" style="font-size:0.7rem;opacity:0.8"></span></button>
+                  <button id="amf-btn-associate" class="action-btn" onclick="setAdminMemberFilter('associate')" style="background:transparent;color:#2563eb;border:1px solid #bfdbfe">AMs <span id="amf-count-associate" style="font-size:0.7rem;opacity:0.8"></span></button>
+                  <button id="amf-btn-inactive" class="action-btn" onclick="setAdminMemberFilter('inactive')" style="background:transparent;color:var(--muted);border:1px solid var(--border)">Inactive <span id="amf-count-inactive" style="font-size:0.7rem;opacity:0.8"></span></button>
+                  <button id="amf-btn-alumni" class="action-btn" onclick="setAdminMemberFilter('alumni')" style="background:transparent;color:#9333ea;border:1px solid #e9d5ff">Alumni <span id="amf-count-alumni" style="font-size:0.7rem;opacity:0.8"></span></button>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px">
+                <button class="btn-primary" onclick="openAdminAddModal()">+ Add Member</button>
+                <button class="btn-outline" onclick="openCSVImportModal()">Import CSV</button>
+              </div>
             </div>
             <div style="overflow-x:auto">
-              <table class="data-table" id="admin-members-table">
+              <table class="data-table" id="admin-members-table" style="min-width:920px">
                 <thead>
                   <tr>
-                    <th>Member ID</th>
+                    <th>BK#</th>
                     <th>Name</th>
                     <th>Email</th>
                     <th>Pledge Class</th>
                     <th>Status</th>
+                    <th>Chore</th>
+                    <th>Fines</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="admin-members-tbody"></tbody>
               </table>
-            </div>
-            <div style="margin-top:18px;background:#f8fafc;border-radius:8px;padding:16px">
-              <div style="font-size:0.85rem;font-weight:700;margin-bottom:12px;color:var(--primary)">Add New Member</div>
-              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-                <div>
-                  <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Full Name</label>
-                  <input type="text" id="new-member-name" class="inline-input" placeholder="John Smith" style="width:160px">
-                </div>
-                <div>
-                  <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Email</label>
-                  <input type="email" id="new-member-email" class="inline-input" placeholder="jsmith@email.com" style="width:200px">
-                </div>
-                <div>
-                  <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Pledge Class</label>
-                  <input type="text" id="new-member-pledge" class="inline-input" placeholder="Spring 2025" style="width:130px">
-                </div>
-                <button class="btn-primary" onclick="addAdminMember()">+ Add Member</button>
-              </div>
             </div>
           </div>
         </div>
@@ -480,9 +479,9 @@
       <div class="admin-section">
         <div class="admin-section-header" onclick="toggleAdminSection('admin-config')">
           <h2>Config Editor</h2>
-          <span class="admin-section-toggle" id="admin-config-toggle">▲</span>
+          <span class="admin-section-toggle" id="admin-config-toggle">▼</span>
         </div>
-        <div class="admin-section-body" id="admin-config-body">
+        <div class="admin-section-body" id="admin-config-body" style="display:none">
           <div class="admin-loading" id="admin-config-loading">Loading config...</div>
           <div id="admin-config-content" style="display:none">
             <div id="config-rows"></div>
@@ -494,9 +493,9 @@
       <div class="admin-section">
         <div class="admin-section-header" onclick="toggleAdminSection('admin-semester')">
           <h2>Semester Tools</h2>
-          <span class="admin-section-toggle" id="admin-semester-toggle">▲</span>
+          <span class="admin-section-toggle" id="admin-semester-toggle">▼</span>
         </div>
-        <div class="admin-section-body" id="admin-semester-body">
+        <div class="admin-section-body" id="admin-semester-body" style="display:none">
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
             <div style="background:#f8fafc;border-radius:8px;padding:16px">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Import Members CSV</div>
@@ -577,6 +576,148 @@
     <div class="modal-btns">
       <button class="btn-outline" onclick="closeEndSemesterModal()">Cancel</button>
       <button id="end-semester-confirm-btn" class="btn-danger" onclick="doEndSemesterArchive()" disabled>Archive Semester</button>
+    </div>
+  </div>
+</div>
+
+<!-- Assign BK Modal -->
+<div class="modal-overlay" id="assign-bk-modal">
+  <div class="modal">
+    <h3>Assign BK Number</h3>
+    <p id="assign-bk-sub" style="font-size:0.85rem;color:var(--muted);margin-bottom:16px"></p>
+    <div style="margin-bottom:16px">
+      <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">BK Number (4 digits)</label>
+      <input type="text" id="assign-bk-input" class="inline-input" maxlength="4" placeholder="1234"
+             style="width:100%;font-size:1.4rem;text-align:center;letter-spacing:6px;font-family:monospace"
+             onkeydown="if(event.key==='Enter')confirmAssignBk()">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="closeAssignBkModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmAssignBk()">Assign BK Number</button>
+    </div>
+  </div>
+</div>
+
+<!-- Cross Member Modal -->
+<div class="modal-overlay" id="cross-member-modal">
+  <div class="modal" style="padding:0;overflow:hidden">
+    <div style="background:var(--primary);padding:24px 28px;text-align:center">
+      <div style="font-size:2rem;margin-bottom:6px">🎉</div>
+      <h3 style="color:var(--gold);margin-bottom:4px">Cross Into Brotherhood</h3>
+      <p id="cross-member-sub" style="color:rgba(255,255,255,0.75);font-size:0.85rem"></p>
+    </div>
+    <div style="padding:24px 28px">
+      <div style="margin-bottom:16px">
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:6px">Assign BK Number (4 digits)</label>
+        <input type="text" id="cross-bk-input" class="inline-input" maxlength="4" placeholder="1234"
+               style="width:100%;font-size:1.6rem;text-align:center;letter-spacing:8px;font-family:monospace"
+               onkeydown="if(event.key==='Enter')confirmCross()">
+      </div>
+      <div class="modal-btns">
+        <button class="btn-outline" onclick="closeCrossModal()">Cancel</button>
+        <button style="background:var(--primary);color:var(--gold);border:none;padding:10px 20px;border-radius:8px;font-size:0.95rem;font-weight:700;cursor:pointer" onclick="confirmCross()">Cross Into Brotherhood</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Edit Modal -->
+<div class="modal-overlay" id="admin-edit-modal">
+  <div class="modal">
+    <h3>Edit Member</h3>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Full Name</label>
+        <input type="text" id="admin-edit-name" class="inline-input" style="width:100%" onkeydown="if(event.key==='Enter')saveAdminEdit()">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Email</label>
+        <input type="email" id="admin-edit-email" class="inline-input" style="width:100%">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Pledge Class</label>
+        <input type="text" id="admin-edit-pledge" class="inline-input" style="width:100%" placeholder="Spring 2025">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Status</label>
+        <select id="admin-edit-status" class="inline-input" style="width:100%">
+          <option value="active">Active (Brother)</option>
+          <option value="associate">Associate Member (AM)</option>
+          <option value="inactive">Inactive</option>
+          <option value="alumni">Alumni</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="closeAdminEditModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveAdminEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Fine History Modal -->
+<div class="modal-overlay" id="admin-fine-modal">
+  <div class="modal" style="width:480px;max-width:96vw">
+    <h3 id="admin-fine-title">Fine History</h3>
+    <div style="overflow-x:auto;margin:12px 0">
+      <table class="data-table">
+        <thead><tr><th>Week</th><th>Chore</th><th>Reason</th></tr></thead>
+        <tbody id="admin-fine-tbody"></tbody>
+      </table>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="closeAdminFineModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Add Member Modal -->
+<div class="modal-overlay" id="admin-add-modal">
+  <div class="modal">
+    <h3>Add New Member</h3>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Full Name *</label>
+        <input type="text" id="admin-add-name" class="inline-input" style="width:100%" placeholder="John Smith">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Email *</label>
+        <input type="email" id="admin-add-email" class="inline-input" style="width:100%" placeholder="jsmith@email.com">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Pledge Class</label>
+        <input type="text" id="admin-add-pledge" class="inline-input" style="width:100%" placeholder="Spring 2025">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">BK Number (optional)</label>
+        <input type="text" id="admin-add-bk" class="inline-input" maxlength="4" placeholder="1234" style="width:100%">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Status</label>
+        <select id="admin-add-status" class="inline-input" style="width:100%">
+          <option value="active">Active (Brother)</option>
+          <option value="associate">Associate Member (AM)</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="closeAdminAddModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmAdminAdd()">Add Member</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR Code Modal -->
+<div class="modal-overlay" id="qr-modal">
+  <div class="modal" style="background:#1a3a2a;border:2px solid var(--gold);width:360px">
+    <h3 style="color:var(--gold);margin-bottom:4px" id="qr-modal-title">QR Code</h3>
+    <p style="font-size:0.82rem;color:#9dbfa5;margin-bottom:16px;word-break:break-all" id="qr-modal-sub"></p>
+    <div style="background:white;border-radius:8px;padding:12px;display:flex;justify-content:center;margin-bottom:16px">
+      <div id="qr-canvas-wrap"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="closeQrModal()" style="color:#9dbfa5;border-color:#9dbfa5">Close</button>
+      <button class="btn-primary" onclick="downloadQr()">Download PNG</button>
     </div>
   </div>
 </div>
@@ -928,26 +1069,26 @@ function esc(s) {
 }
 
 // ---- Admin Tab --------------------------------------------
-var _adminTabOpened = false;
 var adminChores = [];
 var adminMembersData = [];
 var adminConfigData = [];
 var IMPORTANT_KEYS = ['semester', 'week_start', 'officer_emails', 'fine_amount', 'officer_pin'];
+var _adminSectionsLoaded = {};
 
-function initAdminTab() {
-  if (_adminTabOpened) return;
-  _adminTabOpened = true;
-  loadAdminChores();
-  loadAdminMembers();
-  loadAdminConfig();
-}
+function initAdminTab() { /* sections lazy-load on first expand */ }
 
 function toggleAdminSection(id) {
   var body   = document.getElementById(id + '-body');
   var toggle = document.getElementById(id + '-toggle');
   var isOpen = body.style.display !== 'none';
-  body.style.display   = isOpen ? 'none' : 'block';
-  toggle.textContent   = isOpen ? '▼' : '▲';
+  body.style.display = isOpen ? 'none' : 'block';
+  toggle.textContent = isOpen ? '▼' : '▲';
+  if (!isOpen && !_adminSectionsLoaded[id]) {
+    _adminSectionsLoaded[id] = true;
+    if (id === 'admin-chores')   loadAdminChores();
+    else if (id === 'admin-members') loadAdminMembers();
+    else if (id === 'admin-config')  loadAdminConfig();
+  }
 }
 
 // ---- Chore Manager ----------------------------------------
@@ -984,7 +1125,10 @@ function renderChoresTable() {
       'onchange="adminChores[' + idx + '].name=this.value.trim()"></td>' +
       '<td><input type="number" class="inline-input" min="1" value="' + c.people + '" style="width:70px" ' +
       'onchange="adminChores[' + idx + '].people=parseInt(this.value)||1"></td>' +
-      '<td><button class="action-btn btn-fail" onclick="deleteChore(' + idx + ')">Delete</button></td>' +
+      '<td>' +
+      '<button class="action-btn btn-photo" onclick="openQrModal(\'' + esc(c.name) + '\')">QR</button> ' +
+      '<button class="action-btn btn-fail" onclick="deleteChore(' + idx + ')">Delete</button>' +
+      '</td>' +
       '</tr>'
     );
   });
@@ -1032,7 +1176,8 @@ function loadAdminMembers() {
       var r = JSON.parse(json);
       if (!r.success) { showToast('Error loading members: ' + r.error); return; }
       adminMembersData = r.data;
-      renderAdminMembersTable(adminMembersData);
+      updateAdminMemberCounts();
+      filterAdminMembers();
       document.getElementById('admin-members-loading').style.display = 'none';
       document.getElementById('admin-members-content').style.display = 'block';
     })
@@ -1040,44 +1185,118 @@ function loadAdminMembers() {
       document.getElementById('admin-members-loading').textContent = 'Failed to load members.';
       onError(err);
     })
-    .getMembers();
+    .getMemberDirectoryData();
+}
+
+function updateAdminMemberCounts() {
+  var counts = { all: 0, active: 0, associate: 0, inactive: 0, alumni: 0 };
+  adminMembersData.forEach(function(m) {
+    counts.all++;
+    if (counts[m.status] !== undefined) counts[m.status]++;
+  });
+  ['all', 'active', 'associate', 'inactive', 'alumni'].forEach(function(s) {
+    var el = document.getElementById('amf-count-' + s);
+    if (el) el.textContent = '(' + counts[s] + ')';
+  });
 }
 
 function renderAdminMembersTable(data) {
   var tbody = document.getElementById('admin-members-tbody');
   tbody.innerHTML = '';
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No members found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No members found.</td></tr>';
     return;
   }
   data.forEach(function(m) {
-    var badge      = m.status === 'active' ? '<span class="badge badge-verified">active</span>' : '<span class="badge badge-pending">inactive</span>';
-    var toggleLbl  = m.status === 'active' ? 'Deactivate' : 'Activate';
-    var toggleCls  = m.status === 'active' ? 'btn-fail' : 'btn-verify';
-    var newStatus  = m.status === 'active' ? 'inactive' : 'active';
-    var safeName   = esc(m.name);
+    var badge;
+    if (m.status === 'associate')   badge = '<span class="badge badge-associate">AM</span>';
+    else if (m.status === 'active') badge = '<span class="badge badge-verified">Active</span>';
+    else if (m.status === 'alumni') badge = '<span class="badge" style="background:#f3e8ff;color:#9333ea">Alumni</span>';
+    else                            badge = '<span class="badge badge-pending">Inactive</span>';
+
+    var bkCell = m.bkNumber
+      ? '<span style="font-family:monospace;font-weight:700;color:var(--gold);font-size:0.9rem">' + esc(m.bkNumber) + '</span>'
+      : '<span class="badge-none">—</span>';
+
+    var choreCell = m.chore ? esc(m.chore) : '<span class="badge-none">—</span>';
+    var fineCell  = (m.fineCount > 0)
+      ? '<span style="color:var(--red);font-weight:700">' + m.fineCount + '</span>'
+      : '<span style="color:var(--muted)">0</span>';
+
+    var safeName = esc(m.name);
+    var actions = '';
+    if (m.status === 'associate') {
+      actions =
+        '<button class="action-btn" style="background:var(--primary);color:var(--gold);border:none" onclick="openCrossModal(\'' + m.memberId + '\',\'' + safeName + '\')">Cross 🎉</button> ' +
+        '<button class="action-btn btn-photo" onclick="openAdminEditModal(\'' + m.memberId + '\')">Edit</button> ' +
+        '<button class="action-btn btn-fail" onclick="deleteAdminMember(\'' + m.memberId + '\',\'' + safeName + '\')">Remove</button>';
+    } else if (m.status === 'active') {
+      actions =
+        (!m.bkNumber ? '<button class="action-btn btn-photo" onclick="openAssignBkModal(\'' + m.memberId + '\',\'' + safeName + '\')">Assign BK</button> ' : '') +
+        '<button class="action-btn btn-photo" onclick="openAdminEditModal(\'' + m.memberId + '\')">Edit</button> ' +
+        '<button class="action-btn" style="background:#f3e8ff;color:#9333ea;border:1px solid #e9d5ff" onclick="doGraduateMember(\'' + m.memberId + '\',\'' + safeName + '\')">Graduate</button> ' +
+        '<button class="action-btn btn-fail" onclick="toggleMemberStatus(\'' + m.memberId + '\',\'inactive\',\'' + safeName + '\')">Deactivate</button>';
+    } else if (m.status === 'alumni') {
+      actions =
+        '<button class="action-btn btn-photo" onclick="openAdminEditModal(\'' + m.memberId + '\')">Edit</button> ' +
+        '<button class="action-btn btn-fail" onclick="deleteAdminMember(\'' + m.memberId + '\',\'' + safeName + '\')">Delete</button>';
+    } else {
+      actions =
+        '<button class="action-btn btn-verify" onclick="toggleMemberStatus(\'' + m.memberId + '\',\'active\',\'' + safeName + '\')">Activate</button> ' +
+        '<button class="action-btn btn-photo" onclick="openAdminEditModal(\'' + m.memberId + '\')">Edit</button> ' +
+        '<button class="action-btn btn-fail" onclick="deleteAdminMember(\'' + m.memberId + '\',\'' + safeName + '\')">Delete</button>';
+    }
+    if (m.fineCount > 0) {
+      actions += ' <button class="action-btn" style="background:var(--red-bg);color:var(--red);border:1px solid #fecaca" onclick="openAdminFineModal(\'' + m.memberId + '\',\'' + safeName + '\')">Fines</button>';
+    }
+
     tbody.insertAdjacentHTML('beforeend',
       '<tr>' +
-      '<td style="font-family:monospace;font-size:0.75rem;color:var(--muted)">' + esc(m.memberId) + '</td>' +
+      '<td>' + bkCell + '</td>' +
       '<td><strong>' + safeName + '</strong></td>' +
-      '<td>' + esc(m.email) + '</td>' +
+      '<td style="font-size:0.82rem">' + esc(m.email || '—') + '</td>' +
       '<td>' + esc(m.pledgeClass || '—') + '</td>' +
       '<td>' + badge + '</td>' +
-      '<td>' +
-      '<button class="action-btn ' + toggleCls + '" onclick="toggleMemberStatus(\'' + m.memberId + '\',\'' + newStatus + '\',\'' + safeName + '\')">' + toggleLbl + '</button> ' +
-      '<button class="action-btn btn-fail" onclick="deleteAdminMember(\'' + m.memberId + '\',\'' + safeName + '\')">Delete</button>' +
-      '</td>' +
+      '<td style="font-size:0.82rem">' + choreCell + '</td>' +
+      '<td>' + fineCell + '</td>' +
+      '<td style="white-space:nowrap">' + actions + '</td>' +
       '</tr>'
     );
   });
 }
 
+var adminMemberStatusFilter = 'all';
+
+function setAdminMemberFilter(status) {
+  adminMemberStatusFilter = status;
+  var colors = {
+    all:       ['var(--primary)', 'var(--gold)', 'none'],
+    active:    ['transparent', 'var(--green)',  '1px solid #bbf7d0'],
+    associate: ['transparent', '#2563eb',       '1px solid #bfdbfe'],
+    inactive:  ['transparent', 'var(--muted)',  '1px solid var(--border)'],
+    alumni:    ['transparent', '#9333ea',       '1px solid #e9d5ff']
+  };
+  ['all', 'active', 'associate', 'inactive', 'alumni'].forEach(function(s) {
+    var btn = document.getElementById('amf-btn-' + s);
+    if (!btn) return;
+    var active = s === status;
+    var c = colors[s];
+    btn.style.background = active ? 'var(--primary)' : c[0];
+    btn.style.color      = active ? 'var(--gold)'    : c[1];
+    btn.style.border     = active ? 'none'            : c[2];
+  });
+  filterAdminMembers();
+}
+
 function filterAdminMembers() {
-  var q = document.getElementById('admin-member-search').value.toLowerCase();
+  var q = (document.getElementById('admin-member-search') ? document.getElementById('admin-member-search').value : '').toLowerCase();
   renderAdminMembersTable(adminMembersData.filter(function(m) {
-    return m.name.toLowerCase().includes(q) ||
-           m.email.toLowerCase().includes(q) ||
+    if (m.status === 'alumni' && adminMemberStatusFilter !== 'alumni') return false;
+    var matchesSearch = m.name.toLowerCase().includes(q) ||
+           (m.email || '').toLowerCase().includes(q) ||
            (m.pledgeClass || '').toLowerCase().includes(q);
+    var matchesStatus = adminMemberStatusFilter === 'all' || m.status === adminMemberStatusFilter;
+    return matchesSearch && matchesStatus;
   }));
 }
 
@@ -1105,26 +1324,198 @@ function deleteAdminMember(memberId, name) {
     .deleteMember(memberId);
 }
 
-function addAdminMember() {
-  var name   = document.getElementById('new-member-name').value.trim();
-  var email  = document.getElementById('new-member-email').value.trim();
-  var pledge = document.getElementById('new-member-pledge').value.trim();
+// ---- Admin Edit Modal ------------------------------------
+var adminEditPending = null;
+
+function openAdminEditModal(memberId) {
+  var m = adminMembersData.find(function(x) { return x.memberId === memberId; });
+  if (!m) return;
+  adminEditPending = memberId;
+  document.getElementById('admin-edit-name').value   = m.name || '';
+  document.getElementById('admin-edit-email').value  = m.email || '';
+  document.getElementById('admin-edit-pledge').value = m.pledgeClass || '';
+  document.getElementById('admin-edit-status').value = m.status || 'active';
+  document.getElementById('admin-edit-modal').classList.add('open');
+  setTimeout(function() { document.getElementById('admin-edit-name').focus(); }, 80);
+}
+
+function closeAdminEditModal() {
+  document.getElementById('admin-edit-modal').classList.remove('open');
+  adminEditPending = null;
+}
+
+function saveAdminEdit() {
+  if (!adminEditPending) return;
+  var name   = document.getElementById('admin-edit-name').value.trim();
+  var email  = document.getElementById('admin-edit-email').value.trim();
+  var pledge = document.getElementById('admin-edit-pledge').value.trim();
+  var status = document.getElementById('admin-edit-status').value;
   if (!name || !email) { showToast('Name and email are required.'); return; }
+  var memberId = adminEditPending;
+  closeAdminEditModal();
   google.script.run
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
-      if (r.success) {
-        showToast('Member added!');
-        document.getElementById('new-member-name').value  = '';
-        document.getElementById('new-member-email').value = '';
-        document.getElementById('new-member-pledge').value = '';
-        loadAdminMembers();
-      } else {
-        showToast('Error: ' + r.error);
-      }
+      showToast(r.success ? 'Member updated!' : 'Error: ' + (r.error || r.message));
+      if (r.success) loadAdminMembers();
     })
     .withFailureHandler(onError)
-    .addMember(name, email, pledge);
+    .updateMember(memberId, name, email, pledge, status);
+}
+
+// ---- Admin Fine History Modal ----------------------------
+var adminFinePending = null;
+
+function openAdminFineModal(memberId, name) {
+  adminFinePending = memberId;
+  document.getElementById('admin-fine-title').textContent = 'Fine History — ' + name;
+  document.getElementById('admin-fine-tbody').innerHTML = '<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--muted)">Loading...</td></tr>';
+  document.getElementById('admin-fine-modal').classList.add('open');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      var tbody = document.getElementById('admin-fine-tbody');
+      tbody.innerHTML = '';
+      if (!r.success || !r.fines || !r.fines.length) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--muted)">No fines found.</td></tr>';
+        return;
+      }
+      r.fines.forEach(function(f) {
+        tbody.insertAdjacentHTML('beforeend',
+          '<tr><td>' + esc(f.week || '—') + '</td><td>' + esc(f.chore || '—') + '</td><td>' + esc(f.reason || '—') + '</td></tr>'
+        );
+      });
+    })
+    .withFailureHandler(function() {
+      document.getElementById('admin-fine-tbody').innerHTML = '<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--red)">Failed to load.</td></tr>';
+    })
+    .getMemberFineHistory(memberId);
+}
+
+function closeAdminFineModal() {
+  document.getElementById('admin-fine-modal').classList.remove('open');
+  adminFinePending = null;
+}
+
+// ---- Admin Add Member Modal ------------------------------
+function openAdminAddModal() {
+  document.getElementById('admin-add-name').value    = '';
+  document.getElementById('admin-add-email').value   = '';
+  document.getElementById('admin-add-pledge').value  = '';
+  document.getElementById('admin-add-bk').value      = '';
+  document.getElementById('admin-add-status').value  = 'active';
+  document.getElementById('admin-add-modal').classList.add('open');
+  setTimeout(function() { document.getElementById('admin-add-name').focus(); }, 80);
+}
+
+function closeAdminAddModal() {
+  document.getElementById('admin-add-modal').classList.remove('open');
+}
+
+function confirmAdminAdd() {
+  var name   = document.getElementById('admin-add-name').value.trim();
+  var email  = document.getElementById('admin-add-email').value.trim();
+  var pledge = document.getElementById('admin-add-pledge').value.trim();
+  var bk     = document.getElementById('admin-add-bk').value.trim();
+  var status = document.getElementById('admin-add-status').value;
+  if (!name || !email) { showToast('Name and email are required.'); return; }
+  closeAdminAddModal();
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (r.success) { showToast('Member added!'); loadAdminMembers(); }
+      else           { showToast('Error: ' + r.error); }
+    })
+    .withFailureHandler(onError)
+    .addMember(name, email, pledge, bk, status);
+}
+
+// ---- Graduate Member -------------------------------------
+function doGraduateMember(memberId, name) {
+  if (!confirm('Graduate ' + name + '? This moves them to Alumni status.')) return;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? name + ' graduated to Alumni.' : 'Error: ' + (r.error || r.message));
+      if (r.success) loadAdminMembers();
+    })
+    .withFailureHandler(onError)
+    .graduateMember(memberId);
+}
+
+// ---- QR Code Functions (Change 2) -----------------------
+var BASE_URL = 'https://script.google.com/macros/s/AKfycbwqaJpQFFSCVveHVryNizO9YKbjsBG3IbYErjGBcqGUv8AdZIdA-JZEorWlFiaaXiZ_/exec';
+var currentQrChore = '';
+
+function openQrModal(choreName) {
+  currentQrChore = choreName;
+  var url = BASE_URL + '?app=submit&chore=' + encodeURIComponent(choreName);
+  document.getElementById('qr-modal-title').textContent = choreName;
+  document.getElementById('qr-modal-sub').textContent = url;
+  var wrap = document.getElementById('qr-canvas-wrap');
+  wrap.innerHTML = '';
+  new QRCode(wrap, { text: url, width: 200, height: 200, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  document.getElementById('qr-modal').classList.add('open');
+}
+
+function closeQrModal() {
+  document.getElementById('qr-modal').classList.remove('open');
+  currentQrChore = '';
+}
+
+function downloadQr() {
+  var canvas = document.querySelector('#qr-canvas-wrap canvas');
+  if (!canvas) { showToast('QR not ready yet.'); return; }
+  var out = document.createElement('canvas');
+  out.width = 220; out.height = 240;
+  var ctx = out.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 220, 240);
+  ctx.drawImage(canvas, 10, 10, 200, 200);
+  ctx.fillStyle = '#000'; ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center';
+  var label = currentQrChore; if (label.length > 26) label = label.substring(0, 24) + '…';
+  ctx.fillText(label, 110, 230);
+  var a = document.createElement('a');
+  a.download = 'qr-' + currentQrChore.replace(/[^a-zA-Z0-9]/g, '_') + '.png';
+  a.href = out.toDataURL('image/png');
+  a.click();
+}
+
+function generateAllQRCodes() {
+  if (!adminChores.length) { showToast('No chores to generate QR codes for.'); return; }
+  showToast('Generating ZIP...');
+  var zip = new JSZip();
+  var folder = zip.folder('chore-qr-codes');
+  var done = 0, total = adminChores.length;
+
+  adminChores.forEach(function(c) {
+    var url = BASE_URL + '?app=submit&chore=' + encodeURIComponent(c.name);
+    var tmp = document.createElement('div');
+    tmp.style.cssText = 'position:absolute;left:-9999px;top:-9999px';
+    document.body.appendChild(tmp);
+    new QRCode(tmp, { text: url, width: 200, height: 200, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    setTimeout((function(chore, div) { return function() {
+      var cvs = div.querySelector('canvas');
+      if (cvs) {
+        var out = document.createElement('canvas');
+        out.width = 220; out.height = 240;
+        var ctx = out.getContext('2d');
+        ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 220, 240);
+        ctx.drawImage(cvs, 10, 10, 200, 200);
+        ctx.fillStyle = '#000'; ctx.font = 'bold 13px Arial'; ctx.textAlign = 'center';
+        var label = chore.name; if (label.length > 26) label = label.substring(0, 24) + '…';
+        ctx.fillText(label, 110, 230);
+        folder.file(chore.name.replace(/[^a-zA-Z0-9]/g, '_') + '.png', out.toDataURL('image/png').split(',')[1], { base64: true });
+      }
+      document.body.removeChild(div);
+      done++;
+      if (done === total) {
+        zip.generateAsync({ type: 'blob' }).then(function(blob) {
+          saveAs(blob, 'chore-qr-codes.zip');
+          showToast('QR codes downloaded!');
+        });
+      }
+    }; }(c, tmp)), 300);
+  });
 }
 
 // ---- Config Editor ----------------------------------------
@@ -1207,12 +1598,16 @@ function previewCSV() {
   }
   if (!rows.length) { showToast('No valid rows found in the CSV.'); return; }
   var shown = rows.slice(0, 10);
+  var hasBk = rows.some(function(r) { return r[3] && /^\d{4}$/.test(r[3].trim()); });
   var html = '<div style="font-size:0.8rem;font-weight:700;margin-bottom:8px">' + rows.length + ' member(s) found:</div>' +
-    '<table class="data-table" style="font-size:0.78rem"><thead><tr><th>Name</th><th>Email</th><th>Pledge Class</th></tr></thead><tbody>';
+    '<table class="data-table" style="font-size:0.78rem"><thead><tr><th>Name</th><th>Email</th><th>Pledge Class</th>' +
+    (hasBk ? '<th>BK#</th>' : '') + '</tr></thead><tbody>';
   shown.forEach(function(r) {
-    html += '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td>' + esc(r[2] || '—') + '</td></tr>';
+    html += '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td>' + esc(r[2] || '—') + '</td>' +
+      (hasBk ? '<td>' + esc(r[3] || '—') + '</td>' : '') + '</tr>';
   });
-  if (rows.length > 10) html += '<tr><td colspan="3" style="text-align:center;color:var(--muted)">… and ' + (rows.length - 10) + ' more</td></tr>';
+  var cols = hasBk ? 4 : 3;
+  if (rows.length > 10) html += '<tr><td colspan="' + cols + '" style="text-align:center;color:var(--muted)">… and ' + (rows.length - 10) + ' more</td></tr>';
   html += '</tbody></table>';
   document.getElementById('csv-preview').innerHTML = html;
   document.getElementById('csv-preview-section').style.display = 'block';
@@ -1264,6 +1659,68 @@ function doEndSemesterArchive() {
     })
     .withFailureHandler(onError)
     .endOfSemesterArchiveWeb(correctPin);
+}
+
+// ---- Assign BK Modal --------------------------------------
+var assignBkPending = null;
+
+function openAssignBkModal(memberId, name) {
+  assignBkPending = memberId;
+  document.getElementById('assign-bk-sub').textContent = 'Member: ' + name;
+  document.getElementById('assign-bk-input').value = '';
+  document.getElementById('assign-bk-modal').classList.add('open');
+  setTimeout(function() { document.getElementById('assign-bk-input').focus(); }, 80);
+}
+
+function closeAssignBkModal() {
+  document.getElementById('assign-bk-modal').classList.remove('open');
+  assignBkPending = null;
+}
+
+function confirmAssignBk() {
+  var bk = document.getElementById('assign-bk-input').value.trim();
+  if (!/^\d{4}$/.test(bk)) { showToast('BK number must be exactly 4 digits.'); return; }
+  var memberId = assignBkPending;
+  closeAssignBkModal();
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? 'BK number assigned!' : 'Error: ' + r.error);
+      if (r.success) loadAdminMembers();
+    })
+    .withFailureHandler(onError)
+    .assignBkNumber(memberId, bk);
+}
+
+// ---- Cross Member Modal -----------------------------------
+var crossMemberPending = null;
+
+function openCrossModal(memberId, name) {
+  crossMemberPending = memberId;
+  document.getElementById('cross-member-sub').textContent = name;
+  document.getElementById('cross-bk-input').value = '';
+  document.getElementById('cross-member-modal').classList.add('open');
+  setTimeout(function() { document.getElementById('cross-bk-input').focus(); }, 80);
+}
+
+function closeCrossModal() {
+  document.getElementById('cross-member-modal').classList.remove('open');
+  crossMemberPending = null;
+}
+
+function confirmCross() {
+  var bk = document.getElementById('cross-bk-input').value.trim();
+  if (!/^\d{4}$/.test(bk)) { showToast('BK number must be exactly 4 digits.'); return; }
+  var memberId = crossMemberPending;
+  closeCrossModal();
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? '🎉 Member crossed into brotherhood!' : 'Error: ' + r.error);
+      if (r.success) loadAdminMembers();
+    })
+    .withFailureHandler(onError)
+    .crossMember(memberId, bk);
 }
 </script>
 </body>

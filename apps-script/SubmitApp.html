@@ -170,6 +170,17 @@
     <div class="week-label" id="week-label">Week of —</div>
   </div>
 
+  <!-- Chore selection (shown when no QR chore param) -->
+  <div id="chore-step" style="display:none">
+    <div class="section">
+      <label>Step 1 — Select Your Chore</label>
+      <select id="chore-select" onchange="onChoreSelect(this.value)">
+        <option value="">— Select a chore —</option>
+      </select>
+    </div>
+    <div id="chore-loading" style="display:none;text-align:center;padding:16px 0;color:var(--muted);font-size:0.9rem">Loading members...</div>
+  </div>
+
   <!-- Main form -->
   <div id="form-area">
     <div class="warning-box" id="assign-warning">
@@ -223,26 +234,29 @@
 
 <script>
 const CHORE_NAME = '<?= choreName ?>';
+let activeChoreName = CHORE_NAME;
 let selectedFile = null;
 let membersForChore = [];
 
 // ---- Init --------------------------------------------------
 window.addEventListener('load', function() {
-  if (!CHORE_NAME) {
-    document.getElementById('chore-title').textContent = 'No Chore Specified';
-    document.getElementById('week-label').textContent = 'Check your QR code';
-    return;
-  }
-
-  document.getElementById('chore-title').textContent = CHORE_NAME;
-
-  // Load week
+  // Load week label for both paths
   google.script.run
     .withSuccessHandler(function(v) {
       document.getElementById('week-label').textContent = 'Week of ' + (v ? String(v).substring(0, 10) : '—');
     }).getConfigValue('week_start');
 
-  // Load members assigned to this chore
+  if (!CHORE_NAME) {
+    // Manual selection path
+    document.getElementById('chore-title').textContent = 'Submit a Chore';
+    document.getElementById('form-area').style.display = 'none';
+    document.getElementById('chore-step').style.display = 'block';
+    loadChoreDropdown();
+    return;
+  }
+
+  // QR path — existing behavior
+  document.getElementById('chore-title').textContent = CHORE_NAME;
   google.script.run
     .withSuccessHandler(onChoreMembers)
     .withFailureHandler(function(e) { console.error(e); })
@@ -270,6 +284,50 @@ function onChoreMembers(json) {
     }
     sel.addEventListener('change', checkSubmitReady);
   } catch(e) { console.error(e); }
+}
+
+// ---- Manual chore selection --------------------------------
+function loadChoreDropdown() {
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      var sel = document.getElementById('chore-select');
+      sel.innerHTML = '<option value="">— Select a chore —</option>';
+      if (r.success && r.data && r.data.chores) {
+        r.data.chores.forEach(function(c) {
+          var opt = document.createElement('option');
+          opt.value = c.name;
+          opt.textContent = c.name;
+          sel.appendChild(opt);
+        });
+      }
+    })
+    .withFailureHandler(function(e) { console.error('Failed to load chores:', e); })
+    .getChoreRatiosRaw();
+}
+
+function onChoreSelect(choreName) {
+  if (!choreName) return;
+  activeChoreName = choreName;
+  document.getElementById('chore-title').textContent = choreName;
+  document.getElementById('chore-loading').style.display = 'block';
+  document.getElementById('member-select').innerHTML = '<option value="">Loading...</option>';
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      document.getElementById('chore-loading').style.display = 'none';
+      if (!r.success) { console.error(r.error); return; }
+      // Reformat to match onChoreMembers format (expects array of {id, name})
+      var members = (r.members || []).map(function(m) { return { id: m.memberId, name: m.name }; });
+      onChoreMembers(JSON.stringify(members));
+      document.getElementById('chore-step').style.display = 'none';
+      document.getElementById('form-area').style.display = 'block';
+    })
+    .withFailureHandler(function(e) {
+      document.getElementById('chore-loading').style.display = 'none';
+      console.error('Failed to load members:', e);
+    })
+    .getAssignedMembersForChore(choreName);
 }
 
 // ---- Photo handling ----------------------------------------
@@ -334,7 +392,7 @@ function submitForm() {
     google.script.run
       .withSuccessHandler(onSubmitResult)
       .withFailureHandler(onSubmitError)
-      .processPhotoSubmission(memberId, CHORE_NAME, b64, mimeType, clientDate);
+      .processPhotoSubmission(memberId, activeChoreName, b64, mimeType, clientDate);
   };
   reader.readAsDataURL(selectedFile);
 }
@@ -384,7 +442,15 @@ function resetForm() {
   document.getElementById('submit-btn').disabled = true;
   document.getElementById('result').style.display = 'none';
   document.getElementById('submit-another').style.display = 'none';
-  document.getElementById('form-area').style.display = 'block';
+  if (!CHORE_NAME) {
+    activeChoreName = '';
+    document.getElementById('chore-title').textContent = 'Submit a Chore';
+    document.getElementById('chore-select').value = '';
+    document.getElementById('chore-step').style.display = 'block';
+    document.getElementById('form-area').style.display = 'none';
+  } else {
+    document.getElementById('form-area').style.display = 'block';
+  }
 }
 </script>
 </body>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Member Directory</title>
+<style>
+  body {
+    background: #050f08; color: #e8f0ea;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; margin: 0; text-align: center;
+  }
+  .box { padding: 40px 32px; }
+  .box p { color: #7a9e82; font-size: 0.9rem; margin-bottom: 20px; }
+  .btn {
+    display: inline-block; padding: 13px 28px;
+    background: #093D20; color: #FFB71D;
+    border: none; border-radius: 10px;
+    font-size: 1rem; font-weight: 700; cursor: pointer;
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+<div class="box">
+  <p>The Member Directory has moved to the Officer Dashboard.</p>
+  <button class="btn" onclick="redirect()">Go to Officer Dashboard</button>
+</div>
+<script>
+var BASE = 'https://script.google.com/macros/s/AKfycbwqaJpQFFSCVveHVryNizO9YKbjsBG3IbYErjGBcqGUv8AdZIdA-JZEorWlFiaaXiZ_/exec';
+function redirect() { window.open(BASE + '?app=officer', '_blank'); }
+setTimeout(redirect, 1500);
+</script>
+</body>
+</html>

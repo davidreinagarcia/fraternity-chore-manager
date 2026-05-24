@@ -202,6 +202,36 @@
   #print-view th, #print-view td { border: 1px solid #333; padding: 6px 10px; text-align: left; }
   #print-view th { background: #003087; color: #FFD700; }
 
+  /* Reassign chip */
+  .chip-wrap { display: inline-flex; align-items: center; gap: 2px; }
+  .chip-move {
+    background: transparent; border: none; color: var(--gold);
+    font-size: 0.6rem; cursor: pointer; padding: 1px 3px;
+    opacity: 0.55; transition: opacity 0.15s; line-height: 1;
+    border-radius: 3px;
+  }
+  .chip-move:hover { opacity: 1; background: rgba(255,183,29,0.15); }
+
+  /* Reassign modal */
+  #reassign-modal {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.72); z-index: 500;
+    align-items: center; justify-content: center;
+  }
+  .reassign-card {
+    background: #0d1f12; border: 2px solid var(--gold);
+    border-radius: 12px; padding: 22px; width: 360px; max-width: 94vw;
+  }
+  .reassign-chore-btn {
+    display: block; width: 100%; text-align: left;
+    background: #0f2c17; border: 1px solid var(--border);
+    border-radius: 6px; padding: 10px 14px;
+    color: var(--text); cursor: pointer; margin-bottom: 6px;
+    font-size: 0.85rem; font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .reassign-chore-btn:hover { border-color: var(--gold); }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: #0a0a1a; }
@@ -276,12 +306,46 @@
   </table>
 </div>
 
+<!-- Reassign Modal -->
+<div id="reassign-modal">
+  <div class="reassign-card">
+    <div style="font-size:1rem;font-weight:700;color:var(--gold);margin-bottom:4px" id="reassign-title">Move Member</div>
+    <div style="font-size:0.82rem;color:var(--muted);margin-bottom:14px" id="reassign-sub"></div>
+    <div style="max-height:300px;overflow-y:auto" id="reassign-chore-list"></div>
+    <div style="margin-top:14px;text-align:right">
+      <button class="btn btn-primary" onclick="closeReassignModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manager Mode PIN Modal -->
+<div id="manage-pin-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:600;align-items:center;justify-content:center">
+  <div style="background:#0d1f12;border:2px solid var(--gold);border-radius:16px;padding:30px 26px;width:300px;max-width:92vw;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,0.6)">
+    <div style="font-size:1.3rem;font-weight:800;color:var(--gold);margin-bottom:6px">Manager Mode</div>
+    <div style="font-size:0.83rem;color:var(--muted);margin-bottom:20px">Enter officer PIN to access Manager Mode</div>
+    <input type="password" id="manage-pin-input" maxlength="8" placeholder="••••"
+      style="width:100%;padding:13px;font-size:1.5rem;text-align:center;letter-spacing:8px;font-family:monospace;background:#081808;border:2px solid var(--border);border-radius:10px;color:var(--text);outline:none;margin-bottom:12px"
+      onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border)'"
+      onkeydown="if(event.key==='Enter')checkManagePin()">
+    <button onclick="checkManagePin()"
+      style="width:100%;padding:13px;background:var(--primary);color:var(--gold);border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;margin-bottom:8px">
+      Unlock
+    </button>
+    <button onclick="cancelManagePin()"
+      style="background:none;border:none;color:var(--muted);font-size:0.85rem;cursor:pointer;width:100%;padding:6px">
+      Cancel
+    </button>
+    <div id="manage-pin-error" style="color:#dc2626;font-size:0.82rem;margin-top:6px;min-height:18px"></div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 // ---- State -------------------------------------------------
 const MODE_DISPLAY = 'display', MODE_MANAGE = 'manage';
-let currentMode = '<?= mode ?>' || MODE_DISPLAY;
+let currentMode = MODE_DISPLAY;
+let requestedManage = ('<?= mode ?>' === MODE_MANAGE);
 let allChores = [];       // [{name, people, filled, available, members:[]}]
 let allMembers = [];      // all active members
 let selectedMember = null;
@@ -293,8 +357,8 @@ window.addEventListener('load', function() {
   setInterval(updateClock, 1000);
   applyMode();
   refreshAll();
-  // Auto-refresh every 5s in display mode, 10s in manage mode
-  refreshTimer = setInterval(refreshAll, currentMode === MODE_DISPLAY ? 5000 : 10000);
+  refreshTimer = setInterval(refreshAll, 5000);
+  if (requestedManage) showManagePin();
 });
 
 function updateClock() {
@@ -315,11 +379,41 @@ function applyMode() {
 }
 
 function toggleMode() {
-  currentMode = currentMode === MODE_DISPLAY ? MODE_MANAGE : MODE_DISPLAY;
-  clearInterval(refreshTimer);
-  applyMode();
-  refreshAll();
-  refreshTimer = setInterval(refreshAll, currentMode === MODE_DISPLAY ? 5000 : 10000);
+  if (currentMode === MODE_DISPLAY) {
+    showManagePin();
+  } else {
+    currentMode = MODE_DISPLAY;
+    clearInterval(refreshTimer);
+    applyMode();
+    refreshTimer = setInterval(refreshAll, 5000);
+  }
+}
+
+function showManagePin() {
+  document.getElementById('manage-pin-input').value = '';
+  document.getElementById('manage-pin-error').textContent = '';
+  document.getElementById('manage-pin-modal').style.display = 'flex';
+  setTimeout(function() { document.getElementById('manage-pin-input').focus(); }, 80);
+}
+
+function checkManagePin() {
+  var val = document.getElementById('manage-pin-input').value;
+  if (draftPin && val === draftPin) {
+    cancelManagePin();
+    currentMode = MODE_MANAGE;
+    clearInterval(refreshTimer);
+    applyMode();
+    refreshAll();
+    refreshTimer = setInterval(refreshAll, 10000);
+  } else {
+    document.getElementById('manage-pin-error').textContent = 'Incorrect PIN. Try again.';
+    document.getElementById('manage-pin-input').value = '';
+    document.getElementById('manage-pin-input').focus();
+  }
+}
+
+function cancelManagePin() {
+  document.getElementById('manage-pin-modal').style.display = 'none';
 }
 
 // ---- Data loading ------------------------------------------
@@ -445,7 +539,11 @@ function renderManageBoard() {
       </div>
       <div class="member-chips">
         ${(c.assignedMembers || []).map(m =>
-          `<span class="chip">${esc(firstName(m.memberName))}</span>`
+          `<span class="chip-wrap">` +
+          `<span class="chip">${esc(firstName(m.memberName))}</span>` +
+          `<button class="chip-move" title="Move ${esc(m.memberName)}" ` +
+          `onclick="event.stopPropagation();openReassignModal('${m.assignmentId}','${esc(m.memberName)}','${esc(c.name)}')">✎</button>` +
+          `</span>`
         ).join('')}
       </div>
       <div class="chore-fill-bar" style="width:${pct}%"></div>
@@ -603,6 +701,66 @@ function firstName(name) {
 
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ---- Reassign (Change 1) ------------------------------------
+var reassignPending = null;
+
+function openReassignModal(assignmentId, memberName, currentChore) {
+  reassignPending = { assignmentId: assignmentId, memberName: memberName };
+  document.getElementById('reassign-title').textContent = 'Move: ' + memberName;
+  document.getElementById('reassign-sub').textContent = 'Currently: ' + currentChore + ' — select a new chore:';
+
+  var list = document.getElementById('reassign-chore-list');
+  list.innerHTML = '';
+
+  var open = allChores.filter(function(c) {
+    return c.name !== currentChore && (c.assignedMembers || []).length < c.people;
+  });
+
+  if (!open.length) {
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">No open chore slots available.</div>';
+  } else {
+    open.forEach(function(c) {
+      var avail = c.people - (c.assignedMembers || []).length;
+      var btn = document.createElement('button');
+      btn.className = 'reassign-chore-btn';
+      btn.innerHTML = '<strong style="color:var(--gold)">' + esc(c.name) + '</strong>' +
+        ' <span style="color:var(--muted);font-size:0.75rem">(' + avail + ' open)</span>';
+      btn.onclick = function() { doReassign(c.name); };
+      list.appendChild(btn);
+    });
+  }
+
+  document.getElementById('reassign-modal').style.display = 'flex';
+}
+
+function closeReassignModal() {
+  document.getElementById('reassign-modal').style.display = 'none';
+  reassignPending = null;
+}
+
+function doReassign(newChoreName) {
+  if (!reassignPending) return;
+  var pending = reassignPending;
+  closeReassignModal();
+  document.getElementById('action-status').textContent = 'Moving ' + pending.memberName + '...';
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (r.success) {
+        showToast(pending.memberName + ' → ' + newChoreName);
+        refreshAll();
+      } else {
+        showToast('Error: ' + (r.error || 'Move failed'));
+      }
+      document.getElementById('action-status').textContent = '';
+    })
+    .withFailureHandler(function(e) {
+      showToast('Move failed: ' + (e.message || e));
+      document.getElementById('action-status').textContent = '';
+    })
+    .reassignMember(pending.assignmentId, newChoreName);
 }
 </script>
 </body>

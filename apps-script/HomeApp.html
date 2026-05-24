@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Frat Chores</title>
+<style>
+  :root {
+    --primary: #093D20;
+    --gold: #FFB71D;
+    --bg: #050f08;
+    --card: #0d1f12;
+    --border: #1a3d24;
+    --text: #e8f0ea;
+    --muted: #7a9e82;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 100vh;
+    padding-bottom: 48px;
+  }
+
+  /* ---- Header ---- */
+  .header {
+    background: var(--primary);
+    border-bottom: 3px solid var(--gold);
+    padding: 28px 20px 22px;
+    text-align: center;
+  }
+  .header img {
+    height: 60px; width: auto; max-width: 260px;
+    margin-bottom: 14px;
+    filter: brightness(0) invert(1);
+  }
+  .header h1 {
+    font-size: 1.7rem; font-weight: 900;
+    color: var(--gold); letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+  .header p { font-size: 0.82rem; color: var(--muted); letter-spacing: 0.5px; }
+
+  /* ---- Layout ---- */
+  .container { max-width: 480px; margin: 0 auto; padding: 24px 16px 0; }
+
+  .section-label {
+    font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1.8px; color: var(--muted);
+    margin: 28px 0 10px; display: flex; align-items: center; gap: 7px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* ---- Nav cards ---- */
+  .nav-card {
+    display: flex; align-items: center; gap: 16px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px;
+    margin-bottom: 10px; cursor: pointer;
+    text-decoration: none; color: var(--text);
+    transition: border-color 0.15s, background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-card:hover  { border-color: var(--gold); background: #0f2c17; }
+  .nav-card:active { transform: scale(0.985); }
+  .nav-card .icon  { font-size: 1.9rem; width: 48px; text-align: center; flex-shrink: 0; }
+  .nav-card .text  { flex: 1; min-width: 0; }
+  .nav-card .title { font-size: 1rem; font-weight: 700; color: var(--gold); margin-bottom: 3px; }
+  .nav-card .sub   { font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
+  .nav-card .arrow { color: var(--muted); font-size: 1.3rem; flex-shrink: 0; }
+
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="https://www.lambdachi.org/wp-content/uploads/2025/05/lca-logo-primary.svg"
+       alt="Lambda Chi Alpha" onerror="this.style.display='none'">
+  <h1>FRAT CHORES</h1>
+  <p>Lambda Chi Alpha — Chore Management</p>
+</div>
+
+<div class="container">
+
+  <div class="section-label">Members</div>
+
+  <div class="nav-card" onclick="go('?app=submit')">
+    <div class="icon">📸</div>
+    <div class="text">
+      <div class="title">Submit a Chore</div>
+      <div class="sub">Upload your photo proof for this week's chore</div>
+    </div>
+    <div class="arrow">›</div>
+  </div>
+
+  <div class="nav-card" onclick="go('?app=member')">
+    <div class="icon">📊</div>
+    <div class="text">
+      <div class="title">My Compliance</div>
+      <div class="sub">See your submission history and fine count</div>
+    </div>
+    <div class="arrow">›</div>
+  </div>
+
+  <div class="section-label">🔒 Officers</div>
+
+  <div class="nav-card" onclick="go('?app=officer')">
+    <div class="icon">🎛️</div>
+    <div class="text">
+      <div class="title">Officer Dashboard</div>
+      <div class="sub">Review submissions, manage fines, admin tools</div>
+    </div>
+    <div class="arrow">›</div>
+  </div>
+
+  <div class="nav-card" onclick="go('?app=draft&mode=display')">
+    <div class="icon">📺</div>
+    <div class="text">
+      <div class="title">Draft Night Board</div>
+      <div class="sub">TV display showing chore assignments live</div>
+    </div>
+    <div class="arrow">›</div>
+  </div>
+
+  <div class="nav-card" onclick="go('?app=draft&mode=manage')">
+    <div class="icon">⚙️</div>
+    <div class="text">
+      <div class="title">Manager Mode</div>
+      <div class="sub">Assign members to chores during draft night</div>
+    </div>
+    <div class="arrow">›</div>
+  </div>
+
+</div>
+
+<script>
+var BASE = 'https://script.google.com/macros/s/AKfycbwqaJpQFFSCVveHVryNizO9YKbjsBG3IbYErjGBcqGUv8AdZIdA-JZEorWlFiaaXiZ_/exec';
+function go(path) { window.open(BASE + path, '_blank'); }
+</script>
+</body>
+</html>

@@ -156,6 +156,12 @@ function doGet(e) {
       case 'officer':
         tmpl = HtmlService.createTemplateFromFile('OfficerDashboard');
         break;
+      case 'members':
+        tmpl = HtmlService.createTemplateFromFile('MemberDirectory');
+        break;
+      case 'home':
+        tmpl = HtmlService.createTemplateFromFile('HomeApp');
+        break;
       case 'member':
       default:
         tmpl = HtmlService.createTemplateFromFile('MemberView');
@@ -203,7 +209,7 @@ function importMembersFromCSV() {
 
     // email -> row index (1-based, skipping header row 1)
     const emailMap = {};
-    for (let i = 1; i < existing.length; i++) emailMap[existing[i][2]] = i + 1;
+    for (let i = 1; i < existing.length; i++) emailMap[existing[i][3]] = i + 1; // email is col 3 (0-indexed)
 
     const csvEmails = new Set();
     let added = 0, updated = 0;
@@ -211,17 +217,18 @@ function importMembersFromCSV() {
     for (let i = startIdx; i < lines.length; i++) {
       const cols = parseRow(lines[i]);
       if (cols.length < 2 || !cols[1]) continue;
-      const [name, email, pledgeClass] = [cols[0], cols[1], cols[2] || ''];
+      const [name, email, pledgeClass, bkNumber] = [cols[0], cols[1], cols[2] || '', cols[3] || ''];
       csvEmails.add(email);
 
       if (emailMap[email]) {
-        sheet.getRange(emailMap[email], 2).setValue(name);
-        sheet.getRange(emailMap[email], 4).setValue('active');
-        sheet.getRange(emailMap[email], 5).setValue(pledgeClass);
+        sheet.getRange(emailMap[email], 3).setValue(name);        // name col
+        sheet.getRange(emailMap[email], 5).setValue('active');    // status col
+        sheet.getRange(emailMap[email], 6).setValue(pledgeClass); // pledge_class col
+        if (bkNumber) sheet.getRange(emailMap[email], 2).setValue(bkNumber); // bk_number col
         updated++;
       } else {
         const mid = 'M' + Utilities.getUuid().replace(/-/g, '').substring(0, 8).toUpperCase();
-        sheet.appendRow([mid, name, email, 'active', pledgeClass, new Date().toISOString()]);
+        sheet.appendRow([mid, bkNumber, name, email, 'active', pledgeClass, new Date().toISOString()]);
         added++;
       }
     }
@@ -230,8 +237,8 @@ function importMembersFromCSV() {
     const fresh = sheet.getDataRange().getValues();
     let deactivated = 0;
     for (let i = 1; i < fresh.length; i++) {
-      if (!csvEmails.has(fresh[i][2]) && fresh[i][3] === 'active') {
-        sheet.getRange(i + 1, 4).setValue('inactive');
+      if (!csvEmails.has(fresh[i][3]) && fresh[i][4] === 'active') { // email col 3, status col 4
+        sheet.getRange(i + 1, 5).setValue('inactive'); // status col 5 (1-indexed)
         deactivated++;
       }
     }
@@ -264,31 +271,32 @@ function importMembersFromCSVWeb(fileId, pin) {
     const sheet  = ss.getSheetByName('members');
     const existing = sheet.getDataRange().getValues();
     const emailMap = {};
-    for (let i = 1; i < existing.length; i++) emailMap[existing[i][2]] = i + 1;
+    for (let i = 1; i < existing.length; i++) emailMap[existing[i][3]] = i + 1; // email col 3
 
     const csvEmails = new Set();
     let added = 0, updated = 0;
     for (let i = startIdx; i < lines.length; i++) {
       const cols = parseRow(lines[i]);
       if (cols.length < 2 || !cols[1]) continue;
-      const name = cols[0], email = cols[1], pledgeClass = cols[2] || '';
+      const name = cols[0], email = cols[1], pledgeClass = cols[2] || '', bkNumber = cols[3] || '';
       csvEmails.add(email);
       if (emailMap[email]) {
-        sheet.getRange(emailMap[email], 2).setValue(name);
-        sheet.getRange(emailMap[email], 4).setValue('active');
-        sheet.getRange(emailMap[email], 5).setValue(pledgeClass);
+        sheet.getRange(emailMap[email], 3).setValue(name);
+        sheet.getRange(emailMap[email], 5).setValue('active');
+        sheet.getRange(emailMap[email], 6).setValue(pledgeClass);
+        if (bkNumber) sheet.getRange(emailMap[email], 2).setValue(bkNumber);
         updated++;
       } else {
         const mid = 'M' + Utilities.getUuid().replace(/-/g,'').substring(0,8).toUpperCase();
-        sheet.appendRow([mid, name, email, 'active', pledgeClass, new Date().toISOString()]);
+        sheet.appendRow([mid, bkNumber, name, email, 'active', pledgeClass, new Date().toISOString()]);
         added++;
       }
     }
     const fresh = sheet.getDataRange().getValues();
     let deactivated = 0;
     for (let i = 1; i < fresh.length; i++) {
-      if (!csvEmails.has(fresh[i][2]) && fresh[i][3] === 'active') {
-        sheet.getRange(i + 1, 4).setValue('inactive');
+      if (!csvEmails.has(fresh[i][3]) && fresh[i][4] === 'active') {
+        sheet.getRange(i + 1, 5).setValue('inactive');
         deactivated++;
       }
     }
@@ -335,9 +343,9 @@ function runMondayReset() {
     const activeMems = new Set();
     const memName = {};
     for (let i = 1; i < members.length; i++) {
-      if (members[i][3] === 'active') {
+      if (members[i][4] === 'active') {
         activeMems.add(members[i][0]);
-        memName[members[i][0]] = members[i][1];
+        memName[members[i][0]] = members[i][2]; // name is col 2
       }
     }
 
@@ -516,7 +524,7 @@ function getAssignments() {
     const memData   = ss.getSheetByName('members').getDataRange().getValues();
 
     const memMap = {};
-    for (let i = 1; i < memData.length; i++) memMap[memData[i][0]] = memData[i][1];
+    for (let i = 1; i < memData.length; i++) memMap[memData[i][0]] = memData[i][2]; // name col 2
 
     const grouped = {};
     for (let i = 1; i < asgData.length; i++) {
@@ -610,7 +618,7 @@ function autoSplitMembers() {
 
     const active = [];
     for (let i = 1; i < memData.length; i++) {
-      if (memData[i][3] === 'active') active.push({ id: memData[i][0], name: memData[i][1] });
+      if (memData[i][4] === 'active') active.push({ id: memData[i][0], name: memData[i][2] });
     }
 
     const alreadyAssigned = new Set();
@@ -696,7 +704,7 @@ function getWeeklyStatus() {
     const memData  = ss.getSheetByName('members').getDataRange().getValues();
 
     const memMap = {};
-    for (let i = 1; i < memData.length; i++) memMap[memData[i][0]] = memData[i][1];
+    for (let i = 1; i < memData.length; i++) memMap[memData[i][0]] = memData[i][2]; // name col 2
 
     // Group assignments by chore
     const choreMap = {};
@@ -834,8 +842,8 @@ function getMemberStats() {
 
     const stats = {};
     for (let i = 1; i < memData.length; i++) {
-      if (memData[i][3] !== 'active') continue;
-      stats[memData[i][0]] = { name: memData[i][1], subs: 0, fines: 0, assignments: 0 };
+      if (memData[i][4] !== 'active') continue;
+      stats[memData[i][0]] = { name: memData[i][2], subs: 0, fines: 0, assignments: 0 };
     }
 
     for (let i = 1; i < asgData.length; i++) {
@@ -867,8 +875,8 @@ function getActiveMembers() {
     const data = getSpreadsheet().getSheetByName('members').getDataRange().getValues();
     const active = [];
     for (let i = 1; i < data.length; i++) {
-      if (data[i][3] === 'active') {
-        active.push({ id: data[i][0], name: data[i][1], email: data[i][2], pledgeClass: data[i][4] });
+      if (data[i][4] === 'active') {
+        active.push({ id: data[i][0], name: data[i][2], email: data[i][3], pledgeClass: data[i][5] });
       }
     }
     return JSON.stringify(active);
@@ -897,7 +905,7 @@ function getChoreMembers(choreName) {
     const asgData  = ss.getSheetByName('chore_assignments').getDataRange().getValues();
     const memData  = ss.getSheetByName('members').getDataRange().getValues();
     const memMap   = {};
-    for (let i = 1; i < memData.length; i++) memMap[memData[i][0]] = memData[i][1];
+    for (let i = 1; i < memData.length; i++) memMap[memData[i][0]] = memData[i][2]; // name col 2
 
     const members = [];
     for (let i = 1; i < asgData.length; i++) {
@@ -958,7 +966,7 @@ function getMembers() {
     const members = [];
     for (var i = 1; i < data.length; i++) {
       var r = data[i];
-      members.push({ memberId: r[0], name: r[1], email: r[2], status: r[3], pledgeClass: r[4] });
+      members.push({ memberId: r[0], bkNumber: r[1], name: r[2], email: r[3], status: r[4], pledgeClass: r[5] });
     }
     return JSON.stringify({ success: true, data: members });
   } catch (err) {
@@ -967,20 +975,22 @@ function getMembers() {
   }
 }
 
-// Adds a new active member. Returns error if email already exists.
-function addMember(name, email, pledgeClass) {
+// Adds a new member. Returns error if email already exists.
+// status: 'active' (default) or 'associate'. bkNumber: optional 4-digit string.
+function addMember(name, email, pledgeClass, bkNumber, status) {
   try {
     if (!name || !email) return JSON.stringify({ success: false, error: 'Name and email are required.' });
     var sheet = getSpreadsheet().getSheetByName('members');
     var data = sheet.getDataRange().getValues();
     for (var i = 1; i < data.length; i++) {
-      if (String(data[i][2]).toLowerCase() === String(email).toLowerCase()) {
+      if (String(data[i][3]).toLowerCase() === String(email).toLowerCase()) {
         return JSON.stringify({ success: false, error: 'A member with this email already exists.' });
       }
     }
+    var memberStatus = (status === 'associate' || status === 'inactive') ? status : 'active';
     var mid = 'M' + Utilities.getUuid().replace(/-/g, '').substring(0, 8).toUpperCase();
-    sheet.appendRow([mid, name, email, 'active', pledgeClass || '', new Date().toISOString()]);
-    logInfo('addMember', 'Added: ' + email);
+    sheet.appendRow([mid, bkNumber || '', name, email, memberStatus, pledgeClass || '', new Date().toISOString()]);
+    logInfo('addMember', 'Added: ' + email + ' (' + memberStatus + ')');
     return JSON.stringify({ success: true, memberId: mid });
   } catch (err) {
     logError('addMember', err);
@@ -998,7 +1008,7 @@ function updateMemberStatus(memberId, status) {
     var data = sheet.getDataRange().getValues();
     for (var i = 1; i < data.length; i++) {
       if (data[i][0] === memberId) {
-        sheet.getRange(i + 1, 4).setValue(status);
+        sheet.getRange(i + 1, 5).setValue(status); // status is col 5 (1-indexed)
         logInfo('updateMemberStatus', memberId + ' → ' + status);
         return JSON.stringify({ success: true });
       }
@@ -1036,8 +1046,12 @@ function getConfig() {
   try {
     var data = getSpreadsheet().getSheetByName('config').getDataRange().getValues();
     var config = [];
-    for (var i = 0; i < data.length; i++) {
-      if (data[i][0]) config.push({ key: String(data[i][0]), value: data[i][1] });
+    for (var i = 1; i < data.length; i++) {  // skip header row (BUG 3)
+      if (data[i][0]) {
+        var val = data[i][1];
+        if (val instanceof Date) val = Utilities.formatDate(val, 'America/New_York', 'yyyy-MM-dd');  // BUG 4: normalize date cells
+        config.push({ key: String(data[i][0]), value: val });
+      }
     }
     return JSON.stringify({ success: true, data: config });
   } catch (err) {
@@ -1079,31 +1093,32 @@ function importMembersFromCSVText(csvText, pin) {
     var sheet = ss.getSheetByName('members');
     var existing = sheet.getDataRange().getValues();
     var emailMap = {};
-    for (var i = 1; i < existing.length; i++) emailMap[existing[i][2]] = i + 1;
+    for (var i = 1; i < existing.length; i++) emailMap[existing[i][3]] = i + 1; // email col 3
 
     var csvEmails = new Set();
     var added = 0, updated = 0;
     for (var j = startIdx; j < lines.length; j++) {
       var cols = parseRow(lines[j]);
       if (cols.length < 2 || !cols[1]) continue;
-      var name = cols[0], email = cols[1], pledgeClass = cols[2] || '';
+      var name = cols[0], email = cols[1], pledgeClass = cols[2] || '', bkNumber = cols[3] || '';
       csvEmails.add(email);
       if (emailMap[email]) {
-        sheet.getRange(emailMap[email], 2).setValue(name);
-        sheet.getRange(emailMap[email], 4).setValue('active');
-        sheet.getRange(emailMap[email], 5).setValue(pledgeClass);
+        sheet.getRange(emailMap[email], 3).setValue(name);
+        sheet.getRange(emailMap[email], 5).setValue('active');
+        sheet.getRange(emailMap[email], 6).setValue(pledgeClass);
+        if (bkNumber) sheet.getRange(emailMap[email], 2).setValue(bkNumber);
         updated++;
       } else {
         var mid = 'M' + Utilities.getUuid().replace(/-/g, '').substring(0, 8).toUpperCase();
-        sheet.appendRow([mid, name, email, 'active', pledgeClass, new Date().toISOString()]);
+        sheet.appendRow([mid, bkNumber, name, email, 'active', pledgeClass, new Date().toISOString()]);
         added++;
       }
     }
     var fresh = sheet.getDataRange().getValues();
     var deactivated = 0;
     for (var k = 1; k < fresh.length; k++) {
-      if (!csvEmails.has(fresh[k][2]) && fresh[k][3] === 'active') {
-        sheet.getRange(k + 1, 4).setValue('inactive');
+      if (!csvEmails.has(fresh[k][3]) && fresh[k][4] === 'active') { // email col 3, status col 4
+        sheet.getRange(k + 1, 5).setValue('inactive');
         deactivated++;
       }
     }
@@ -1111,6 +1126,260 @@ function importMembersFromCSVText(csvText, pin) {
     return JSON.stringify({ success: true, added: added, updated: updated, deactivated: deactivated });
   } catch (err) {
     logError('importMembersFromCSVText', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// ============================================================
+// New functions — Changes 1-5
+// ============================================================
+
+// ---- Change 1: Reassign member to a different chore ---------
+
+function reassignMember(assignmentId, newChoreName) {
+  try {
+    var ss = getSpreadsheet();
+    var semester = getConfigValue('semester');
+    var sheet = ss.getSheetByName('chore_assignments');
+    var data = sheet.getDataRange().getValues();
+
+    // Guard: target chore must not be full
+    var ratios = _getChoreRatiosData();
+    var counts = _getAssignmentCounts(semester);
+    var targetRatio = (ratios.chores || []).filter(function(c) { return c.name === newChoreName; })[0];
+    if (targetRatio && (counts[newChoreName] || 0) >= targetRatio.people) {
+      return JSON.stringify({ success: false, error: 'That chore is already full.' });
+    }
+
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === assignmentId) {
+        var gid = 'G' + newChoreName.replace(/[^A-Za-z0-9]/g, '').substring(0, 8) +
+                  '_' + (semester || '').replace(/\s/g, '');
+        sheet.getRange(i + 1, 3).setValue(newChoreName); // chore_name col
+        sheet.getRange(i + 1, 4).setValue(gid);          // group_id col
+        logInfo('reassignMember', assignmentId + ' → ' + newChoreName);
+        return JSON.stringify({ success: true });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Assignment not found.' });
+  } catch (err) {
+    logError('reassignMember', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// ---- Change 2: Officer PIN for HomeApp ----------------------
+
+function getOfficerPin() {
+  try { return String(getConfigValue('officer_pin') || '1234'); }
+  catch (_) { return '1234'; }
+}
+
+// ---- Change 3: BK number management ------------------------
+
+// Assigns a 4-digit BK number to a member. Enforces uniqueness.
+function assignBkNumber(memberId, bkNumber) {
+  try {
+    if (!bkNumber || !/^\d{4}$/.test(String(bkNumber))) {
+      return JSON.stringify({ success: false, error: 'BK number must be exactly 4 digits.' });
+    }
+    var sheet = getSpreadsheet().getSheetByName('members');
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][1]) === String(bkNumber) && data[i][0] !== memberId) {
+        return JSON.stringify({ success: false, error: 'BK ' + bkNumber + ' is already assigned to another member.' });
+      }
+    }
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === memberId) {
+        sheet.getRange(i + 1, 2).setValue(bkNumber); // bk_number col
+        logInfo('assignBkNumber', memberId + ' → BK ' + bkNumber);
+        return JSON.stringify({ success: true });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) {
+    logError('assignBkNumber', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// ---- Change 4: AM crossing ----------------------------------
+
+// Converts an Associate Member to an active brother, assigning their BK number in one step.
+function crossMember(memberId, bkNumber) {
+  try {
+    if (!bkNumber || !/^\d{4}$/.test(String(bkNumber))) {
+      return JSON.stringify({ success: false, error: 'BK number must be exactly 4 digits.' });
+    }
+    var sheet = getSpreadsheet().getSheetByName('members');
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][1]) === String(bkNumber) && data[i][0] !== memberId) {
+        return JSON.stringify({ success: false, error: 'BK ' + bkNumber + ' is already in use.' });
+      }
+    }
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === memberId) {
+        if (data[i][4] !== 'associate') {
+          return JSON.stringify({ success: false, error: 'Member is not an Associate Member.' });
+        }
+        sheet.getRange(i + 1, 2).setValue(bkNumber); // bk_number col
+        sheet.getRange(i + 1, 5).setValue('active');  // status col
+        logInfo('crossMember', memberId + ' crossed → BK ' + bkNumber);
+        return JSON.stringify({ success: true });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) {
+    logError('crossMember', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// ---- Change 5: Member Directory backend ---------------------
+
+// Returns all members joined with their current chore + fine count — single call to load the directory.
+function getMemberDirectoryData() {
+  try {
+    var ss = getSpreadsheet();
+    var semester = getConfigValue('semester');
+    var memData  = ss.getSheetByName('members').getDataRange().getValues();
+    var asgData  = ss.getSheetByName('chore_assignments').getDataRange().getValues();
+    var fineData = ss.getSheetByName('fines').getDataRange().getValues();
+
+    var asgMap = {};
+    for (var i = 1; i < asgData.length; i++) {
+      if (asgData[i][4] === semester) asgMap[asgData[i][1]] = asgData[i][2];
+    }
+
+    var fineMap = {};
+    for (var i = 1; i < fineData.length; i++) {
+      var fid = fineData[i][1];
+      fineMap[fid] = (fineMap[fid] || 0) + 1;
+    }
+
+    var members = [];
+    for (var i = 1; i < memData.length; i++) {
+      var r = memData[i];
+      members.push({
+        memberId: r[0], bkNumber: r[1], name: r[2], email: r[3],
+        status: r[4], pledgeClass: r[5],
+        chore: asgMap[r[0]] || null,
+        fineCount: fineMap[r[0]] || 0
+      });
+    }
+
+    return JSON.stringify({ success: true, data: members, semester: semester });
+  } catch (err) {
+    logError('getMemberDirectoryData', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// Edits name, email, pledgeClass, and bkNumber for an existing member.
+function updateMember(memberId, name, email, pledgeClass, bkNumber) {
+  try {
+    if (!name || !email) return JSON.stringify({ success: false, error: 'Name and email are required.' });
+    var sheet = getSpreadsheet().getSheetByName('members');
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][3]).toLowerCase() === String(email).toLowerCase() && data[i][0] !== memberId) {
+        return JSON.stringify({ success: false, error: 'That email is already used by another member.' });
+      }
+    }
+    if (bkNumber) {
+      if (!/^\d{4}$/.test(String(bkNumber))) {
+        return JSON.stringify({ success: false, error: 'BK number must be exactly 4 digits.' });
+      }
+      for (var i = 1; i < data.length; i++) {
+        if (String(data[i][1]) === String(bkNumber) && data[i][0] !== memberId) {
+          return JSON.stringify({ success: false, error: 'BK ' + bkNumber + ' is already in use.' });
+        }
+      }
+    }
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === memberId) {
+        sheet.getRange(i + 1, 2).setValue(bkNumber || '');   // bk_number
+        sheet.getRange(i + 1, 3).setValue(name);              // name
+        sheet.getRange(i + 1, 4).setValue(email);             // email
+        sheet.getRange(i + 1, 6).setValue(pledgeClass || ''); // pledge_class
+        logInfo('updateMember', memberId + ': ' + name);
+        return JSON.stringify({ success: true });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) {
+    logError('updateMember', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// Returns active members assigned to a given chore this semester (for manual submission flow).
+function getAssignedMembersForChore(choreName) {
+  try {
+    var ss = getSpreadsheet();
+    var semester = getConfigValue('semester');
+    var asgData = ss.getSheetByName('chore_assignments').getDataRange().getValues();
+    var memData = ss.getSheetByName('members').getDataRange().getValues();
+    var memMap = {};
+    for (var i = 1; i < memData.length; i++) {
+      if (memData[i][4] === 'active') memMap[memData[i][0]] = memData[i][2];
+    }
+    var members = [];
+    for (var i = 1; i < asgData.length; i++) {
+      var r = asgData[i];
+      if (r[4] === semester && r[2] === choreName && memMap[r[1]]) {
+        members.push({ memberId: r[1], name: memMap[r[1]] });
+      }
+    }
+    return JSON.stringify({ success: true, members: members });
+  } catch (err) {
+    logError('getAssignedMembersForChore', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// Sets a member's status to 'alumni' (graduated/removed brothers kept for history).
+function graduateMember(memberId) {
+  try {
+    var sheet = getSpreadsheet().getSheetByName('members');
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === memberId) {
+        sheet.getRange(i + 1, 5).setValue('alumni');
+        logInfo('graduateMember', memberId + ' → alumni');
+        return JSON.stringify({ success: true });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) {
+    logError('graduateMember', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// Returns all fines for a member this semester, with running total.
+function getMemberFineHistory(memberId) {
+  try {
+    var fineData   = getSpreadsheet().getSheetByName('fines').getDataRange().getValues();
+    var fineAmount = Number(getConfigValue('fine_amount') || 5);
+    var fines = [];
+    for (var i = 1; i < fineData.length; i++) {
+      if (fineData[i][1] === memberId) {
+        fines.push({
+          fineId:   fineData[i][0],
+          choreName: fineData[i][2],
+          weekStart: _normDate(fineData[i][3]),
+          reason:    fineData[i][4],
+          issuedAt:  fineData[i][5],
+          issuedBy:  fineData[i][6]
+        });
+      }
+    }
+    return JSON.stringify({ success: true, fines: fines, fineAmount: fineAmount, total: fines.length * fineAmount });
+  } catch (err) {
+    logError('getMemberFineHistory', err);
     return JSON.stringify({ success: false, error: err.toString() });
   }
 }
