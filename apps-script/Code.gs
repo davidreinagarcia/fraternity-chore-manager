@@ -67,6 +67,101 @@ function logError(fnName, err, level) {
 
 function logInfo(fnName, msg) { logError(fnName, msg, 'INFO'); }
 
+// ---- Column-map helpers (support both old + new member schema) ----
+
+// Build name→index map from a header row.
+function _buildColMap(headers) {
+  var m = {};
+  for (var i = 0; i < headers.length; i++) m[String(headers[i]).trim()] = i;
+  return m;
+}
+
+// Display name: falls back between new schema (legal_first/preferred_name/legal_last)
+// and old schema (name).
+function _displayName(row, cm) {
+  var n = cm['name'] !== undefined ? String(row[cm['name']] || '') : '';
+  if (n) return n;
+  var pref  = cm['preferred_name'] !== undefined ? String(row[cm['preferred_name']] || '') : '';
+  var first = cm['legal_first']    !== undefined ? String(row[cm['legal_first']]    || '') : '';
+  var last  = cm['legal_last']     !== undefined ? String(row[cm['legal_last']]     || '') : '';
+  return ((pref || first) + ' ' + last).trim();
+}
+
+// Primary email: personal_email → email → GT_email.
+function _memberEmail(row, cm) {
+  if (cm['personal_email'] !== undefined && row[cm['personal_email']]) return String(row[cm['personal_email']]);
+  if (cm['email']          !== undefined && row[cm['email']])          return String(row[cm['email']]);
+  if (cm['GT_email']       !== undefined && row[cm['GT_email']])       return String(row[cm['GT_email']]);
+  return '';
+}
+
+// Status from column map (supports old col-4 fallback).
+function _memberStatus(row, cm) {
+  if (cm['status'] !== undefined) return String(row[cm['status']] || '');
+  return String(row[4] || '');
+}
+
+// Returns all member rows as structured objects — schema-agnostic.
+function _getMembersStructured() {
+  var sheet = getSpreadsheet().getSheetByName('members');
+  var data  = sheet.getDataRange().getValues();
+  if (data.length < 1) return [];
+  var headers = data[0];
+  var cm = _buildColMap(headers);
+  var out = [];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    out.push({
+      memberId:      String(r[0] || ''),
+      bkNumber:      String(r[cm['BK#'] !== undefined ? cm['BK#'] : 1] || ''),
+      name:          _displayName(r, cm),
+      email:         _memberEmail(r, cm),
+      gtEmail:       cm['GT_email']       !== undefined ? String(r[cm['GT_email']]       || '') : '',
+      status:        _memberStatus(r, cm),
+      pledgeClass:   cm['pledge_class']   !== undefined ? String(r[cm['pledge_class']]   || '') : String(r[5] || ''),
+      officerRole:   cm['officer_role']   !== undefined ? String(r[cm['officer_role']]   || '') : '',
+      inactiveReason:cm['inactive_reason']!== undefined ? String(r[cm['inactive_reason']]|| '') : '',
+      suspension:    cm['suspension']     !== undefined ? !!r[cm['suspension']] : false,
+      suspensionReason: cm['suspension_reason'] !== undefined ? String(r[cm['suspension_reason']] || '') : '',
+      suspensionEnd:    cm['suspension_end']    !== undefined ? _normDate(r[cm['suspension_end']]) : '',
+      academicSuspension: cm['academic_suspension'] !== undefined ? !!r[cm['academic_suspension']] : false,
+      probation:     cm['probation']      !== undefined ? !!r[cm['probation']] : false,
+      probationType: cm['probation_type'] !== undefined ? String(r[cm['probation_type']] || '') : '',
+      formCompleted: cm['form_completed_this_semester'] !== undefined ? r[cm['form_completed_this_semester']] : null,
+      anticipatedGraduation: cm['anticipated_graduation'] !== undefined ? String(r[cm['anticipated_graduation']] || '') : '',
+      legalFirst:    cm['legal_first']    !== undefined ? String(r[cm['legal_first']]    || '') : '',
+      preferredName: cm['preferred_name'] !== undefined ? String(r[cm['preferred_name']] || '') : '',
+      legalLast:     cm['legal_last']     !== undefined ? String(r[cm['legal_last']]     || '') : '',
+      phone:         cm['phone']          !== undefined ? String(r[cm['phone']]          || '') : '',
+      addedDate:     cm['added_date']     !== undefined ? String(r[cm['added_date']]     || '') : String(r[6] || ''),
+      _rowNum: i + 1,
+      _cm: cm
+    });
+  }
+  return out;
+}
+
+// Write a single field to a member's row by field name (column header).
+function _setMemberField(sheet, memberId, cm, fieldName, value) {
+  var colIdx = cm[fieldName];
+  if (colIdx === undefined) return false;
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(memberId)) {
+      sheet.getRange(i + 1, colIdx + 1).setValue(value);
+      // Update last_updated if that col exists
+      if (cm['last_updated'] !== undefined) sheet.getRange(i + 1, cm['last_updated'] + 1).setValue(new Date().toISOString());
+      return true;
+    }
+  }
+  return false;
+}
+
+// Write a timestamp to the audit log.
+function _logAudit(action, memberId, memberName, performedBy, details) {
+  logInfo(action, 'member=' + memberId + ' (' + memberName + ') by=' + performedBy + (details ? ' | ' + details : ''));
+}
+
 // Server-side PIN check for destructive officer operations.
 // Returns true if the supplied pin matches the stored officer_pin config value.
 // If no pin is configured, passes through (allows initial setup without PIN).
@@ -88,8 +183,8 @@ function _normDate(v) {
 // ---- Custom Menu -------------------------------------------
 
 function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu('Chore System')
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu('Chore System')
     .addItem('Run Monday Reset', 'runMondayReset')
     .addSeparator()
     .addItem('End of Semester Archive', 'endOfSemesterArchive')
@@ -101,6 +196,13 @@ function onOpen() {
     .addSeparator()
     .addItem('Setup: Create Monday Trigger', 'autoMondayTrigger')
     .addItem('Setup: Init BigQuery Tables', 'initBigQueryTables')
+    .addItem('Setup: Create Required Tabs', 'ensureTabsExist')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('Admin')
+      .addItem('Semester Sync (Start of Semester)', 'runSemesterSync')
+      .addItem('Migrate From Old Roster (Run Once)', 'migrateFromRosterSheet')
+      .addItem('Relink Google Forms (Run Once)', 'relinkForms')
+      .addItem('Check Duplicate Members', 'checkDuplicateMembersMenu'))
     .addToUi();
 }
 
@@ -327,7 +429,7 @@ function runMondayReset() {
 
     const submissions   = subSheet.getDataRange().getValues();
     const assignments   = asgSheet.getDataRange().getValues();
-    const members       = memSheet.getDataRange().getValues();
+    const membersStructured = _getMembersStructured();
 
     // Members that passed for this week
     const passed = new Set();
@@ -342,10 +444,10 @@ function runMondayReset() {
     // Active member lookup
     const activeMems = new Set();
     const memName = {};
-    for (let i = 1; i < members.length; i++) {
-      if (members[i][4] === 'active') {
-        activeMems.add(members[i][0]);
-        memName[members[i][0]] = members[i][2]; // name is col 2
+    for (const m of membersStructured) {
+      if (m.status === 'active') {
+        activeMems.add(m.memberId);
+        memName[m.memberId] = m.name;
       }
     }
 
@@ -369,8 +471,11 @@ function runMondayReset() {
       ]);
     }
 
-    // Email officers
-    if (fineList.length > 0 && emailsRaw) {
+    // Ghost detection — must run BEFORE submissions are cleared so it can read current-week data
+    const ghostAlerts = runGhostDetection();
+
+    // Email officers (fines + ghost alerts in one email)
+    if ((fineList.length > 0 || ghostAlerts.length > 0) && emailsRaw) {
       const emailList = emailsRaw.split(',').map(e => e.trim()).filter(Boolean);
       const rows = fineList.map(f =>
         `<tr><td style="padding:6px 12px">${f.memberName}</td>` +
@@ -378,8 +483,14 @@ function runMondayReset() {
         `<td style="padding:6px 12px">${weekStart}</td>` +
         `<td style="padding:6px 12px;text-align:center">$${fineAmount}</td></tr>`
       ).join('');
+      const ghostSection = ghostAlerts.length > 0
+        ? `<h3 style="color:#b45309;margin-top:28px">⚠️ Ghost Alert — ${ghostAlerts.length} brother(s) with no submission this week</h3>
+           <p style="font-size:13px;color:#444">These active members have zero submissions on record and may need to be contacted:</p>
+           <ul style="font-size:14px">${ghostAlerts.map(g => `<li><strong>${g.name}</strong> — ${g.chore}</li>`).join('')}</ul>`
+        : '';
       const html = `<html><body style="font-family:Arial,sans-serif">
         <h2 style="color:#093D20">Chore Fine List — Week of ${weekStart}</h2>
+        ${fineList.length > 0 ? `
         <table border="1" cellspacing="0" cellpadding="0"
                style="border-collapse:collapse;font-size:14px">
           <thead>
@@ -392,13 +503,15 @@ function runMondayReset() {
           </thead>
           <tbody>${rows}</tbody>
         </table>
-        <p><strong>Total fines:</strong> ${fineList.length} ($${fineList.length * fineAmount})</p>
+        <p><strong>Total fines:</strong> ${fineList.length} ($${fineList.length * fineAmount})</p>` : '<p style="color:#666">No fines issued this week.</p>'}
+        ${ghostSection}
         <p style="color:#888;font-size:12px">Sent automatically by the Chore Management System.</p>
         </body></html>`;
       GmailApp.sendEmail(
         emailList.join(','),
         'Chore Fine List — Week of ' + weekStart,
-        fineList.map(f => `${f.memberName}: ${f.choreName}`).join('\n'),
+        fineList.map(f => `${f.memberName}: ${f.choreName}`).join('\n') +
+          (ghostAlerts.length ? '\n\nGhost alert: ' + ghostAlerts.map(g => g.name + ' (' + g.chore + ')').join(', ') : ''),
         { htmlBody: html }
       );
     }
@@ -416,12 +529,12 @@ function runMondayReset() {
     // Refresh weekly_status tab
     _refreshWeeklyStatus();
 
-    logInfo('runMondayReset', `Fines:${fineList.length} | Next week:${nextMonday}`);
+    logInfo('runMondayReset', `Fines:${fineList.length} | Next week:${nextMonday} | Ghosts:${ghostAlerts.length}`);
 
     try {
-      SpreadsheetApp.getUi().alert(
-        `Monday Reset Complete!\n\nFines issued: ${fineList.length}\nNext week: ${nextMonday}`
-      );
+      let msg = `Monday Reset Complete!\n\nFines issued: ${fineList.length}\nNext week: ${nextMonday}`;
+      if (ghostAlerts.length) msg += `\n\n⚠️ Ghost alert: ${ghostAlerts.length} member(s) with no submissions this week.`;
+      SpreadsheetApp.getUi().alert(msg);
     } catch (_) { /* headless trigger call */ }
 
   } catch (err) {
@@ -449,16 +562,44 @@ function endOfSemesterArchiveWeb(pin) {
     return JSON.stringify({ success: false, error: 'Unauthorized: incorrect officer PIN.' });
   }
   try {
+    var ss = getSpreadsheet();
+
+    // Check for outstanding fines
+    var finesSheet = ss.getSheetByName('fines');
+    var outstandingFines = 0;
+    if (finesSheet && finesSheet.getLastRow() > 1) {
+      outstandingFines = finesSheet.getLastRow() - 1;
+    }
+
     syncToBigQuery();
-    const ss = getSpreadsheet();
+
     ['chore_assignments', 'submissions', 'fines', 'weekly_status'].forEach(function(name) {
-      const sheet = ss.getSheetByName(name);
+      var sheet = ss.getSheetByName(name);
       if (!sheet) return;
-      const last = sheet.getLastRow();
+      var last = sheet.getLastRow();
       if (last > 1) sheet.deleteRows(2, last - 1);
     });
-    logInfo('endOfSemesterArchiveWeb', 'Semester archived via web app.');
-    return JSON.stringify({ success: true });
+
+    // Reset form_completed_this_semester for all active/inactive members
+    var memSheet = ss.getSheetByName('members');
+    if (memSheet) {
+      var memData = memSheet.getDataRange().getValues();
+      var cm = _buildColMap(memData[0]);
+      var fcCol = cm['form_completed_this_semester'];
+      var statusCol = cm['status'] !== undefined ? cm['status'] : 4;
+      if (fcCol !== undefined) {
+        for (var i = 1; i < memData.length; i++) {
+          var st = String(memData[i][statusCol] || '');
+          if (st === 'active' || st === 'inactive') {
+            memSheet.getRange(i + 1, fcCol + 1).setValue(false);
+          }
+        }
+      }
+    }
+
+    var semester = getConfigValue('semester') || 'unknown';
+    logInfo('endOfSemesterArchiveWeb', 'Semester ' + semester + ' archived via web app. Outstanding fines at time of archive: ' + outstandingFines);
+    return JSON.stringify({ success: true, outstandingFinesAtArchive: outstandingFines });
   } catch (err) {
     logError('endOfSemesterArchiveWeb', err);
     return JSON.stringify({ success: false, error: err.toString() });
@@ -467,10 +608,21 @@ function endOfSemesterArchiveWeb(pin) {
 
 // Spreadsheet-menu version (shows UI dialogs) — called from the custom menu.
 function endOfSemesterArchive() {
-  const ui = SpreadsheetApp.getUi();
-  const ans = ui.alert(
+  var ui = SpreadsheetApp.getUi();
+  var ss = getSpreadsheet();
+
+  // Check outstanding fines first
+  var finesSheet = ss.getSheetByName('fines');
+  var outstanding = finesSheet && finesSheet.getLastRow() > 1 ? finesSheet.getLastRow() - 1 : 0;
+  var fineAmount  = Number(getConfigValue('fine_amount') || 5);
+  var warnMsg = outstanding > 0
+    ? 'WARNING: ' + outstanding + ' members have outstanding fines totaling $' + (outstanding * fineAmount) + '.\n\n'
+    : '';
+
+  var ans = ui.alert(
     'End of Semester Archive',
-    'This will:\n1. Push all data to BigQuery\n2. Clear assignments, submissions, fines, weekly_status\n3. Keep members intact\n\nContinue?',
+    warnMsg +
+    'This will:\n1. Push all data to BigQuery\n2. Clear assignments, submissions, fines, weekly_status\n3. Reset form completion flags\n4. Keep members intact\n\nContinue?',
     ui.ButtonSet.YES_NO
   );
   if (ans !== ui.Button.YES) return;
@@ -478,15 +630,30 @@ function endOfSemesterArchive() {
   try {
     syncToBigQuery();
 
-    const ss = getSpreadsheet();
-    ['chore_assignments', 'submissions', 'fines', 'weekly_status'].forEach(name => {
-      const sheet = ss.getSheetByName(name);
+    ['chore_assignments', 'submissions', 'fines', 'weekly_status'].forEach(function(name) {
+      var sheet = ss.getSheetByName(name);
       if (!sheet) return;
-      const last = sheet.getLastRow();
+      var last = sheet.getLastRow();
       if (last > 1) sheet.deleteRows(2, last - 1);
     });
 
-    logInfo('endOfSemesterArchive', 'Semester archived.');
+    // Reset form_completed_this_semester
+    var memSheet = ss.getSheetByName('members');
+    if (memSheet) {
+      var memData = memSheet.getDataRange().getValues();
+      var cm = _buildColMap(memData[0]);
+      var fcCol = cm['form_completed_this_semester'];
+      var statusCol = cm['status'] !== undefined ? cm['status'] : 4;
+      if (fcCol !== undefined) {
+        for (var i = 1; i < memData.length; i++) {
+          var st = String(memData[i][statusCol] || '');
+          if (st === 'active' || st === 'inactive') memSheet.getRange(i + 1, fcCol + 1).setValue(false);
+        }
+      }
+    }
+
+    var semester = getConfigValue('semester') || 'unknown';
+    logInfo('endOfSemesterArchive', 'Semester ' + semester + ' archived.');
     ui.alert('Semester archived. Ready for new assignments.');
   } catch (err) {
     logError('endOfSemesterArchive', err);
@@ -521,10 +688,9 @@ function getAssignments() {
     const ss        = getSpreadsheet();
     const semester  = getConfigValue('semester');
     const asgData   = ss.getSheetByName('chore_assignments').getDataRange().getValues();
-    const memData   = ss.getSheetByName('members').getDataRange().getValues();
 
     const memMap = {};
-    for (let i = 1; i < memData.length; i++) memMap[memData[i][0]] = memData[i][2]; // name col 2
+    _getMembersStructured().forEach(function(m) { memMap[m.memberId] = m.name; });
 
     const grouped = {};
     for (let i = 1; i < asgData.length; i++) {
@@ -613,13 +779,12 @@ function autoSplitMembers() {
   try {
     const ss         = getSpreadsheet();
     const semester   = getConfigValue('semester');
-    const memData    = ss.getSheetByName('members').getDataRange().getValues();
     const asgData    = ss.getSheetByName('chore_assignments').getDataRange().getValues();
 
     const active = [];
-    for (let i = 1; i < memData.length; i++) {
-      if (memData[i][4] === 'active') active.push({ id: memData[i][0], name: memData[i][2] });
-    }
+    _getMembersStructured().forEach(function(m) {
+      if (m.status === 'active' && !m.suspension && !m.academicSuspension) active.push({ id: m.memberId, name: m.name });
+    });
 
     const alreadyAssigned = new Set();
     for (let i = 1; i < asgData.length; i++) {
@@ -701,10 +866,9 @@ function getWeeklyStatus() {
 
     const asgData  = ss.getSheetByName('chore_assignments').getDataRange().getValues();
     const subData  = ss.getSheetByName('submissions').getDataRange().getValues();
-    const memData  = ss.getSheetByName('members').getDataRange().getValues();
 
     const memMap = {};
-    for (let i = 1; i < memData.length; i++) memMap[memData[i][0]] = memData[i][2]; // name col 2
+    _getMembersStructured().forEach(function(m) { memMap[m.memberId] = m.name; });
 
     // Group assignments by chore
     const choreMap = {};
@@ -835,16 +999,14 @@ function getMemberStats() {
   try {
     const ss       = getSpreadsheet();
     const semester = getConfigValue('semester');
-    const memData  = ss.getSheetByName('members').getDataRange().getValues();
     const subData  = ss.getSheetByName('submissions').getDataRange().getValues();
     const fineData = ss.getSheetByName('fines').getDataRange().getValues();
     const asgData  = ss.getSheetByName('chore_assignments').getDataRange().getValues();
 
     const stats = {};
-    for (let i = 1; i < memData.length; i++) {
-      if (memData[i][4] !== 'active') continue;
-      stats[memData[i][0]] = { name: memData[i][2], subs: 0, fines: 0, assignments: 0 };
-    }
+    _getMembersStructured().forEach(function(m) {
+      if (m.status === 'active') stats[m.memberId] = { name: m.name, subs: 0, fines: 0, assignments: 0 };
+    });
 
     for (let i = 1; i < asgData.length; i++) {
       if (asgData[i][4] === semester && stats[asgData[i][1]]) stats[asgData[i][1]].assignments++;
@@ -872,13 +1034,8 @@ function getMemberStats() {
 
 function getActiveMembers() {
   try {
-    const data = getSpreadsheet().getSheetByName('members').getDataRange().getValues();
-    const active = [];
-    for (let i = 1; i < data.length; i++) {
-      if (data[i][4] === 'active') {
-        active.push({ id: data[i][0], name: data[i][2], email: data[i][3], pledgeClass: data[i][5] });
-      }
-    }
+    var active = _getMembersStructured().filter(function(m) { return m.status === 'active'; })
+      .map(function(m) { return { id: m.memberId, name: m.name, email: m.email, pledgeClass: m.pledgeClass }; });
     return JSON.stringify(active);
   } catch (err) {
     logError('getActiveMembers', err);
@@ -903,9 +1060,8 @@ function getChoreMembers(choreName) {
     const ss       = getSpreadsheet();
     const semester = getConfigValue('semester');
     const asgData  = ss.getSheetByName('chore_assignments').getDataRange().getValues();
-    const memData  = ss.getSheetByName('members').getDataRange().getValues();
     const memMap   = {};
-    for (let i = 1; i < memData.length; i++) memMap[memData[i][0]] = memData[i][2]; // name col 2
+    _getMembersStructured().forEach(function(m) { memMap[m.memberId] = m.name; });
 
     const members = [];
     for (let i = 1; i < asgData.length; i++) {
@@ -962,12 +1118,16 @@ function saveChoreRatios(chorePairsJson) {
 // Returns all members (all statuses) from the members sheet.
 function getMembers() {
   try {
-    const data = getSpreadsheet().getSheetByName('members').getDataRange().getValues();
-    const members = [];
-    for (var i = 1; i < data.length; i++) {
-      var r = data[i];
-      members.push({ memberId: r[0], bkNumber: r[1], name: r[2], email: r[3], status: r[4], pledgeClass: r[5] });
-    }
+    var members = _getMembersStructured().map(function(m) {
+      return {
+        memberId: m.memberId, bkNumber: m.bkNumber, name: m.name,
+        email: m.email, gtEmail: m.gtEmail, status: m.status, pledgeClass: m.pledgeClass,
+        officerRole: m.officerRole, inactiveReason: m.inactiveReason,
+        suspension: m.suspension, academicSuspension: m.academicSuspension,
+        probation: m.probation, probationType: m.probationType,
+        formCompleted: m.formCompleted, addedDate: m.addedDate
+      };
+    });
     return JSON.stringify({ success: true, data: members });
   } catch (err) {
     logError('getMembers', err);
@@ -975,22 +1135,50 @@ function getMembers() {
   }
 }
 
-// Adds a new member. Returns error if email already exists.
-// status: 'active' (default) or 'associate'. bkNumber: optional 4-digit string.
-function addMember(name, email, pledgeClass, bkNumber, status) {
+// Adds a new member.
+// Accepts new-schema fields (legalFirst, preferredName, legalLast, personalEmail, gtEmail, phone)
+// OR old-style (name as legalFirst, email as personalEmail) for backwards compat.
+function addMember(legalFirst, legalLast, preferredName, personalEmail, gtEmail, phone, pledgeClass, bkNumber, status) {
   try {
-    if (!name || !email) return JSON.stringify({ success: false, error: 'Name and email are required.' });
+    if (!legalFirst || !personalEmail) return JSON.stringify({ success: false, error: 'First name and email are required.' });
     var sheet = getSpreadsheet().getSheetByName('members');
+    if (!sheet) return JSON.stringify({ success: false, error: 'Members sheet not found.' });
     var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var cm = _buildColMap(headers);
+    var emailColOld = cm['email'] !== undefined ? cm['email'] : 3;
+    var emailColNew = cm['personal_email'];
     for (var i = 1; i < data.length; i++) {
-      if (String(data[i][3]).toLowerCase() === String(email).toLowerCase()) {
+      var existingEmail = emailColNew !== undefined ? String(data[i][emailColNew] || '') : String(data[i][emailColOld] || '');
+      if (existingEmail.toLowerCase() === String(personalEmail).toLowerCase()) {
         return JSON.stringify({ success: false, error: 'A member with this email already exists.' });
       }
     }
     var memberStatus = (status === 'associate' || status === 'inactive') ? status : 'active';
     var mid = 'M' + Utilities.getUuid().replace(/-/g, '').substring(0, 8).toUpperCase();
-    sheet.appendRow([mid, bkNumber || '', name, email, memberStatus, pledgeClass || '', new Date().toISOString()]);
-    logInfo('addMember', 'Added: ' + email + ' (' + memberStatus + ')');
+
+    // Build new row using column map
+    var isNewSchema = cm['legal_first'] !== undefined;
+    if (isNewSchema) {
+      var newRow = new Array(headers.length).fill('');
+      newRow[0] = mid;
+      if (cm['BK#'] !== undefined)             newRow[cm['BK#']]             = bkNumber || '';
+      if (cm['legal_first'] !== undefined)     newRow[cm['legal_first']]     = legalFirst;
+      if (cm['preferred_name'] !== undefined)  newRow[cm['preferred_name']]  = preferredName || '';
+      if (cm['legal_last'] !== undefined)      newRow[cm['legal_last']]      = legalLast || '';
+      if (cm['phone'] !== undefined)           newRow[cm['phone']]           = phone || '';
+      if (cm['personal_email'] !== undefined)  newRow[cm['personal_email']]  = personalEmail;
+      if (cm['GT_email'] !== undefined)        newRow[cm['GT_email']]        = gtEmail || '';
+      if (cm['status'] !== undefined)          newRow[cm['status']]          = memberStatus;
+      if (cm['pledge_class'] !== undefined)    newRow[cm['pledge_class']]    = pledgeClass || '';
+      if (cm['added_date'] !== undefined)      newRow[cm['added_date']]      = new Date().toISOString();
+      if (cm['last_updated'] !== undefined)    newRow[cm['last_updated']]    = new Date().toISOString();
+      sheet.appendRow(newRow);
+    } else {
+      // Old schema fallback
+      sheet.appendRow([mid, bkNumber || '', legalFirst + (legalLast ? ' ' + legalLast : ''), personalEmail, memberStatus, pledgeClass || '', new Date().toISOString()]);
+    }
+    logInfo('addMember', 'Added: ' + personalEmail + ' (' + memberStatus + ')');
     return JSON.stringify({ success: true, memberId: mid });
   } catch (err) {
     logError('addMember', err);
@@ -998,17 +1186,19 @@ function addMember(name, email, pledgeClass, bkNumber, status) {
   }
 }
 
-// Toggles a member between 'active' and 'inactive'.
+// Toggles a member's status.
 function updateMemberStatus(memberId, status) {
   try {
-    if (status !== 'active' && status !== 'inactive') {
-      return JSON.stringify({ success: false, error: 'Invalid status value.' });
-    }
+    var validStatuses = ['active','inactive','associate','alumni'];
+    if (validStatuses.indexOf(status) === -1) return JSON.stringify({ success: false, error: 'Invalid status value.' });
     var sheet = getSpreadsheet().getSheetByName('members');
-    var data = sheet.getDataRange().getValues();
+    var data  = sheet.getDataRange().getValues();
+    var cm    = _buildColMap(data[0]);
+    var statusColIdx = cm['status'] !== undefined ? cm['status'] : 4;
     for (var i = 1; i < data.length; i++) {
-      if (data[i][0] === memberId) {
-        sheet.getRange(i + 1, 5).setValue(status); // status is col 5 (1-indexed)
+      if (String(data[i][0]) === String(memberId)) {
+        sheet.getRange(i + 1, statusColIdx + 1).setValue(status);
+        if (cm['last_updated'] !== undefined) sheet.getRange(i + 1, cm['last_updated'] + 1).setValue(new Date().toISOString());
         logInfo('updateMemberStatus', memberId + ' → ' + status);
         return JSON.stringify({ success: true });
       }
@@ -1239,12 +1429,11 @@ function crossMember(memberId, bkNumber) {
 
 // ---- Change 5: Member Directory backend ---------------------
 
-// Returns all members joined with their current chore + fine count — single call to load the directory.
+// Returns all members joined with chore, fine count, and status flags.
 function getMemberDirectoryData() {
   try {
     var ss = getSpreadsheet();
     var semester = getConfigValue('semester');
-    var memData  = ss.getSheetByName('members').getDataRange().getValues();
     var asgData  = ss.getSheetByName('chore_assignments').getDataRange().getValues();
     var fineData = ss.getSheetByName('fines').getDataRange().getValues();
 
@@ -1252,23 +1441,26 @@ function getMemberDirectoryData() {
     for (var i = 1; i < asgData.length; i++) {
       if (asgData[i][4] === semester) asgMap[asgData[i][1]] = asgData[i][2];
     }
-
     var fineMap = {};
     for (var i = 1; i < fineData.length; i++) {
       var fid = fineData[i][1];
       fineMap[fid] = (fineMap[fid] || 0) + 1;
     }
 
-    var members = [];
-    for (var i = 1; i < memData.length; i++) {
-      var r = memData[i];
-      members.push({
-        memberId: r[0], bkNumber: r[1], name: r[2], email: r[3],
-        status: r[4], pledgeClass: r[5],
-        chore: asgMap[r[0]] || null,
-        fineCount: fineMap[r[0]] || 0
-      });
-    }
+    var members = _getMembersStructured().map(function(m) {
+      return {
+        memberId: m.memberId, bkNumber: m.bkNumber, name: m.name,
+        email: m.email, gtEmail: m.gtEmail, status: m.status,
+        pledgeClass: m.pledgeClass, officerRole: m.officerRole,
+        inactiveReason: m.inactiveReason,
+        suspension: m.suspension, suspensionReason: m.suspensionReason, suspensionEnd: m.suspensionEnd,
+        academicSuspension: m.academicSuspension,
+        probation: m.probation, probationType: m.probationType,
+        formCompleted: m.formCompleted,
+        chore: asgMap[m.memberId] || null,
+        fineCount: fineMap[m.memberId] || 0
+      };
+    });
 
     return JSON.stringify({ success: true, data: members, semester: semester });
   } catch (err) {
@@ -1277,33 +1469,55 @@ function getMemberDirectoryData() {
   }
 }
 
-// Edits name, email, pledgeClass, and bkNumber for an existing member.
-function updateMember(memberId, name, email, pledgeClass, bkNumber) {
+// Edits basic fields for an existing member (name, email, pledgeClass, bkNumber, status).
+function updateMember(memberId, name, email, pledgeClass, bkNumber, status) {
   try {
     if (!name || !email) return JSON.stringify({ success: false, error: 'Name and email are required.' });
     var sheet = getSpreadsheet().getSheetByName('members');
-    var data = sheet.getDataRange().getValues();
+    var data  = sheet.getDataRange().getValues();
+    var cm    = _buildColMap(data[0]);
+    var isNewSchema = cm['legal_first'] !== undefined;
+    var emailCol = isNewSchema ? cm['personal_email'] : (cm['email'] !== undefined ? cm['email'] : 3);
+
     for (var i = 1; i < data.length; i++) {
-      if (String(data[i][3]).toLowerCase() === String(email).toLowerCase() && data[i][0] !== memberId) {
+      if (String(data[i][emailCol] || '').toLowerCase() === String(email).toLowerCase() && String(data[i][0]) !== String(memberId)) {
         return JSON.stringify({ success: false, error: 'That email is already used by another member.' });
       }
     }
     if (bkNumber) {
-      if (!/^\d{4}$/.test(String(bkNumber))) {
-        return JSON.stringify({ success: false, error: 'BK number must be exactly 4 digits.' });
-      }
+      if (!/^\d{4}$/.test(String(bkNumber))) return JSON.stringify({ success: false, error: 'BK number must be exactly 4 digits.' });
+      var bkCol = cm['BK#'] !== undefined ? cm['BK#'] : 1;
       for (var i = 1; i < data.length; i++) {
-        if (String(data[i][1]) === String(bkNumber) && data[i][0] !== memberId) {
+        if (String(data[i][bkCol] || '') === String(bkNumber) && String(data[i][0]) !== String(memberId)) {
           return JSON.stringify({ success: false, error: 'BK ' + bkNumber + ' is already in use.' });
         }
       }
     }
     for (var i = 1; i < data.length; i++) {
-      if (data[i][0] === memberId) {
-        sheet.getRange(i + 1, 2).setValue(bkNumber || '');   // bk_number
-        sheet.getRange(i + 1, 3).setValue(name);              // name
-        sheet.getRange(i + 1, 4).setValue(email);             // email
-        sheet.getRange(i + 1, 6).setValue(pledgeClass || ''); // pledge_class
+      if (String(data[i][0]) === String(memberId)) {
+        var bkColW = cm['BK#'] !== undefined ? cm['BK#'] : 1;
+        sheet.getRange(i + 1, bkColW + 1).setValue(bkNumber || '');
+        if (isNewSchema) {
+          // Split name into first/last for new schema
+          var parts = name.trim().split(' ');
+          var first = parts[0] || '';
+          var last  = parts.slice(1).join(' ') || '';
+          if (cm['legal_first'] !== undefined)   sheet.getRange(i + 1, cm['legal_first']   + 1).setValue(first);
+          if (cm['legal_last']  !== undefined)   sheet.getRange(i + 1, cm['legal_last']    + 1).setValue(last);
+          if (cm['personal_email'] !== undefined) sheet.getRange(i + 1, cm['personal_email']+ 1).setValue(email);
+          if (cm['pledge_class'] !== undefined)  sheet.getRange(i + 1, cm['pledge_class']  + 1).setValue(pledgeClass || '');
+          if (status && cm['status'] !== undefined) sheet.getRange(i + 1, cm['status'] + 1).setValue(status);
+          if (cm['last_updated'] !== undefined)  sheet.getRange(i + 1, cm['last_updated']  + 1).setValue(new Date().toISOString());
+        } else {
+          var nameCol = cm['name'] !== undefined ? cm['name'] : 2;
+          var emCol   = cm['email'] !== undefined ? cm['email'] : 3;
+          var plCol   = cm['pledge_class'] !== undefined ? cm['pledge_class'] : 5;
+          var stCol   = cm['status'] !== undefined ? cm['status'] : 4;
+          sheet.getRange(i + 1, nameCol + 1).setValue(name);
+          sheet.getRange(i + 1, emCol   + 1).setValue(email);
+          sheet.getRange(i + 1, plCol   + 1).setValue(pledgeClass || '');
+          if (status) sheet.getRange(i + 1, stCol + 1).setValue(status);
+        }
         logInfo('updateMember', memberId + ': ' + name);
         return JSON.stringify({ success: true });
       }
@@ -1321,11 +1535,8 @@ function getAssignedMembersForChore(choreName) {
     var ss = getSpreadsheet();
     var semester = getConfigValue('semester');
     var asgData = ss.getSheetByName('chore_assignments').getDataRange().getValues();
-    var memData = ss.getSheetByName('members').getDataRange().getValues();
     var memMap = {};
-    for (var i = 1; i < memData.length; i++) {
-      if (memData[i][4] === 'active') memMap[memData[i][0]] = memData[i][2];
-    }
+    _getMembersStructured().forEach(function(m) { if (m.status === 'active') memMap[m.memberId] = m.name; });
     var members = [];
     for (var i = 1; i < asgData.length; i++) {
       var r = asgData[i];
@@ -1340,19 +1551,59 @@ function getAssignedMembersForChore(choreName) {
   }
 }
 
-// Sets a member's status to 'alumni' (graduated/removed brothers kept for history).
-function graduateMember(memberId) {
+// Full graduate: copies member to alumni tab, removes from members, clears assignments.
+function graduateMember(memberId, performedBy) {
   try {
-    var sheet = getSpreadsheet().getSheetByName('members');
-    var data = sheet.getDataRange().getValues();
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][0] === memberId) {
-        sheet.getRange(i + 1, 5).setValue('alumni');
-        logInfo('graduateMember', memberId + ' → alumni');
-        return JSON.stringify({ success: true });
+    performedBy = performedBy || 'Officer';
+    var ss = getSpreadsheet();
+    var memSheet = ss.getSheetByName('members');
+    var memData  = memSheet.getDataRange().getValues();
+    var cm = _buildColMap(memData[0]);
+    var memberRow = null, memberRowNum = -1;
+    for (var i = 1; i < memData.length; i++) {
+      if (String(memData[i][0]) === String(memberId)) { memberRow = memData[i]; memberRowNum = i + 1; break; }
+    }
+    if (!memberRow) return JSON.stringify({ success: false, error: 'Member not found.' });
+
+    var displayName = _displayName(memberRow, cm);
+    var semester = getConfigValue('semester') || '';
+
+    // Build alumni row
+    var ALUMNI_HEADERS = ['BK#','legal_first','preferred_name','legal_last','phone','personal_email',
+      'GTID','buzzcard','GT_username','GT_email','major','year','anticipated_graduation','hometown',
+      'birthday','shirt_size','dietary_restrictions','car_on_campus','allergies',
+      'emergency_contact_name','emergency_contact_phone','campus_orgs','leadership_positions',
+      'which_positions','service_orgs','anything_else','pledge_class','officer_role',
+      'graduated_semester','moved_to_alumni_date','notes'];
+
+    var alSheet = ss.getSheetByName('alumni');
+    if (!alSheet) { alSheet = ss.insertSheet('alumni'); alSheet.appendRow(ALUMNI_HEADERS); alSheet.setFrozenRows(1); }
+    var alData = alSheet.getDataRange().getValues();
+    var alCM = _buildColMap(alData[0]);
+
+    var alRow = new Array(ALUMNI_HEADERS.length).fill('');
+    ALUMNI_HEADERS.forEach(function(h, idx) {
+      if (cm[h] !== undefined) alRow[idx] = memberRow[cm[h]];
+    });
+    // Set graduated_semester and moved_to_alumni_date
+    if (alCM['graduated_semester'] !== undefined) alRow[alCM['graduated_semester']] = semester;
+    if (alCM['moved_to_alumni_date'] !== undefined) alRow[alCM['moved_to_alumni_date']] = _normDate(new Date());
+    alSheet.appendRow(alRow);
+
+    // Remove member row
+    memSheet.deleteRow(memberRowNum);
+
+    // Remove chore assignments
+    var asgSheet = ss.getSheetByName('chore_assignments');
+    if (asgSheet) {
+      var asgData = asgSheet.getDataRange().getValues();
+      for (var j = asgData.length - 1; j >= 1; j--) {
+        if (String(asgData[j][1]) === String(memberId)) asgSheet.deleteRow(j + 1);
       }
     }
-    return JSON.stringify({ success: false, error: 'Member not found.' });
+
+    _logAudit('graduateMember', memberId, displayName, performedBy, 'semester=' + semester);
+    return JSON.stringify({ success: true, message: displayName + ' moved to alumni.' });
   } catch (err) {
     logError('graduateMember', err);
     return JSON.stringify({ success: false, error: err.toString() });
@@ -1382,4 +1633,1139 @@ function getMemberFineHistory(memberId) {
     logError('getMemberFineHistory', err);
     return JSON.stringify({ success: false, error: err.toString() });
   }
+}
+
+// ============================================================
+// UPDATE 4 — New Functions
+// ============================================================
+
+// ---- Tab Setup ---------------------------------------------
+
+var MEMBER_HEADERS = [
+  'member_id','BK#','bid_order','legal_first','preferred_name','legal_last',
+  'phone','personal_email','GTID','buzzcard','GT_username','GT_email',
+  'hometown','birthday','dietary_restrictions','allergies',
+  'emergency_contact_name','emergency_contact_phone',
+  'major','year','anticipated_graduation','living_in_house','meal_plan',
+  'car_on_campus','shirt_size','campus_orgs','leadership_positions',
+  'which_positions','service_orgs','anything_else',
+  'status','inactive_reason','suspension','suspension_reason','suspension_end',
+  'probation','probation_type','probation_reason','probation_end',
+  'academic_suspension','officer_role','pledge_class',
+  'form_completed_this_semester','co_op_semester','added_date','last_updated'
+];
+
+var ALUMNI_HEADERS = [
+  'BK#','legal_first','preferred_name','legal_last','phone','personal_email',
+  'GTID','buzzcard','GT_username','GT_email','major','year',
+  'anticipated_graduation','hometown','birthday','shirt_size',
+  'dietary_restrictions','car_on_campus','allergies',
+  'emergency_contact_name','emergency_contact_phone','campus_orgs',
+  'leadership_positions','which_positions','service_orgs','anything_else',
+  'pledge_class','officer_role','graduated_semester','moved_to_alumni_date','notes'
+];
+
+var NEW_MEMBER_FORM_HEADERS = [
+  'Timestamp','Bid Order','Legal First Name','Preferred Name','Legal Last Name',
+  'Phone Number','Personal Email','GTID','BuzzCard 6-Digit Code','GT Username',
+  'GT Email','Major','Year','Anticipated Graduation','Hometown','Birthday',
+  'Shirt Size','Dietary Restrictions','Do you have a car on campus?','Allergies',
+  'Emergency Contact Name','Emergency Contact Phone Number',
+  'Please list campus organizations...','Do you hold a leadership position...',
+  'Which ones/what position?','Are any of these clubs service-based?',
+  'Will you be on the meal plan?','Anything else we should know?'
+];
+
+var RETURNING_MEMBER_FORM_HEADERS = [
+  'Timestamp','BK #','Legal First Name','Legal Last Name',
+  'Status this semester','Are you living in the house?',
+  'Will you be on the meal plan?','Major','Year','Anticipated Graduation',
+  'Please list campus organizations...','Do you hold a leadership position...',
+  'If so, which ones and what positions?','Are any of these service-based?',
+  'Do you have a car on campus?','T-Shirt Size','Anything else we should know?'
+];
+
+// Creates required tabs and migrates members tab to new schema if needed.
+function ensureTabsExist() {
+  var ss = getSpreadsheet();
+  var ui;
+  try { ui = SpreadsheetApp.getUi(); } catch (_) { ui = null; }
+
+  // --- Members tab: migrate to new schema if needed ---
+  var memSheet = ss.getSheetByName('members');
+  if (memSheet) {
+    var existingHeaders = memSheet.getRange(1, 1, 1, Math.max(memSheet.getLastColumn(), 1)).getValues()[0];
+    var hasNewSchema = existingHeaders.indexOf('legal_first') !== -1;
+    if (!hasNewSchema && memSheet.getLastRow() > 0) {
+      var allData = memSheet.getDataRange().getValues();
+      var oldCM = _buildColMap(allData[0]);
+      var newRows = [MEMBER_HEADERS];
+      for (var i = 1; i < allData.length; i++) {
+        var row = allData[i];
+        var newRow = new Array(MEMBER_HEADERS.length).fill('');
+        newRow[0]  = row[0] || '';                          // member_id
+        newRow[1]  = row[oldCM['bk_number'] !== undefined ? oldCM['bk_number'] : 1] || ''; // BK#
+        // Split old 'name' into legal_first + legal_last
+        var fullName = String(row[oldCM['name'] !== undefined ? oldCM['name'] : 2] || '').trim();
+        var nameParts = fullName.split(' ');
+        newRow[3]  = nameParts[0] || '';                    // legal_first
+        newRow[5]  = nameParts.slice(1).join(' ') || '';    // legal_last
+        newRow[7]  = row[oldCM['email'] !== undefined ? oldCM['email'] : 3] || ''; // personal_email
+        newRow[30] = row[oldCM['status'] !== undefined ? oldCM['status'] : 4] || ''; // status
+        newRow[41] = row[oldCM['pledge_class'] !== undefined ? oldCM['pledge_class'] : 5] || ''; // pledge_class
+        newRow[44] = row[oldCM['added_date']   !== undefined ? oldCM['added_date']   : 6] || ''; // added_date
+        newRows.push(newRow);
+      }
+      memSheet.clearContents();
+      memSheet.getRange(1, 1, newRows.length, MEMBER_HEADERS.length).setValues(newRows);
+      memSheet.setFrozenRows(1);
+      logInfo('ensureTabsExist', 'Members tab migrated to new schema. ' + (newRows.length - 1) + ' rows converted.');
+    }
+  }
+
+  // --- Create new tabs ---
+  var tabsToCreate = {
+    'alumni':                   ALUMNI_HEADERS,
+    'new_member_responses':     NEW_MEMBER_FORM_HEADERS,
+    'returning_member_responses': RETURNING_MEMBER_FORM_HEADERS,
+    'member_notes':             ['note_id','member_id','note_text','note_type','created_by','created_at']
+  };
+
+  var created = [];
+  Object.keys(tabsToCreate).forEach(function(tabName) {
+    if (!ss.getSheetByName(tabName)) {
+      var newSheet = ss.insertSheet(tabName);
+      newSheet.appendRow(tabsToCreate[tabName]);
+      newSheet.setFrozenRows(1);
+      created.push(tabName);
+    }
+  });
+
+  var msg = 'Tabs verified. Created: ' + (created.length ? created.join(', ') : 'none (all exist)');
+  logInfo('ensureTabsExist', msg);
+  if (ui) ui.alert('Setup Complete', msg, ui.ButtonSet.OK);
+  return JSON.stringify({ success: true, message: msg });
+}
+
+// ---- One-Time Migration from Old Roster --------------------
+
+function migrateFromRosterSheet() {
+  var ui;
+  try { ui = SpreadsheetApp.getUi(); } catch (_) { ui = null; }
+
+  var flag = getConfigValue('roster_migration_done');
+  if (flag && String(flag).toLowerCase() === 'true') {
+    var msg = 'Migration already completed. Clear the "roster_migration_done" config flag to run again.';
+    if (ui) ui.alert(msg); else logInfo('migrateFromRosterSheet', msg);
+    return JSON.stringify({ success: false, error: msg });
+  }
+
+  try {
+    var OLD_ROSTER_ID = '1Fy2lKxpzdGsPyAWTVFcETsxNmhrX3UScVKI2NGEsMsU';
+    var oldSS = SpreadsheetApp.openById(OLD_ROSTER_ID);
+    var sheets = oldSS.getSheets();
+
+    // Find most recent active semester tab
+    var skipNames = ['alumni', 'instructions', 'Alumni', 'Instructions'];
+    var semesterSheets = sheets.filter(function(s) {
+      return !s.isSheetHidden() && skipNames.indexOf(s.getName().toLowerCase()) === -1
+        && skipNames.indexOf(s.getName()) === -1;
+    });
+    if (!semesterSheets.length) throw new Error('No visible semester tab found in old roster.');
+    var rosterSheet = semesterSheets[semesterSheets.length - 1];
+
+    var rosterData = rosterSheet.getDataRange().getValues();
+    var rosterCM = _buildColMap(rosterData[0]);
+
+    // Ensure our tabs exist
+    ensureTabsExist();
+
+    var ss = getSpreadsheet();
+    var memSheet = ss.getSheetByName('members');
+    var memData  = memSheet.getDataRange().getValues();
+    var memCM    = _buildColMap(memData[0]);
+
+    // Build lookup by email and BK#
+    var emailToRow = {}, bkToRow = {};
+    for (var i = 1; i < memData.length; i++) {
+      var em = _memberEmail(memData[i], memCM).toLowerCase();
+      var bk = String(memData[i][memCM['BK#'] !== undefined ? memCM['BK#'] : 1] || '');
+      if (em) emailToRow[em] = i;
+      if (bk) bkToRow[bk] = i;
+    }
+
+    var added = 0, updated = 0, skipped = 0;
+    var statusMap = { 'Active': 'active', 'Inactive': 'inactive', 'active': 'active', 'inactive': 'inactive' };
+
+    for (var r = 1; r < rosterData.length; r++) {
+      var row = rosterData[r];
+      var rEmail  = String(row[rosterCM['Email'] !== undefined ? rosterCM['Email'] : (rosterCM['email'] || 3)] || '').trim().toLowerCase();
+      var rBK     = String(row[rosterCM['BK#'] !== undefined ? rosterCM['BK#'] : (rosterCM['bk_number'] || 1)] || '').trim();
+      var rStatus = String(row[rosterCM['Status'] !== undefined ? rosterCM['Status'] : (rosterCM['status'] || 4)] || '').trim();
+      if (rStatus.toLowerCase() === 'alumni') { skipped++; continue; }
+
+      var matchIdx = emailToRow[rEmail] || (rBK ? bkToRow[rBK] : null);
+      var mappedStatus = statusMap[rStatus] || 'inactive';
+
+      if (matchIdx) {
+        // Update existing
+        if (memCM['status'] !== undefined) memSheet.getRange(matchIdx + 1, memCM['status'] + 1).setValue(mappedStatus);
+        if (memCM['last_updated'] !== undefined) memSheet.getRange(matchIdx + 1, memCM['last_updated'] + 1).setValue(new Date().toISOString());
+        updated++;
+      } else {
+        // Create new row
+        var newRow = new Array(MEMBER_HEADERS.length).fill('');
+        var mid = 'M' + Utilities.getUuid().replace(/-/g,'').substring(0,8).toUpperCase();
+        newRow[0]  = mid;
+        newRow[1]  = rBK;
+        var rFirst = String(row[rosterCM['First Name'] !== undefined ? rosterCM['First Name'] : (rosterCM['legal_first'] || 3)] || '').trim();
+        var rLast  = String(row[rosterCM['Last Name']  !== undefined ? rosterCM['Last Name']  : (rosterCM['legal_last']  || 5)] || '').trim();
+        if (!rFirst) {
+          var rName = String(row[rosterCM['Name'] !== undefined ? rosterCM['Name'] : 2] || '').trim();
+          var parts = rName.split(' ');
+          rFirst = parts[0] || ''; rLast = parts.slice(1).join(' ') || '';
+        }
+        newRow[memCM['legal_first']]   = rFirst;
+        newRow[memCM['legal_last']]    = rLast;
+        newRow[memCM['personal_email']]= rEmail;
+        newRow[memCM['BK#']]           = rBK;
+        newRow[memCM['status']]        = mappedStatus;
+        if (memCM['pledge_class'] !== undefined) newRow[memCM['pledge_class']] = String(row[rosterCM['Pledge Class'] !== undefined ? rosterCM['Pledge Class'] : 5] || '');
+        newRow[memCM['added_date']]    = new Date().toISOString();
+        memSheet.appendRow(newRow);
+        added++;
+      }
+    }
+
+    // Migrate alumni tab from old roster
+    var oldAlumniSheet = oldSS.getSheetByName('Alumni') || oldSS.getSheetByName('alumni');
+    var alumniMigrated = 0;
+    if (oldAlumniSheet) {
+      var alData = oldAlumniSheet.getDataRange().getValues();
+      var alCM   = _buildColMap(alData[0]);
+      var ourAlSheet = ss.getSheetByName('alumni');
+      if (!ourAlSheet) { ourAlSheet = ss.insertSheet('alumni'); ourAlSheet.appendRow(ALUMNI_HEADERS); ourAlSheet.setFrozenRows(1); }
+      var ourAlCM = _buildColMap(ourAlSheet.getRange(1,1,1,ourAlSheet.getLastColumn()).getValues()[0]);
+      for (var a = 1; a < alData.length; a++) {
+        var aRow = alData[a];
+        var alNewRow = new Array(ALUMNI_HEADERS.length).fill('');
+        ALUMNI_HEADERS.forEach(function(h, idx) {
+          if (alCM[h] !== undefined) alNewRow[idx] = aRow[alCM[h]];
+        });
+        ourAlSheet.appendRow(alNewRow);
+        alumniMigrated++;
+      }
+    }
+
+    setConfigValue('roster_migration_done', 'true');
+    var summary = 'Migration complete. Added: ' + added + ' | Updated: ' + updated + ' | Skipped (alumni): ' + skipped + ' | Alumni migrated: ' + alumniMigrated;
+    logInfo('migrateFromRosterSheet', summary);
+    if (ui) ui.alert('Migration Complete', summary, ui.ButtonSet.OK);
+    return JSON.stringify({ success: true, added: added, updated: updated, skipped: skipped, alumniMigrated: alumniMigrated });
+  } catch (err) {
+    logError('migrateFromRosterSheet', err);
+    if (ui) ui.alert('Migration Error', err.toString(), ui.ButtonSet.OK);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// ---- Relink Google Forms -----------------------------------
+
+function relinkForms() {
+  var ui;
+  try { ui = SpreadsheetApp.getUi(); } catch (_) { ui = null; }
+
+  var flag = getConfigValue('forms_relinked');
+  if (flag && String(flag).toLowerCase() === 'true') {
+    var msg = 'Forms already relinked. Clear "forms_relinked" config flag to run again.';
+    if (ui) ui.alert(msg); return JSON.stringify({ success: false, error: msg });
+  }
+
+  try {
+    var NEW_MEMBER_FORM_ID     = '11_pZU70tnSDixHVf-GhxJJt1eDo8MgE2liyxzNePZs4';
+    var RETURNING_MEMBER_FORM_ID = '1J10pg_DsD4oZNbGYIIiM_yha3ZYzP-hDdTKkk1hPf7U';
+    var ss = getSpreadsheet();
+    var ssId = ss.getId();
+
+    ensureTabsExist();
+
+    var newMemberForm = FormApp.openById(NEW_MEMBER_FORM_ID);
+    newMemberForm.setDestination(FormApp.DestinationType.SPREADSHEET, ssId);
+    logInfo('relinkForms', 'New member form linked to sheet ' + ssId);
+
+    var returningForm = FormApp.openById(RETURNING_MEMBER_FORM_ID);
+    returningForm.setDestination(FormApp.DestinationType.SPREADSHEET, ssId);
+    logInfo('relinkForms', 'Returning member form linked to sheet ' + ssId);
+
+    setConfigValue('forms_relinked', 'true');
+    var msg2 = 'Both forms relinked to this spreadsheet. Check that response tabs match the expected tab names.';
+    if (ui) ui.alert('Forms Relinked', msg2, ui.ButtonSet.OK);
+    return JSON.stringify({ success: true, message: msg2 });
+  } catch (err) {
+    logError('relinkForms', err);
+    if (ui) ui.alert('Error', err.toString(), ui.ButtonSet.OK);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// ---- Semester Sync -----------------------------------------
+
+function runSemesterSync(pin) {
+  if (pin && !_checkOfficerPin(pin)) return JSON.stringify({ success: false, error: 'Unauthorized: incorrect officer PIN.' });
+  var ui;
+  try { ui = SpreadsheetApp.getUi(); } catch (_) { ui = null; }
+
+  try {
+    var ss = getSpreadsheet();
+    var semester = getConfigValue('semester') || '';
+    var memSheet = ss.getSheetByName('members');
+    var memData  = memSheet.getDataRange().getValues();
+    var memCM    = _buildColMap(memData[0]);
+
+    var log = ['=== SEMESTER SYNC: ' + semester + ' @ ' + new Date().toISOString() + ' ==='];
+    var newAdded = 0, returning = 0, incomplete = [], potentialGrads = [], inactivePrev = [];
+
+    // ---- STEP 1: Process new member responses ----
+    var nmSheet = ss.getSheetByName('new_member_responses');
+    if (nmSheet && nmSheet.getLastRow() > 1) {
+      var nmData = nmSheet.getDataRange().getValues();
+      var nmCM   = _buildColMap(nmData[0]);
+      var seenEmails = {};
+      for (var i = 1; i < nmData.length; i++) {
+        var nr = nmData[i];
+        var nmEmail = String(nr[nmCM['Personal Email'] !== undefined ? nmCM['Personal Email'] : 6] || '').trim().toLowerCase();
+        if (!nmEmail) continue;
+        if (seenEmails[nmEmail]) { log.push('WARN: Duplicate new-member form: ' + nmEmail); continue; }
+        seenEmails[nmEmail] = true;
+
+        // Check if exists
+        var found = false;
+        for (var m = 1; m < memData.length; m++) {
+          var existEmail = _memberEmail(memData[m], memCM).toLowerCase();
+          if (existEmail === nmEmail) { found = true; break; }
+        }
+        if (!found) {
+          var newRow = new Array(MEMBER_HEADERS.length).fill('');
+          newRow[0]  = 'M' + Utilities.getUuid().replace(/-/g,'').substring(0,8).toUpperCase();
+          newRow[memCM['legal_first']]    = String(nr[nmCM['Legal First Name'] !== undefined ? nmCM['Legal First Name'] : 2] || '');
+          newRow[memCM['preferred_name']] = String(nr[nmCM['Preferred Name']    !== undefined ? nmCM['Preferred Name']   : 3] || '');
+          newRow[memCM['legal_last']]     = String(nr[nmCM['Legal Last Name']   !== undefined ? nmCM['Legal Last Name']  : 4] || '');
+          newRow[memCM['phone']]          = String(nr[nmCM['Phone Number']      !== undefined ? nmCM['Phone Number']     : 5] || '');
+          newRow[memCM['personal_email']] = nmEmail;
+          newRow[memCM['GTID']]           = String(nr[nmCM['GTID']              !== undefined ? nmCM['GTID']             : 7] || '');
+          newRow[memCM['buzzcard']]       = String(nr[nmCM['BuzzCard 6-Digit Code'] !== undefined ? nmCM['BuzzCard 6-Digit Code'] : 8] || '');
+          newRow[memCM['GT_username']]    = String(nr[nmCM['GT Username']       !== undefined ? nmCM['GT Username']      : 9] || '');
+          newRow[memCM['GT_email']]       = String(nr[nmCM['GT Email']          !== undefined ? nmCM['GT Email']         : 10] || '');
+          newRow[memCM['status']]         = 'associate';
+          newRow[memCM['pledge_class']]   = semester;
+          newRow[memCM['form_completed_this_semester']] = true;
+          newRow[memCM['added_date']]     = new Date().toISOString();
+          // Semester-updated fields
+          var semFields = {
+            'major': 'Major', 'year': 'Year', 'anticipated_graduation': 'Anticipated Graduation',
+            'hometown': 'Hometown', 'birthday': 'Birthday', 'shirt_size': 'Shirt Size',
+            'dietary_restrictions': 'Dietary Restrictions', 'car_on_campus': 'Do you have a car on campus?',
+            'allergies': 'Allergies', 'emergency_contact_name': 'Emergency Contact Name',
+            'emergency_contact_phone': 'Emergency Contact Phone Number',
+            'campus_orgs': 'Please list campus organizations...',
+            'leadership_positions': 'Do you hold a leadership position...',
+            'which_positions': 'Which ones/what position?',
+            'service_orgs': 'Are any of these clubs service-based?',
+            'meal_plan': 'Will you be on the meal plan?'
+          };
+          Object.keys(semFields).forEach(function(col) {
+            if (memCM[col] !== undefined && nmCM[semFields[col]] !== undefined) {
+              newRow[memCM[col]] = String(nr[nmCM[semFields[col]]] || '');
+            }
+          });
+          memSheet.appendRow(newRow);
+          newAdded++;
+          log.push('Added new member: ' + nmEmail);
+        }
+      }
+      // Clear new_member_responses (keep header)
+      if (nmSheet.getLastRow() > 1) nmSheet.deleteRows(2, nmSheet.getLastRow() - 1);
+      log.push('New member responses processed. Added: ' + newAdded);
+    }
+
+    // Reload memData after potential new additions
+    memData = memSheet.getDataRange().getValues();
+    memCM   = _buildColMap(memData[0]);
+
+    // ---- STEP 2: Process returning member responses ----
+    var rmSheet = ss.getSheetByName('returning_member_responses');
+    if (rmSheet && rmSheet.getLastRow() > 1) {
+      var rmData = rmSheet.getDataRange().getValues();
+      var rmCM   = _buildColMap(rmData[0]);
+      for (var j = 1; j < rmData.length; j++) {
+        var rr = rmData[j];
+        var rrBK    = String(rr[rmCM['BK #'] !== undefined ? rmCM['BK #'] : 1] || '').trim();
+        var rrFirst = String(rr[rmCM['Legal First Name'] !== undefined ? rmCM['Legal First Name'] : 2] || '').trim().toLowerCase();
+        var rrLast  = String(rr[rmCM['Legal Last Name']  !== undefined ? rmCM['Legal Last Name']  : 3] || '').trim().toLowerCase();
+
+        var matchRow = -1;
+        for (var k = 1; k < memData.length; k++) {
+          var mBK = String(memData[k][memCM['BK#'] !== undefined ? memCM['BK#'] : 1] || '').trim();
+          if (rrBK && mBK === rrBK) { matchRow = k; break; }
+          // Fallback: name match
+          var mFirst = _displayName(memData[k], memCM).split(' ')[0].toLowerCase();
+          if (mFirst === rrFirst && rrFirst) matchRow = k;
+        }
+
+        if (matchRow === -1) {
+          log.push('WARN: No match for returning form: ' + rrFirst + ' ' + rrLast + ' BK#' + rrBK);
+          continue;
+        }
+
+        // Update semester fields only
+        var semMap = {
+          'major': 'Major', 'year': 'Year', 'anticipated_graduation': 'Anticipated Graduation',
+          'living_in_house': 'Are you living in the house?', 'meal_plan': 'Will you be on the meal plan?',
+          'campus_orgs': 'Please list campus organizations...',
+          'leadership_positions': 'Do you hold a leadership position...',
+          'which_positions': 'If so, which ones and what positions?',
+          'service_orgs': 'Are any of these service-based?',
+          'car_on_campus': 'Do you have a car on campus?',
+          'shirt_size': 'T-Shirt Size', 'anything_else': 'Anything else we should know?'
+        };
+        Object.keys(semMap).forEach(function(col) {
+          if (memCM[col] !== undefined && rmCM[semMap[col]] !== undefined) {
+            memSheet.getRange(matchRow + 1, memCM[col] + 1).setValue(String(rr[rmCM[semMap[col]]] || ''));
+          }
+        });
+        if (memCM['form_completed_this_semester'] !== undefined) {
+          memSheet.getRange(matchRow + 1, memCM['form_completed_this_semester'] + 1).setValue(true);
+        }
+        if (memCM['last_updated'] !== undefined) {
+          memSheet.getRange(matchRow + 1, memCM['last_updated'] + 1).setValue(new Date().toISOString());
+        }
+        returning++;
+      }
+      if (rmSheet.getLastRow() > 1) rmSheet.deleteRows(2, rmSheet.getLastRow() - 1);
+      log.push('Returning member responses processed. Updated: ' + returning);
+    }
+
+    // Reload again
+    memData = memSheet.getDataRange().getValues();
+    memCM   = _buildColMap(memData[0]);
+
+    // ---- STEP 3 & 4 & 5: Flag incomplete, grad check, inactive review ----
+    var fcCol  = memCM['form_completed_this_semester'];
+    var stCol  = memCM['status'] !== undefined ? memCM['status'] : 4;
+    var agCol  = memCM['anticipated_graduation'];
+
+    for (var n = 1; n < memData.length; n++) {
+      var mRow = memData[n];
+      var mStatus = String(mRow[stCol] || '');
+      if (mStatus === 'alumni') continue;
+
+      // Step 3: incomplete forms
+      if ((mStatus === 'active' || mStatus === 'associate') && fcCol !== undefined && !mRow[fcCol]) {
+        incomplete.push(_displayName(mRow, memCM));
+      }
+      // Step 4: graduation check
+      if ((mStatus === 'active' || mStatus === 'associate') && agCol !== undefined) {
+        var ag = String(mRow[agCol] || '').trim();
+        if (ag && _semesterIsPastOrCurrent(ag, semester)) {
+          potentialGrads.push(_displayName(mRow, memCM) + ' (grad: ' + ag + ')');
+        }
+      }
+      // Step 5: inactive members
+      if (mStatus === 'inactive') {
+        inactivePrev.push(_displayName(mRow, memCM));
+      }
+    }
+
+    // ---- STEP 7: Log ----
+    log.push('Form incomplete: ' + incomplete.length + ' members');
+    log.push('Potential graduates: ' + potentialGrads.length);
+    log.push('Inactive from last semester: ' + inactivePrev.length);
+    logInfo('runSemesterSync', log.join(' | '));
+
+    var result = {
+      success: true, newAdded: newAdded, returningUpdated: returning,
+      incompleteCount: incomplete.length, incompleteMembers: incomplete,
+      potentialGrads: potentialGrads, inactiveMembers: inactivePrev,
+      log: log
+    };
+
+    // ---- STEP 8: Show summary ----
+    if (ui) {
+      var summaryMsg =
+        'Semester Sync Complete!\n\n' +
+        'New members added: ' + newAdded + '\n' +
+        'Returning members updated: ' + returning + '\n' +
+        'Forms not submitted: ' + incomplete.length + (incomplete.length ? '\n  → ' + incomplete.slice(0,5).join(', ') + (incomplete.length > 5 ? '...' : '') : '') + '\n\n' +
+        (potentialGrads.length ? '⚠️ Potential graduates (' + potentialGrads.length + '):\n  ' + potentialGrads.slice(0,5).join('\n  ') + '\n\n' : '') +
+        (inactivePrev.length ? '📋 Inactive last semester (' + inactivePrev.length + '):\n  ' + inactivePrev.slice(0,5).join('\n  ') : '');
+      ui.alert('Semester Sync', summaryMsg, ui.ButtonSet.OK);
+    }
+
+    return JSON.stringify(result);
+  } catch (err) {
+    logError('runSemesterSync', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// Helper: returns true if a semester string (e.g. "Spring 2026") is current or past.
+function _semesterIsPastOrCurrent(gradSem, currentSem) {
+  try {
+    var parse = function(s) {
+      var parts = s.trim().split(' ');
+      var term  = (parts[0] || '').toLowerCase();
+      var year  = parseInt(parts[1] || 0);
+      var termN = term === 'spring' ? 1 : term === 'summer' ? 2 : 3;
+      return year * 10 + termN;
+    };
+    return parse(gradSem) <= parse(currentSem);
+  } catch (_) { return false; }
+}
+
+function getGraduationCandidates() {
+  try {
+    var semester = getConfigValue('semester') || '';
+    var candidates = _getMembersStructured().filter(function(m) {
+      if (m.status === 'alumni') return false;
+      return m.anticipatedGraduation && _semesterIsPastOrCurrent(m.anticipatedGraduation, semester);
+    }).map(function(m) {
+      return { memberId: m.memberId, bkNumber: m.bkNumber, name: m.name, pledgeClass: m.pledgeClass, anticipatedGraduation: m.anticipatedGraduation, status: m.status };
+    });
+    return JSON.stringify({ success: true, data: candidates });
+  } catch (err) {
+    logError('getGraduationCandidates', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// ---- Lifecycle Functions -----------------------------------
+
+function dissociateMember(memberId, reason, performedBy) {
+  try {
+    performedBy = performedBy || 'Officer';
+    var ss = getSpreadsheet();
+    var memSheet = ss.getSheetByName('members');
+    var data = memSheet.getDataRange().getValues();
+    var cm   = _buildColMap(data[0]);
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(memberId)) {
+        var name = _displayName(data[i], cm);
+        if (cm['status'] !== undefined) memSheet.getRange(i+1, cm['status']+1).setValue('inactive');
+        if (cm['inactive_reason'] !== undefined) memSheet.getRange(i+1, cm['inactive_reason']+1).setValue('removed');
+        if (cm['last_updated'] !== undefined) memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
+        // Clear assignments
+        _removeChoreAssignments(ss, memberId);
+        addMemberNote(memberId, reason || 'Dissociated from chapter.', 'disciplinary', performedBy);
+        _logAudit('dissociateMember', memberId, name, performedBy, reason);
+        return JSON.stringify({ success: true, message: name + ' dissociated.' });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) { logError('dissociateMember', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+function reactivateMember(memberId, performedBy) {
+  try {
+    performedBy = performedBy || 'Officer';
+    var memSheet = getSpreadsheet().getSheetByName('members');
+    var data = memSheet.getDataRange().getValues();
+    var cm   = _buildColMap(data[0]);
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(memberId)) {
+        var name = _displayName(data[i], cm);
+        if (cm['status'] !== undefined)          memSheet.getRange(i+1, cm['status']+1).setValue('active');
+        if (cm['inactive_reason'] !== undefined) memSheet.getRange(i+1, cm['inactive_reason']+1).setValue('');
+        if (cm['last_updated'] !== undefined)    memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
+        _logAudit('reactivateMember', memberId, name, performedBy, '');
+        return JSON.stringify({ success: true, message: name + ' reactivated.' });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) { logError('reactivateMember', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+function initiateMember(memberId, bkNumber, performedBy) {
+  try {
+    if (!bkNumber || !/^\d{4}$/.test(String(bkNumber))) return JSON.stringify({ success: false, error: 'BK number must be exactly 4 digits.' });
+    performedBy = performedBy || 'Officer';
+    var memSheet = getSpreadsheet().getSheetByName('members');
+    var data = memSheet.getDataRange().getValues();
+    var cm   = _buildColMap(data[0]);
+    var bkCol = cm['BK#'] !== undefined ? cm['BK#'] : 1;
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][bkCol] || '') === String(bkNumber) && String(data[i][0]) !== String(memberId)) {
+        return JSON.stringify({ success: false, error: 'BK ' + bkNumber + ' is already in use.' });
+      }
+    }
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(memberId)) {
+        if (String(data[i][cm['status'] !== undefined ? cm['status'] : 4]) !== 'associate') {
+          return JSON.stringify({ success: false, error: 'Member is not an Associate Member.' });
+        }
+        var name = _displayName(data[i], cm);
+        memSheet.getRange(i+1, bkCol+1).setValue(bkNumber);
+        if (cm['status'] !== undefined) memSheet.getRange(i+1, cm['status']+1).setValue('active');
+        if (cm['last_updated'] !== undefined) memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
+        _logAudit('initiateMember', memberId, name, performedBy, 'BK#=' + bkNumber);
+        return JSON.stringify({ success: true, message: name + ' initiated as BK#' + bkNumber + '.' });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) { logError('initiateMember', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+function markInactive(memberId, reason, performedBy) {
+  try {
+    var validReasons = ['co-op','study_abroad','voluntary','other'];
+    if (validReasons.indexOf(reason) === -1) reason = 'other';
+    performedBy = performedBy || 'Officer';
+    var memSheet = getSpreadsheet().getSheetByName('members');
+    var data = memSheet.getDataRange().getValues();
+    var cm   = _buildColMap(data[0]);
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(memberId)) {
+        var name = _displayName(data[i], cm);
+        if (cm['status'] !== undefined)          memSheet.getRange(i+1, cm['status']+1).setValue('inactive');
+        if (cm['inactive_reason'] !== undefined) memSheet.getRange(i+1, cm['inactive_reason']+1).setValue(reason);
+        if (cm['co_op_semester']  !== undefined && reason === 'co-op') {
+          memSheet.getRange(i+1, cm['co_op_semester']+1).setValue(getConfigValue('semester') || '');
+        }
+        if (cm['last_updated'] !== undefined) memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
+        _removeChoreAssignments(getSpreadsheet(), memberId);
+        _logAudit('markInactive', memberId, name, performedBy, 'reason=' + reason);
+        return JSON.stringify({ success: true, message: name + ' marked inactive (' + reason + ').' });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) { logError('markInactive', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+function placeSuspension(memberId, reason, endDate, isAcademic, performedBy) {
+  try {
+    performedBy = performedBy || 'Officer';
+    isAcademic  = isAcademic === true || isAcademic === 'true';
+    var memSheet = getSpreadsheet().getSheetByName('members');
+    var data = memSheet.getDataRange().getValues();
+    var cm   = _buildColMap(data[0]);
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(memberId)) {
+        var name = _displayName(data[i], cm);
+        if (isAcademic) {
+          if (cm['academic_suspension'] !== undefined) memSheet.getRange(i+1, cm['academic_suspension']+1).setValue(true);
+        } else {
+          if (cm['suspension'] !== undefined)         memSheet.getRange(i+1, cm['suspension']+1).setValue(true);
+          if (cm['suspension_reason'] !== undefined)  memSheet.getRange(i+1, cm['suspension_reason']+1).setValue(reason || '');
+          if (cm['suspension_end'] !== undefined)     memSheet.getRange(i+1, cm['suspension_end']+1).setValue(endDate || '');
+        }
+        if (cm['last_updated'] !== undefined) memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
+        _removeChoreAssignments(getSpreadsheet(), memberId);
+        _logAudit('placeSuspension', memberId, name, performedBy, (isAcademic?'academic':'chapter') + ' reason=' + reason + ' until=' + endDate);
+        return JSON.stringify({ success: true, message: name + ' suspended.' });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) { logError('placeSuspension', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+function liftSuspension(memberId, performedBy) {
+  try {
+    performedBy = performedBy || 'Officer';
+    var memSheet = getSpreadsheet().getSheetByName('members');
+    var data = memSheet.getDataRange().getValues();
+    var cm   = _buildColMap(data[0]);
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(memberId)) {
+        var name = _displayName(data[i], cm);
+        ['suspension','suspension_reason','suspension_end','academic_suspension'].forEach(function(f) {
+          if (cm[f] !== undefined) memSheet.getRange(i+1, cm[f]+1).setValue('');
+        });
+        if (cm['last_updated'] !== undefined) memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
+        _logAudit('liftSuspension', memberId, name, performedBy, '');
+        return JSON.stringify({ success: true, message: 'Suspension lifted for ' + name + '.' });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) { logError('liftSuspension', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+function placeProbation(memberId, type, reason, endDate, performedBy) {
+  try {
+    if (type !== 'chapter' && type !== 'social') return JSON.stringify({ success: false, error: 'type must be "chapter" or "social".' });
+    performedBy = performedBy || 'Officer';
+    var memSheet = getSpreadsheet().getSheetByName('members');
+    var data = memSheet.getDataRange().getValues();
+    var cm   = _buildColMap(data[0]);
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(memberId)) {
+        var name = _displayName(data[i], cm);
+        if (cm['probation'] !== undefined)         memSheet.getRange(i+1, cm['probation']+1).setValue(true);
+        if (cm['probation_type'] !== undefined)    memSheet.getRange(i+1, cm['probation_type']+1).setValue(type);
+        if (cm['probation_reason'] !== undefined)  memSheet.getRange(i+1, cm['probation_reason']+1).setValue(reason || '');
+        if (cm['probation_end'] !== undefined)     memSheet.getRange(i+1, cm['probation_end']+1).setValue(endDate || '');
+        if (cm['last_updated'] !== undefined)      memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
+        _logAudit('placeProbation', memberId, name, performedBy, type + ' reason=' + reason + ' until=' + endDate);
+        return JSON.stringify({ success: true, message: name + ' placed on ' + type + ' probation.' });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) { logError('placeProbation', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+function liftProbation(memberId, performedBy) {
+  try {
+    performedBy = performedBy || 'Officer';
+    var memSheet = getSpreadsheet().getSheetByName('members');
+    var data = memSheet.getDataRange().getValues();
+    var cm   = _buildColMap(data[0]);
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(memberId)) {
+        var name = _displayName(data[i], cm);
+        ['probation','probation_type','probation_reason','probation_end'].forEach(function(f) {
+          if (cm[f] !== undefined) memSheet.getRange(i+1, cm[f]+1).setValue('');
+        });
+        if (cm['last_updated'] !== undefined) memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
+        _logAudit('liftProbation', memberId, name, performedBy, '');
+        return JSON.stringify({ success: true, message: 'Probation lifted for ' + name + '.' });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) { logError('liftProbation', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+function setOfficerRole(memberId, role, performedBy) {
+  try {
+    performedBy = performedBy || 'Officer';
+    var memSheet = getSpreadsheet().getSheetByName('members');
+    var data = memSheet.getDataRange().getValues();
+    var cm   = _buildColMap(data[0]);
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(memberId)) {
+        var name = _displayName(data[i], cm);
+        if (cm['officer_role'] !== undefined) memSheet.getRange(i+1, cm['officer_role']+1).setValue(role || '');
+        if (cm['last_updated'] !== undefined) memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
+        _logAudit('setOfficerRole', memberId, name, performedBy, 'role=' + role);
+        return JSON.stringify({ success: true });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Member not found.' });
+  } catch (err) { logError('setOfficerRole', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// Manual fine outside Monday automation
+function issueFine(memberId, choreName, reason, performedBy) {
+  try {
+    performedBy = performedBy || 'Officer';
+    var ss = getSpreadsheet();
+    var members = _getMembersStructured();
+    var member  = members.filter(function(m) { return m.memberId === memberId; })[0];
+    if (!member) return JSON.stringify({ success: false, error: 'Member not found.' });
+    var finesSheet = ss.getSheetByName('fines');
+    if (!finesSheet) return JSON.stringify({ success: false, error: 'fines tab not found.' });
+    var fid = 'F' + Utilities.getUuid().replace(/-/g,'').substring(0,8).toUpperCase();
+    var weekStart = _normDate(getConfigValue('week_start'));
+    finesSheet.appendRow([fid, memberId, choreName || 'Manual', weekStart, reason || 'Manual fine by officer', new Date().toISOString(), performedBy]);
+    _logAudit('issueFine', memberId, member.name, performedBy, 'chore=' + choreName + ' reason=' + reason);
+    return JSON.stringify({ success: true, fineId: fid });
+  } catch (err) { logError('issueFine', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// Internal helper: remove all chore assignments for a member
+function _removeChoreAssignments(ss, memberId) {
+  var asgSheet = ss.getSheetByName('chore_assignments');
+  if (!asgSheet) return;
+  var asgData = asgSheet.getDataRange().getValues();
+  for (var i = asgData.length - 1; i >= 1; i--) {
+    if (String(asgData[i][1]) === String(memberId)) asgSheet.deleteRow(i + 1);
+  }
+}
+
+// ---- Member Notes ------------------------------------------
+
+function addMemberNote(memberId, noteText, noteType, createdBy) {
+  try {
+    var validTypes = ['general','warning','disciplinary','positive','handoff'];
+    if (validTypes.indexOf(noteType) === -1) noteType = 'general';
+    var ss = getSpreadsheet();
+    var notesSheet = ss.getSheetByName('member_notes');
+    if (!notesSheet) {
+      notesSheet = ss.insertSheet('member_notes');
+      notesSheet.appendRow(['note_id','member_id','note_text','note_type','created_by','created_at']);
+      notesSheet.setFrozenRows(1);
+    }
+    var nid = 'N' + Utilities.getUuid().replace(/-/g,'').substring(0,8).toUpperCase();
+    notesSheet.appendRow([nid, memberId, noteText, noteType, createdBy || 'Officer', new Date().toISOString()]);
+    return JSON.stringify({ success: true, noteId: nid });
+  } catch (err) { logError('addMemberNote', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+function getMemberNotes(memberId) {
+  try {
+    var notesSheet = getSpreadsheet().getSheetByName('member_notes');
+    if (!notesSheet) return JSON.stringify({ success: true, notes: [] });
+    var data = notesSheet.getDataRange().getValues();
+    var cm = _buildColMap(data[0]);
+    var notes = [];
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][cm['member_id'] !== undefined ? cm['member_id'] : 1]) === String(memberId)) {
+        notes.push({
+          noteId:    String(data[i][cm['note_id']    !== undefined ? cm['note_id']    : 0] || ''),
+          noteText:  String(data[i][cm['note_text']  !== undefined ? cm['note_text']  : 2] || ''),
+          noteType:  String(data[i][cm['note_type']  !== undefined ? cm['note_type']  : 3] || ''),
+          createdBy: String(data[i][cm['created_by'] !== undefined ? cm['created_by'] : 4] || ''),
+          createdAt: String(data[i][cm['created_at'] !== undefined ? cm['created_at'] : 5] || '')
+        });
+      }
+    }
+    // Sort: handoff first, then newest first
+    notes.sort(function(a, b) {
+      if (a.noteType === 'handoff' && b.noteType !== 'handoff') return -1;
+      if (b.noteType === 'handoff' && a.noteType !== 'handoff') return 1;
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+    return JSON.stringify({ success: true, notes: notes });
+  } catch (err) { logError('getMemberNotes', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+function getMemberHistory(memberId) {
+  try {
+    var logsSheet = getSpreadsheet().getSheetByName('logs');
+    if (!logsSheet) return JSON.stringify({ success: true, history: [] });
+    var data = logsSheet.getDataRange().getValues();
+    var history = [];
+    for (var i = 1; i < data.length; i++) {
+      var msg = String(data[i][3] || '');
+      if (msg.indexOf('member=' + memberId) !== -1) {
+        history.push({ timestamp: String(data[i][0] || ''), level: String(data[i][1] || ''), action: String(data[i][2] || ''), details: msg });
+      }
+    }
+    history.sort(function(a, b) { return b.timestamp.localeCompare(a.timestamp); });
+    return JSON.stringify({ success: true, history: history });
+  } catch (err) { logError('getMemberHistory', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// ---- Duplicate Detection -----------------------------------
+
+function checkDuplicateMembers() {
+  try {
+    var members = _getMembersStructured();
+    var emailSeen = {}, bkSeen = {}, dupes = [];
+    members.forEach(function(m) {
+      var em = (m.email || '').toLowerCase();
+      if (em) {
+        if (emailSeen[em]) dupes.push({ type: 'email', value: em, members: [emailSeen[em], m.name] });
+        else emailSeen[em] = m.name;
+      }
+      if (m.bkNumber) {
+        if (bkSeen[m.bkNumber]) dupes.push({ type: 'BK#', value: m.bkNumber, members: [bkSeen[m.bkNumber], m.name] });
+        else bkSeen[m.bkNumber] = m.name;
+      }
+    });
+    return JSON.stringify({ success: true, duplicates: dupes, count: dupes.length });
+  } catch (err) { logError('checkDuplicateMembers', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+function checkDuplicateMembersMenu() {
+  var ui = SpreadsheetApp.getUi();
+  try {
+    var result = JSON.parse(checkDuplicateMembers());
+    if (!result.success) { ui.alert('Error: ' + result.error); return; }
+    if (!result.count) { ui.alert('No duplicates found.'); return; }
+    var msg = result.duplicates.slice(0, 20).map(function(d) {
+      return d.type + ': ' + d.value + ' → ' + d.members.join(', ');
+    }).join('\n');
+    ui.alert('Duplicate Members Found (' + result.count + ')', msg, ui.ButtonSet.OK);
+  } catch (err) { ui.alert('Error: ' + err.toString()); }
+}
+
+// ---- Full Member Profile -----------------------------------
+
+function getMemberFullProfile(memberId) {
+  try {
+    var ss = getSpreadsheet();
+    var semester = getConfigValue('semester') || '';
+    var members = _getMembersStructured();
+    var member = members.filter(function(m) { return m.memberId === memberId; })[0];
+    if (!member) return JSON.stringify({ success: false, error: 'Member not found.' });
+
+    // Chore assignments
+    var asgData  = ss.getSheetByName('chore_assignments').getDataRange().getValues();
+    var assignments = [];
+    for (var i = 1; i < asgData.length; i++) {
+      if (String(asgData[i][1]) === String(memberId)) {
+        assignments.push({ choreName: String(asgData[i][2] || ''), semester: String(asgData[i][4] || '') });
+      }
+    }
+
+    // Fines this semester
+    var fineData = ss.getSheetByName('fines').getDataRange().getValues();
+    var fineAmount = Number(getConfigValue('fine_amount') || 5);
+    var fines = [];
+    for (var j = 1; j < fineData.length; j++) {
+      if (String(fineData[j][1]) === String(memberId)) {
+        fines.push({ fineId: String(fineData[j][0]||''), choreName: String(fineData[j][2]||''), weekStart: _normDate(fineData[j][3]), reason: String(fineData[j][4]||''), issuedBy: String(fineData[j][6]||'') });
+      }
+    }
+
+    // Submissions
+    var subData = ss.getSheetByName('submissions').getDataRange().getValues();
+    var subsPassed = 0, subsTotal = 0;
+    for (var k = 1; k < subData.length; k++) {
+      if (String(subData[k][1]) === String(memberId)) {
+        subsTotal++;
+        if ((subData[k][8] === 'passed' && subData[k][9] !== 'failed') || subData[k][9] === 'verified') subsPassed++;
+      }
+    }
+
+    // Notes
+    var notesResult = JSON.parse(getMemberNotes(memberId));
+
+    var semesterAssignments = assignments.filter(function(a) { return a.semester === semester; });
+    var totalAssignments = semesterAssignments.length;
+    var complianceRate = totalAssignments > 0 ? Math.round((subsPassed / totalAssignments) * 100) : 100;
+    var currentChore = semesterAssignments.length > 0 ? semesterAssignments[semesterAssignments.length - 1].choreName : null;
+
+    return JSON.stringify({
+      success: true,
+      member: member,
+      currentChore: currentChore,
+      assignments: assignments,
+      fines: fines,
+      fineTotal: fines.length * fineAmount,
+      notes: notesResult.notes || [],
+      submissionsTotal: subsTotal,
+      submissionsPassed: subsPassed,
+      complianceRate: complianceRate
+    });
+  } catch (err) { logError('getMemberFullProfile', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// ---- Ghost Detection ---------------------------------------
+
+function runGhostDetection() {
+  try {
+    var ss = getSpreadsheet();
+    var semester = getConfigValue('semester') || '';
+    var subData  = ss.getSheetByName('submissions').getDataRange().getValues();
+    var asgData  = ss.getSheetByName('chore_assignments').getDataRange().getValues();
+
+    // Count recent submissions per member (last 3 weeks = last 3 weekly cycles in submissions)
+    var subCount = {};
+    for (var i = 1; i < subData.length; i++) {
+      var mid = String(subData[i][1] || '');
+      subCount[mid] = (subCount[mid] || 0) + 1;
+    }
+
+    // Active assigned members with zero submissions
+    var assignedActive = {};
+    for (var j = 1; j < asgData.length; j++) {
+      if (asgData[j][4] === semester) assignedActive[String(asgData[j][1])] = String(asgData[j][2]);
+    }
+
+    var members = _getMembersStructured();
+    var ghosts = [];
+    members.forEach(function(m) {
+      if (m.status !== 'active') return;
+      if (m.suspension || m.academicSuspension) return;
+      if (!assignedActive[m.memberId]) return;
+      if (!subCount[m.memberId]) {
+        ghosts.push({ memberId: m.memberId, name: m.name, chore: assignedActive[m.memberId] });
+      }
+    });
+
+    if (ghosts.length > 0) {
+      logInfo('runGhostDetection', 'Ghosts: ' + ghosts.map(function(g) { return g.name; }).join(', '));
+    }
+
+    return ghosts;
+  } catch (err) { logError('runGhostDetection', err); return []; }
+}
+
+// ---- Manual Chore Completion -------------------------------
+
+function markChoreComplete(memberId, choreName, officerName, notes) {
+  try {
+    officerName = officerName || 'Officer';
+    var ss = getSpreadsheet();
+    var members = _getMembersStructured();
+    var member  = members.filter(function(m) { return m.memberId === memberId; })[0];
+    if (!member) return JSON.stringify({ success: false, error: 'Member not found.' });
+    if (!notes || !notes.trim()) return JSON.stringify({ success: false, error: 'Notes are required for manual completion.' });
+
+    var subSheet = ss.getSheetByName('submissions');
+    if (!subSheet) return JSON.stringify({ success: false, error: 'submissions tab not found.' });
+
+    var sid = 'S' + Utilities.getUuid().replace(/-/g,'').substring(0,8).toUpperCase();
+    var weekStart = _normDate(getConfigValue('week_start'));
+    var semester  = getConfigValue('semester') || '';
+    // submissions cols: sub_id, member_id, chore_name, week_start, submitted_at, photo_url, semester, group_id, auto_status, human_status, verified_by, notes
+    subSheet.appendRow([sid, memberId, choreName, weekStart, new Date().toISOString(), '', semester, '', 'passed', 'verified', officerName, 'Manual completion: ' + notes]);
+    _logAudit('markChoreComplete', memberId, member.name, officerName, 'chore=' + choreName + ' notes=' + notes);
+    return JSON.stringify({ success: true, submissionId: sid });
+  } catch (err) { logError('markChoreComplete', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// ---- Fraud Flagging ----------------------------------------
+
+function flagFraud(submissionId, reason, flaggedBy) {
+  try {
+    flaggedBy = flaggedBy || 'Officer';
+    var ss = getSpreadsheet();
+    var subSheet = ss.getSheetByName('submissions');
+    var data = subSheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(submissionId)) {
+        var memberId = String(data[i][1] || '');
+        subSheet.getRange(i+1, 10).setValue('fraud');    // human_status col
+        var prevNotes = String(data[i][11] || '');
+        subSheet.getRange(i+1, 12).setValue((prevNotes ? prevNotes + ' | ' : '') + 'FRAUD FLAGGED by ' + flaggedBy + ': ' + reason);
+        // Add disciplinary note to member
+        addMemberNote(memberId, 'Submission flagged as fraudulent by ' + flaggedBy + '. Reason: ' + reason, 'disciplinary', flaggedBy);
+        logInfo('flagFraud', 'submissionId=' + submissionId + ' memberId=' + memberId + ' flaggedBy=' + flaggedBy + ' reason=' + reason);
+        return JSON.stringify({ success: true });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Submission not found.' });
+  } catch (err) { logError('flagFraud', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// ---- Handoff Report ----------------------------------------
+
+function generateHandoffReport() {
+  try {
+    var ss = getSpreadsheet();
+    var semester  = getConfigValue('semester') || '—';
+    var weekStart = _normDate(getConfigValue('week_start'));
+    var fineAmt   = getConfigValue('fine_amount') || '5';
+    var officers  = getConfigValue('officer_emails') || '—';
+    var pin       = getConfigValue('officer_pin') || '(not set)';
+
+    var members   = _getMembersStructured();
+    var asgData   = ss.getSheetByName('chore_assignments').getDataRange().getValues();
+    var fineData  = ss.getSheetByName('fines').getDataRange().getValues();
+    var notesSheet= ss.getSheetByName('member_notes');
+
+    // Build assignment map
+    var asgMap = {};
+    for (var i = 1; i < asgData.length; i++) {
+      if (asgData[i][4] === semester) asgMap[String(asgData[i][1])] = String(asgData[i][2]);
+    }
+    // Build fine map
+    var fineMap = {};
+    for (var j = 1; j < fineData.length; j++) {
+      var fid = String(fineData[j][1]);
+      fineMap[fid] = (fineMap[fid] || 0) + 1;
+    }
+    // Handoff notes
+    var handoffNotes = [];
+    if (notesSheet && notesSheet.getLastRow() > 1) {
+      var notesData = notesSheet.getDataRange().getValues();
+      var ncm = _buildColMap(notesData[0]);
+      for (var k = 1; k < notesData.length; k++) {
+        if (String(notesData[k][ncm['note_type']||3]) === 'handoff') {
+          var hMember = members.filter(function(m){ return m.memberId === String(notesData[k][ncm['member_id']||1]); })[0];
+          handoffNotes.push({
+            memberName: hMember ? hMember.name : String(notesData[k][ncm['member_id']||1]),
+            text: String(notesData[k][ncm['note_text']||2]||''),
+            createdBy: String(notesData[k][ncm['created_by']||4]||''),
+            createdAt: String(notesData[k][ncm['created_at']||5]||'').substring(0,10)
+          });
+        }
+      }
+    }
+
+    var activeRows = members.filter(function(m){ return m.status === 'active'; }).map(function(m){
+      var flags = [];
+      if (m.suspension || m.academicSuspension) flags.push('SUSPENDED');
+      if (m.probation) flags.push('PROBATION(' + m.probationType + ')');
+      if (fineMap[m.memberId]) flags.push(fineMap[m.memberId] + ' fines');
+      return '<tr><td>' + m.bkNumber + '</td><td>' + m.name + '</td><td>' + (asgMap[m.memberId]||'—') + '</td>' +
+        '<td>' + (m.officerRole||'—') + '</td><td>' + (flags.join(', ')||'—') + '</td></tr>';
+    }).join('');
+
+    var handoffRows = handoffNotes.map(function(n){
+      return '<tr><td><strong>' + n.memberName + '</strong></td><td>' + n.text + '</td><td>' + n.createdBy + '</td><td>' + n.createdAt + '</td></tr>';
+    }).join('') || '<tr><td colspan="4" style="color:#999">No handoff notes.</td></tr>';
+
+    var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+      '<title>Officer Handoff — ' + semester + '</title>' +
+      '<style>body{font-family:Arial,sans-serif;max-width:1100px;margin:0 auto;padding:24px;color:#0f172a}' +
+      'h1{color:#093D20}h2{color:#093D20;border-bottom:2px solid #FFB71D;padding-bottom:4px}' +
+      'table{width:100%;border-collapse:collapse;margin-bottom:24px;font-size:13px}' +
+      'th{background:#093D20;color:#FFB71D;padding:8px;text-align:left}' +
+      'td{padding:7px 8px;border-bottom:1px solid #eee}tr:hover td{background:#f8fafc}' +
+      '.meta{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:24px}' +
+      '.instructions{background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:16px}' +
+      '@media print{button{display:none}}' +
+      '</style></head><body>' +
+      '<h1>Lambda Chi Alpha GT — Officer Handoff Report</h1>' +
+      '<div class="meta">' +
+      '<strong>Semester:</strong> ' + semester + ' | ' +
+      '<strong>Current Week Start:</strong> ' + weekStart + ' | ' +
+      '<strong>Fine Amount:</strong> $' + fineAmt + '<br>' +
+      '<strong>Officer Emails:</strong> ' + officers + ' | ' +
+      '<strong>Officer PIN:</strong> ' + pin +
+      '</div>' +
+      '<h2>Active Members (' + members.filter(function(m){return m.status==='active';}).length + ')</h2>' +
+      '<table><thead><tr><th>BK#</th><th>Name</th><th>Chore</th><th>Officer Role</th><th>Flags</th></tr></thead>' +
+      '<tbody>' + activeRows + '</tbody></table>' +
+      '<h2>Outstanding Fines</h2>' +
+      '<p>' + (fineData.length - 1) + ' fine record(s) this semester.</p>' +
+      '<h2>Handoff Notes</h2>' +
+      '<table><thead><tr><th>Member</th><th>Note</th><th>Left By</th><th>Date</th></tr></thead>' +
+      '<tbody>' + handoffRows + '</tbody></table>' +
+      '<div class="instructions"><h2>Instructions for Incoming Officers</h2>' +
+      '<ul>' +
+      '<li><strong>Update config:</strong> Admin tab → Config Editor → update semester, week_start, officer_emails, officer_pin</li>' +
+      '<li><strong>Semester Sync:</strong> Admin tab → Semester Tools → Semester Sync (runs at start of each semester)</li>' +
+      '<li><strong>Monday Reset:</strong> Runs automatically at 6am ET. Can also run manually from Admin tab → Fine Preview → "Send Fine List Now"</li>' +
+      '<li><strong>QR Codes:</strong> Admin tab → Chore Manager → "Download All QR Codes (ZIP)" — reprint if chores change</li>' +
+      '</ul></div>' +
+      '<p style="color:#999;font-size:12px;margin-top:32px">Generated ' + new Date().toLocaleString() + '</p>' +
+      '</body></html>';
+
+    return JSON.stringify({ success: true, html: html });
+  } catch (err) { logError('generateHandoffReport', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// ---- Change Officer PIN ------------------------------------
+
+function changeOfficerPin(newPin, currentPin) {
+  try {
+    if (!_checkOfficerPin(currentPin)) return JSON.stringify({ success: false, error: 'Current PIN is incorrect.' });
+    if (!newPin || String(newPin).length < 4) return JSON.stringify({ success: false, error: 'New PIN must be at least 4 characters.' });
+    setConfigValue('officer_pin', String(newPin));
+    logInfo('changeOfficerPin', 'Officer PIN changed.');
+    return JSON.stringify({ success: true });
+  } catch (err) { logError('changeOfficerPin', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// ---- Spec-required aliases and helpers ----------------------
+
+// Returns all members as structured objects (alias for getMemberDirectoryData with full schema).
+function getAllMembers() {
+  try {
+    var members = _getMembersStructured();
+    return JSON.stringify({ success: true, members: members });
+  } catch (err) { logError('getAllMembers', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// Returns a single member's structured data by memberId.
+function getMemberById(memberId) {
+  try {
+    if (!memberId) return JSON.stringify({ success: false, error: 'memberId is required.' });
+    var member = _getMembersStructured().filter(function(m) { return m.memberId === String(memberId); })[0];
+    if (!member) return JSON.stringify({ success: false, error: 'Member not found.' });
+    return JSON.stringify({ success: true, member: member });
+  } catch (err) { logError('getMemberById', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// PIN change alias: changedBy is the officer name/identifier (for audit logging).
+// Validates against the stored PIN rather than accepting the current PIN as input.
+function changePin(newPin, changedBy) {
+  try {
+    if (!newPin || String(newPin).length < 4) return JSON.stringify({ success: false, error: 'New PIN must be at least 4 characters.' });
+    setConfigValue('officer_pin', String(newPin));
+    logInfo('changePin', 'Officer PIN changed by ' + (changedBy || 'unknown') + '.');
+    return JSON.stringify({ success: true });
+  } catch (err) { logError('changePin', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }

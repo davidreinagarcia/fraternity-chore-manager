@@ -238,6 +238,83 @@
   }
   .config-val-input:focus { outline: none; border-color: var(--primary); }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---- Member Manager status badges ---- */
+  .badge-active-m  { background:#f0fdf4; color:#16a34a; }
+  .badge-inactive-m{ background:#f1f5f9; color:#64748b; }
+  .badge-alumni-m  { background:#fffbeb; color:#b45309; }
+  .badge-assoc-m   { background:#eff6ff; color:#2563eb; }
+  .badge-susp-m    { background:var(--red-bg); color:var(--red); }
+  .badge-prob-m    { background:var(--yellow-bg); color:var(--yellow); }
+
+  /* ---- Contextual action dropdown ---- */
+  .ctx-menu {
+    position:fixed; background:white; border:1px solid var(--border);
+    border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.14);
+    z-index:600; min-width:185px; display:none; overflow:hidden;
+  }
+  .ctx-menu.open { display:block; }
+  .ctx-item {
+    padding:9px 16px; cursor:pointer; font-size:0.82rem;
+    color:var(--text); white-space:nowrap; border:none; background:none;
+    width:100%; text-align:left; display:block;
+  }
+  .ctx-item:hover { background:var(--bg); }
+  .ctx-item.danger { color:var(--red); }
+  .ctx-item.separator { height:1px; background:var(--border); padding:0; pointer-events:none; }
+
+  /* ---- Notes side panel ---- */
+  .notes-panel {
+    position:fixed; right:-400px; top:0; bottom:0; width:380px;
+    background:white; z-index:450; display:flex; flex-direction:column;
+    box-shadow:-4px 0 24px rgba(0,0,0,0.16); transition:right 0.28s ease;
+    border-left:3px solid var(--primary);
+  }
+  .notes-panel.open { right:0; }
+  .notes-panel-header {
+    padding:16px 20px; background:var(--primary); color:var(--gold);
+    display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+  }
+  .notes-panel-header h3 { font-size:0.95rem; font-weight:700; }
+  .notes-list { flex:1; overflow-y:auto; padding:12px 16px; }
+  .note-item { padding:10px 12px; border-radius:8px; margin-bottom:8px; }
+  .note-handoff  { background:#fff7ed; border-left:3px solid var(--gold); }
+  .note-disciplinary { background:var(--red-bg); border-left:3px solid var(--red); }
+  .note-warning  { background:var(--yellow-bg); border-left:3px solid var(--yellow); }
+  .note-positive { background:var(--green-bg); border-left:3px solid var(--green); }
+  .note-general  { background:#f8fafc; border-left:3px solid var(--border); }
+  .note-type-label { font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px; }
+  .note-text { font-size:0.83rem; line-height:1.5; }
+  .note-meta { font-size:0.72rem; color:var(--muted); margin-top:4px; }
+  .notes-add-form { padding:12px 16px; border-top:1px solid var(--border); flex-shrink:0; background:#fafbff; }
+
+  /* ---- Large modal variants ---- */
+  .modal-lg { width:640px; max-width:96vw; max-height:88vh; overflow-y:auto; }
+  .modal-xl { width:760px; max-width:96vw; max-height:90vh; overflow-y:auto; }
+  .profile-section { margin-bottom:20px; }
+  .profile-section h4 { font-size:0.85rem; font-weight:700; color:var(--primary); border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:10px; }
+  .profile-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px 16px; }
+  .profile-field { font-size:0.83rem; }
+  .profile-field .label { color:var(--muted); font-size:0.72rem; font-weight:600; text-transform:uppercase; margin-bottom:2px; }
+
+  /* ---- Quick action btn ---- */
+  .qa-btn {
+    padding:4px 9px; border-radius:5px; border:1px solid var(--border);
+    background:white; font-size:0.75rem; cursor:pointer; margin:0 1px;
+    color:var(--muted); transition:all 0.12s;
+  }
+  .qa-btn:hover { border-color:var(--primary); color:var(--primary); }
+  .qa-btn.more { font-weight:800; letter-spacing:1px; }
+
+  /* ---- Run-once button ---- */
+  .btn-run-once { opacity:1; transition:opacity 0.2s; }
+  .btn-run-once.done { opacity:0.45; cursor:not-allowed; }
+
+  /* ---- Overlay for panel backdrop ---- */
+  #panel-backdrop {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.25); z-index:440;
+  }
+  #panel-backdrop.open { display:block; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -287,10 +364,10 @@
 
     <!-- Tabs -->
     <div class="tabs">
-      <button class="tab-btn active" onclick="showTab('tab-status')">This Week</button>
-      <button class="tab-btn" onclick="showTab('tab-fines')">Fine Preview</button>
-      <button class="tab-btn" onclick="showTab('tab-members')">Member Stats</button>
-      <button class="tab-btn" onclick="showTab('tab-admin');initAdminTab()">Admin</button>
+      <button class="tab-btn active" onclick="showTab('tab-status',this)">This Week</button>
+      <button class="tab-btn" onclick="showTab('tab-fines',this)">Fine Preview</button>
+      <button class="tab-btn" onclick="showTab('tab-mm',this);initMemberManager()">Member Manager</button>
+      <button class="tab-btn" onclick="showTab('tab-admin',this);initAdminTab()">Admin</button>
     </div>
 
     <!-- Tab: This Week's Status -->
@@ -349,29 +426,52 @@
       </div>
     </div>
 
-    <!-- Tab: Member Stats -->
-    <div id="tab-members" class="tab-pane">
+    <!-- Tab: Member Manager -->
+    <div id="tab-mm" class="tab-pane">
       <div class="card">
         <div class="card-header">
-          <h2>Member Stats — This Semester</h2>
-          <input type="text" id="member-filter" placeholder="Search..."
-                 style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem"
-                 oninput="filterMemberTable()">
+          <h2>Member Manager</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="exportMembersCSV()">Export CSV</button>
+            <button class="btn-primary" style="padding:6px 14px;font-size:0.8rem" onclick="openAddMemberModal()">+ Add Member</button>
+          </div>
+        </div>
+        <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <input type="text" id="mm-search" class="inline-input" placeholder="Search name, email, pledge class..." style="width:260px" oninput="filterMM()">
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button id="mmf-all"      class="action-btn" onclick="setMMFilter('all')"      style="background:var(--primary);color:var(--gold);border:none">All <span id="mm-cnt-all"></span></button>
+            <button id="mmf-active"   class="action-btn" onclick="setMMFilter('active')"   style="background:transparent;color:var(--green);border:1px solid #bbf7d0">Active <span id="mm-cnt-active"></span></button>
+            <button id="mmf-associate"class="action-btn" onclick="setMMFilter('associate')" style="background:transparent;color:#2563eb;border:1px solid #bfdbfe">AMs <span id="mm-cnt-associate"></span></button>
+            <button id="mmf-inactive" class="action-btn" onclick="setMMFilter('inactive')" style="background:transparent;color:var(--muted);border:1px solid var(--border)">Inactive <span id="mm-cnt-inactive"></span></button>
+            <button id="mmf-alumni"   class="action-btn" onclick="setMMFilter('alumni')"   style="background:transparent;color:#b45309;border:1px solid #fde68a">Alumni <span id="mm-cnt-alumni"></span></button>
+          </div>
         </div>
         <div class="card-body" style="overflow-x:auto">
-          <table class="data-table" id="members-table">
-            <thead>
-              <tr>
-                <th onclick="sortTable('members-table',0)">Member</th>
-                <th onclick="sortTable('members-table',1)">Assignments</th>
-                <th onclick="sortTable('members-table',2)">Verified Submissions</th>
-                <th onclick="sortTable('members-table',3)">Fines</th>
-                <th onclick="sortTable('members-table',4)">Compliance Rate</th>
-              </tr>
-            </thead>
-            <tbody id="members-tbody">
-              <tr class="loading-row"><td colspan="5">Loading...</td></tr>
-            </tbody>
+          <div id="mm-loading" style="text-align:center;padding:30px;color:var(--muted)">Loading members...</div>
+          <!-- Regular member table -->
+          <table class="data-table" id="mm-table" style="display:none;min-width:900px">
+            <thead><tr>
+              <th onclick="sortTable('mm-table',0)">BK#</th>
+              <th onclick="sortTable('mm-table',1)">Name</th>
+              <th onclick="sortTable('mm-table',2)">Pledge Class</th>
+              <th onclick="sortTable('mm-table',3)">Status</th>
+              <th onclick="sortTable('mm-table',4)">Chore</th>
+              <th onclick="sortTable('mm-table',5)">Fines</th>
+              <th>Form</th>
+              <th>Actions</th>
+            </tr></thead>
+            <tbody id="mm-tbody"></tbody>
+          </table>
+          <!-- Alumni table -->
+          <table class="data-table" id="mm-alumni-table" style="display:none;min-width:700px">
+            <thead><tr>
+              <th>BK#</th>
+              <th>Name</th>
+              <th>Pledge Class</th>
+              <th>Officer Roles</th>
+              <th>Actions</th>
+            </tr></thead>
+            <tbody id="mm-alumni-tbody"></tbody>
           </table>
         </div>
       </div>
@@ -429,53 +529,7 @@
         </div>
       </div>
 
-      <!-- 2. Member Manager -->
-      <div class="admin-section">
-        <div class="admin-section-header" onclick="toggleAdminSection('admin-members')">
-          <h2>Member Manager</h2>
-          <span class="admin-section-toggle" id="admin-members-toggle">▼</span>
-        </div>
-        <div class="admin-section-body" id="admin-members-body" style="display:none">
-          <div class="admin-loading" id="admin-members-loading">Loading members...</div>
-          <div id="admin-members-content" style="display:none">
-            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;justify-content:space-between">
-              <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-                <input type="text" id="admin-member-search" class="inline-input" placeholder="Search by name, email, or pledge class..." style="width:280px" oninput="filterAdminMembers()">
-                <div style="display:flex;gap:4px;flex-wrap:wrap">
-                  <button id="amf-btn-all" class="action-btn" onclick="setAdminMemberFilter('all')" style="background:var(--primary);color:var(--gold);border:none">All <span id="amf-count-all" style="font-size:0.7rem;opacity:0.8"></span></button>
-                  <button id="amf-btn-active" class="action-btn" onclick="setAdminMemberFilter('active')" style="background:transparent;color:var(--green);border:1px solid #bbf7d0">Active <span id="amf-count-active" style="font-size:0.7rem;opacity:0.8"></span></button>
-                  <button id="amf-btn-associate" class="action-btn" onclick="setAdminMemberFilter('associate')" style="background:transparent;color:#2563eb;border:1px solid #bfdbfe">AMs <span id="amf-count-associate" style="font-size:0.7rem;opacity:0.8"></span></button>
-                  <button id="amf-btn-inactive" class="action-btn" onclick="setAdminMemberFilter('inactive')" style="background:transparent;color:var(--muted);border:1px solid var(--border)">Inactive <span id="amf-count-inactive" style="font-size:0.7rem;opacity:0.8"></span></button>
-                  <button id="amf-btn-alumni" class="action-btn" onclick="setAdminMemberFilter('alumni')" style="background:transparent;color:#9333ea;border:1px solid #e9d5ff">Alumni <span id="amf-count-alumni" style="font-size:0.7rem;opacity:0.8"></span></button>
-                </div>
-              </div>
-              <div style="display:flex;gap:8px">
-                <button class="btn-primary" onclick="openAdminAddModal()">+ Add Member</button>
-                <button class="btn-outline" onclick="openCSVImportModal()">Import CSV</button>
-              </div>
-            </div>
-            <div style="overflow-x:auto">
-              <table class="data-table" id="admin-members-table" style="min-width:920px">
-                <thead>
-                  <tr>
-                    <th>BK#</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Pledge Class</th>
-                    <th>Status</th>
-                    <th>Chore</th>
-                    <th>Fines</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="admin-members-tbody"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 3. Config Editor -->
+      <!-- 2. Config Editor -->
       <div class="admin-section">
         <div class="admin-section-header" onclick="toggleAdminSection('admin-config')">
           <h2>Config Editor</h2>
@@ -489,7 +543,7 @@
         </div>
       </div>
 
-      <!-- 4. Semester Tools -->
+      <!-- 3. Semester Tools -->
       <div class="admin-section">
         <div class="admin-section-header" onclick="toggleAdminSection('admin-semester')">
           <h2>Semester Tools</h2>
@@ -497,19 +551,62 @@
         </div>
         <div class="admin-section-body" id="admin-semester-body" style="display:none">
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+            <div style="background:var(--green-bg);border-radius:8px;padding:16px;border:1px solid #bbf7d0">
+              <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px;color:var(--green)">Semester Sync</div>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Run at the start of each semester. Processes new &amp; returning member forms, flags incomplete forms, checks graduation, reviews inactive members.</p>
+              <button class="btn-primary" onclick="openSemesterSyncModal()">Run Semester Sync</button>
+            </div>
+            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+              <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Review Graduation Candidates</div>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Show members whose anticipated graduation date is past or at current semester. Review before graduating.</p>
+              <button class="btn-outline" onclick="openGradReview()">Review Candidates</button>
+            </div>
             <div style="background:#f8fafc;border-radius:8px;padding:16px">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Import Members CSV</div>
-              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">
-                Paste CSV rows (name, email, pledge_class) to batch-add or update members. Members NOT in the CSV will be deactivated.
-              </p>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Paste CSV rows (name, email, pledge_class) to batch-add or update members.</p>
               <button class="btn-primary" onclick="openCSVImportModal()">Paste &amp; Import CSV</button>
             </div>
             <div style="background:var(--red-bg);border-radius:8px;padding:16px;border:1px solid #fecaca">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px;color:var(--red)">End of Semester Archive</div>
-              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">
-                Syncs all data to BigQuery, then clears assignments, submissions, fines, and weekly_status. <strong>This is irreversible.</strong>
-              </p>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Syncs all data to BigQuery, then clears assignments, submissions, fines, and weekly_status. <strong>This is irreversible.</strong></p>
               <button class="btn-danger" onclick="openEndSemesterModal()">End of Semester Archive</button>
+            </div>
+            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+              <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Migrate From Old Roster <span style="font-size:0.68rem;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-weight:700">RUN ONCE</span></div>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">One-time import from the old roster sheet. Grays out permanently after running.</p>
+              <button class="btn-outline btn-run-once" id="btn-migrate" onclick="runMigrateRoster(this)">Migrate Old Roster</button>
+            </div>
+            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+              <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Relink Google Forms <span style="font-size:0.68rem;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-weight:700">RUN ONCE</span></div>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Links New Member and Returning Member forms to this spreadsheet. Run once after setup.</p>
+              <button class="btn-outline btn-run-once" id="btn-relink" onclick="runRelinkForms(this)">Relink Forms</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Officer Handoff -->
+      <div class="admin-section">
+        <div class="admin-section-header" onclick="toggleAdminSection('admin-handoff')">
+          <h2>Officer Handoff</h2>
+          <span class="admin-section-toggle" id="admin-handoff-toggle">▼</span>
+        </div>
+        <div class="admin-section-body" id="admin-handoff-body" style="display:none">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+              <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Generate Handoff Report</div>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Generates a full HTML report with active members, outstanding fines, handoff notes, and instructions for the incoming officer.</p>
+              <button class="btn-primary" onclick="doGenerateHandoff()">Generate Handoff Report</button>
+            </div>
+            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+              <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Change Officer PIN</div>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Update the PIN required to access this dashboard. You'll need to enter the current PIN to confirm.</p>
+              <button class="btn-outline" onclick="openChangePinModal()">Change PIN</button>
+            </div>
+            <div style="background:var(--green-bg);border-radius:8px;padding:16px;border:1px solid #bbf7d0">
+              <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px;color:var(--green)">Semester Sync</div>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Run at the start of each semester to sync member rosters, form responses, and compliance data.</p>
+              <button class="btn-primary" onclick="openSemesterSyncModal()">Run Semester Sync</button>
             </div>
           </div>
         </div>
@@ -671,38 +768,54 @@
   </div>
 </div>
 
-<!-- Admin Add Member Modal -->
+<!-- Add Member Modal (expanded) -->
 <div class="modal-overlay" id="admin-add-modal">
-  <div class="modal">
+  <div class="modal modal-lg">
     <h3>Add New Member</h3>
-    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div>
-        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Full Name *</label>
-        <input type="text" id="admin-add-name" class="inline-input" style="width:100%" placeholder="John Smith">
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Legal First Name *</label>
+        <input type="text" id="add-legal-first" class="inline-input" style="width:100%" placeholder="Jonathan">
       </div>
       <div>
-        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Email *</label>
-        <input type="email" id="admin-add-email" class="inline-input" style="width:100%" placeholder="jsmith@email.com">
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Legal Last Name *</label>
+        <input type="text" id="add-legal-last" class="inline-input" style="width:100%" placeholder="Smith">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Preferred Name</label>
+        <input type="text" id="add-preferred" class="inline-input" style="width:100%" placeholder="Jon">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Personal Email *</label>
+        <input type="email" id="add-personal-email" class="inline-input" style="width:100%" placeholder="jon@gmail.com">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">GT Email</label>
+        <input type="email" id="add-gt-email" class="inline-input" style="width:100%" placeholder="jsmith@gatech.edu">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Phone</label>
+        <input type="text" id="add-phone" class="inline-input" style="width:100%" placeholder="404-555-1234">
       </div>
       <div>
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Pledge Class</label>
-        <input type="text" id="admin-add-pledge" class="inline-input" style="width:100%" placeholder="Spring 2025">
+        <input type="text" id="add-pledge" class="inline-input" style="width:100%" placeholder="Spring 2025">
       </div>
       <div>
-        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">BK Number (optional)</label>
-        <input type="text" id="admin-add-bk" class="inline-input" maxlength="4" placeholder="1234" style="width:100%">
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">BK Number <span id="add-bk-req" style="color:var(--red);display:none">*</span></label>
+        <input type="text" id="add-bk" class="inline-input" maxlength="4" placeholder="1234" style="width:100%;font-family:monospace;letter-spacing:4px">
       </div>
-      <div>
+      <div style="grid-column:span 2">
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Status</label>
-        <select id="admin-add-status" class="inline-input" style="width:100%">
-          <option value="active">Active (Brother)</option>
+        <select id="add-status" class="inline-input" style="width:100%" onchange="onAddStatusChange()">
           <option value="associate">Associate Member (AM)</option>
+          <option value="active">Active (Brother)</option>
         </select>
       </div>
     </div>
     <div class="modal-btns">
-      <button class="btn-outline" onclick="closeAdminAddModal()">Cancel</button>
-      <button class="btn-primary" onclick="confirmAdminAdd()">Add Member</button>
+      <button class="btn-outline" onclick="closeAddMemberModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmAddMember()">Add Member</button>
     </div>
   </div>
 </div>
@@ -721,6 +834,170 @@
     </div>
   </div>
 </div>
+
+<!-- Mark Complete Modal -->
+<div class="modal-overlay" id="mark-complete-modal">
+  <div class="modal">
+    <h3>Mark Chore Complete</h3>
+    <p id="mc-sub" style="font-size:0.85rem;color:var(--muted);margin-bottom:14px"></p>
+    <div style="margin-bottom:12px">
+      <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Your Name (Officer) *</label>
+      <input type="text" id="mc-officer" class="inline-input" style="width:100%" placeholder="e.g. Alex Johnson">
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Notes (required — why marking manually?) *</label>
+      <textarea id="mc-notes" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;resize:vertical;min-height:70px;font-family:inherit" placeholder="e.g. Verified in person, photo not submitted due to phone issues"></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="closeMarkCompleteModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmMarkComplete()">Mark Complete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Flag Fraud Modal -->
+<div class="modal-overlay" id="flag-fraud-modal">
+  <div class="modal">
+    <h3 style="color:var(--red)">Flag Submission as Fraud</h3>
+    <p id="ff-sub" style="font-size:0.85rem;color:var(--muted);margin-bottom:14px"></p>
+    <div style="margin-bottom:14px">
+      <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Reason *</label>
+      <textarea id="ff-reason" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;resize:vertical;min-height:70px;font-family:inherit" placeholder="e.g. Photo is from a previous week / not their chore area"></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="closeFlagFraudModal()">Cancel</button>
+      <button class="btn-danger" onclick="confirmFlagFraud()">Flag as Fraud</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generic Action Modal -->
+<div class="modal-overlay" id="action-modal">
+  <div class="modal modal-lg">
+    <h3 id="act-title">Action</h3>
+    <p id="act-sub" style="font-size:0.85rem;color:var(--muted);margin-bottom:16px"></p>
+    <div id="act-fields" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px"></div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="closeActionModal()">Cancel</button>
+      <button id="act-confirm" class="btn-primary" onclick="executeAction()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Member History Modal -->
+<div class="modal-overlay" id="history-modal">
+  <div class="modal modal-lg">
+    <h3 id="hist-title">Member History</h3>
+    <div id="hist-loading" style="text-align:center;padding:20px;color:var(--muted)">Loading...</div>
+    <div id="hist-list" style="display:none;max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="btn-outline" onclick="closeHistoryModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Full Profile Modal -->
+<div class="modal-overlay" id="profile-modal">
+  <div class="modal modal-xl">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <h3 id="prof-title">Member Profile</h3>
+      <button class="btn-outline" style="padding:5px 12px;font-size:0.8rem" onclick="closeProfileModal()">Close</button>
+    </div>
+    <div id="prof-loading" style="text-align:center;padding:30px;color:var(--muted)">Loading...</div>
+    <div id="prof-content" style="display:none"></div>
+  </div>
+</div>
+
+<!-- Graduation Review Modal -->
+<div class="modal-overlay" id="grad-review-modal">
+  <div class="modal modal-lg">
+    <h3>Graduation Candidates</h3>
+    <p style="font-size:0.83rem;color:var(--muted);margin-bottom:14px">Members whose anticipated graduation is past or current semester. Use the Advanced (…) menu in Member Manager to graduate them.</p>
+    <div id="grad-list" style="max-height:55vh;overflow-y:auto">
+      <div style="text-align:center;padding:20px;color:var(--muted)">Loading...</div>
+    </div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="btn-outline" onclick="closeGradReview()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Semester Sync Modal -->
+<div class="modal-overlay" id="sem-sync-modal">
+  <div class="modal">
+    <h3>Run Semester Sync</h3>
+    <div style="background:var(--green-bg);border:1px solid #bbf7d0;border-radius:8px;padding:14px;margin-bottom:16px">
+      <div style="font-weight:700;color:var(--green);margin-bottom:8px">This will:</div>
+      <ul style="font-size:0.83rem;padding-left:18px;line-height:1.9;color:var(--text)">
+        <li>Process new member form responses</li>
+        <li>Process returning member form responses</li>
+        <li>Flag members who haven't completed their form</li>
+        <li>Identify graduation candidates</li>
+        <li>Log a full sync report</li>
+      </ul>
+    </div>
+    <p style="font-size:0.83rem;color:var(--muted);margin-bottom:16px">Run this at the start of each semester after forms are submitted.</p>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="closeSemesterSyncModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmSemesterSync()">Run Semester Sync</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change PIN Modal -->
+<div class="modal-overlay" id="change-pin-modal">
+  <div class="modal">
+    <h3>Change Officer PIN</h3>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Current PIN</label>
+        <input type="password" id="pin-current" class="inline-input" style="width:100%;text-align:center;letter-spacing:6px;font-family:monospace;font-size:1.2rem" maxlength="8" placeholder="••••">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">New PIN (min 4 characters)</label>
+        <input type="password" id="pin-new" class="inline-input" style="width:100%;text-align:center;letter-spacing:6px;font-family:monospace;font-size:1.2rem" maxlength="8" placeholder="••••">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Confirm New PIN</label>
+        <input type="password" id="pin-confirm" class="inline-input" style="width:100%;text-align:center;letter-spacing:6px;font-family:monospace;font-size:1.2rem" maxlength="8" placeholder="••••">
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="closeChangePinModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmChangePin()">Change PIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notes Side Panel -->
+<div id="panel-backdrop" onclick="closeNotesPanel()"></div>
+<div class="notes-panel" id="notes-panel">
+  <div class="notes-panel-header">
+    <h3 id="notes-panel-title">Notes</h3>
+    <button onclick="closeNotesPanel()" style="background:rgba(255,255,255,0.15);border:none;color:var(--gold);padding:4px 10px;border-radius:5px;cursor:pointer;font-size:0.85rem">✕ Close</button>
+  </div>
+  <div class="notes-list" id="notes-list">
+    <div style="text-align:center;padding:20px;color:var(--muted)">Loading notes...</div>
+  </div>
+  <div class="notes-add-form">
+    <div style="font-size:0.78rem;font-weight:700;margin-bottom:8px;color:var(--primary)">Add Note</div>
+    <select id="note-type-select" class="inline-input" style="width:100%;margin-bottom:8px">
+      <option value="general">General</option>
+      <option value="handoff">Handoff</option>
+      <option value="positive">Positive</option>
+      <option value="warning">Warning</option>
+      <option value="disciplinary">Disciplinary</option>
+    </select>
+    <textarea id="note-text-input" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:7px;font-size:0.83rem;resize:vertical;min-height:60px;font-family:inherit;margin-bottom:8px" placeholder="Enter note..."></textarea>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" id="note-author" class="inline-input" style="flex:1" placeholder="Your name">
+      <button class="btn-primary" style="padding:7px 14px;font-size:0.82rem" onclick="submitNote()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ctx Dropdown Menu -->
+<div class="ctx-menu" id="ctx-menu"></div>
 
 <div id="toast"></div>
 
@@ -760,14 +1037,29 @@ let verifyPending = null;
 function initDashboard() {
   google.script.run.withSuccessHandler(function(v) {
     document.getElementById('meta-line').textContent = 'Semester: ' + (v || '—');
-    document.getElementById('week-label').textContent = 'Week of —';
   }).getConfigValue('semester');
-
   google.script.run.withSuccessHandler(function(v) {
     document.getElementById('week-label').textContent = 'Week of ' + (v ? String(v).substring(0, 10) : '—');
   }).getConfigValue('week_start');
-
+  // Pre-disable run-once buttons if already completed
+  google.script.run.withSuccessHandler(function(v) {
+    if (String(v).toLowerCase() === 'true') {
+      var btn = document.getElementById('btn-migrate');
+      if (btn) { btn.disabled = true; btn.classList.add('done'); btn.textContent = 'Migration Done'; }
+    }
+  }).getConfigValue('roster_migration_done');
+  google.script.run.withSuccessHandler(function(v) {
+    if (String(v).toLowerCase() === 'true') {
+      var btn = document.getElementById('btn-relink');
+      if (btn) { btn.disabled = true; btn.classList.add('done'); btn.textContent = 'Forms Relinked'; }
+    }
+  }).getConfigValue('forms_relinked');
   refreshAll();
+}
+
+var _mmLoaded = false;
+function initMemberManager() {
+  if (!_mmLoaded) { _mmLoaded = true; loadMemberManager(); }
 }
 
 function refreshAll() {
@@ -820,7 +1112,8 @@ function onWeeklyStatus(json) {
         <button class="action-btn btn-photo" onclick="viewPhoto('${m.submissionId}')">Photo</button>
         <button class="action-btn btn-verify" onclick="openVerify('${m.submissionId}','${esc(m.memberName)}','${esc(chore.choreName)}','verified')">✓ Verify</button>
         <button class="action-btn btn-fail" onclick="openVerify('${m.submissionId}','${esc(m.memberName)}','${esc(chore.choreName)}','failed')">✗ Fail</button>
-      ` : '<span class="badge-none">Not submitted</span>';
+        <button class="action-btn" style="background:var(--red-bg);color:var(--red);border:1px solid #fecaca" onclick="openFlagFraudModal('${m.submissionId}','${esc(m.memberName)}','${esc(chore.choreName)}')">🚩 Fraud</button>
+      ` : `<button class="action-btn btn-verify" onclick="openMarkCompleteModal('${m.memberId||''}','${esc(m.memberName)}','${esc(chore.choreName)}')">✓ Mark Complete</button>`;
 
       if (!m.submitted) pendingFines++;
 
@@ -1030,11 +1323,11 @@ function callImportMembers() {
 }
 
 // ---- Tabs --------------------------------------------------
-function showTab(id) {
+function showTab(id, btn) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  event.target.classList.add('active');
+  if (btn) btn.classList.add('active');
 }
 
 // ---- Sort --------------------------------------------------
@@ -1070,7 +1363,6 @@ function esc(s) {
 
 // ---- Admin Tab --------------------------------------------
 var adminChores = [];
-var adminMembersData = [];
 var adminConfigData = [];
 var IMPORTANT_KEYS = ['semester', 'week_start', 'officer_emails', 'fine_amount', 'officer_pin'];
 var _adminSectionsLoaded = {};
@@ -1086,7 +1378,6 @@ function toggleAdminSection(id) {
   if (!isOpen && !_adminSectionsLoaded[id]) {
     _adminSectionsLoaded[id] = true;
     if (id === 'admin-chores')   loadAdminChores();
-    else if (id === 'admin-members') loadAdminMembers();
     else if (id === 'admin-config')  loadAdminConfig();
   }
 }
@@ -1167,168 +1458,11 @@ function saveChores() {
     .saveChoreRatios(JSON.stringify(adminChores));
 }
 
-// ---- Member Manager ----------------------------------------
-function loadAdminMembers() {
-  document.getElementById('admin-members-loading').style.display = 'block';
-  document.getElementById('admin-members-content').style.display = 'none';
-  google.script.run
-    .withSuccessHandler(function(json) {
-      var r = JSON.parse(json);
-      if (!r.success) { showToast('Error loading members: ' + r.error); return; }
-      adminMembersData = r.data;
-      updateAdminMemberCounts();
-      filterAdminMembers();
-      document.getElementById('admin-members-loading').style.display = 'none';
-      document.getElementById('admin-members-content').style.display = 'block';
-    })
-    .withFailureHandler(function(err) {
-      document.getElementById('admin-members-loading').textContent = 'Failed to load members.';
-      onError(err);
-    })
-    .getMemberDirectoryData();
-}
-
-function updateAdminMemberCounts() {
-  var counts = { all: 0, active: 0, associate: 0, inactive: 0, alumni: 0 };
-  adminMembersData.forEach(function(m) {
-    counts.all++;
-    if (counts[m.status] !== undefined) counts[m.status]++;
-  });
-  ['all', 'active', 'associate', 'inactive', 'alumni'].forEach(function(s) {
-    var el = document.getElementById('amf-count-' + s);
-    if (el) el.textContent = '(' + counts[s] + ')';
-  });
-}
-
-function renderAdminMembersTable(data) {
-  var tbody = document.getElementById('admin-members-tbody');
-  tbody.innerHTML = '';
-  if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No members found.</td></tr>';
-    return;
-  }
-  data.forEach(function(m) {
-    var badge;
-    if (m.status === 'associate')   badge = '<span class="badge badge-associate">AM</span>';
-    else if (m.status === 'active') badge = '<span class="badge badge-verified">Active</span>';
-    else if (m.status === 'alumni') badge = '<span class="badge" style="background:#f3e8ff;color:#9333ea">Alumni</span>';
-    else                            badge = '<span class="badge badge-pending">Inactive</span>';
-
-    var bkCell = m.bkNumber
-      ? '<span style="font-family:monospace;font-weight:700;color:var(--gold);font-size:0.9rem">' + esc(m.bkNumber) + '</span>'
-      : '<span class="badge-none">—</span>';
-
-    var choreCell = m.chore ? esc(m.chore) : '<span class="badge-none">—</span>';
-    var fineCell  = (m.fineCount > 0)
-      ? '<span style="color:var(--red);font-weight:700">' + m.fineCount + '</span>'
-      : '<span style="color:var(--muted)">0</span>';
-
-    var safeName = esc(m.name);
-    var actions = '';
-    if (m.status === 'associate') {
-      actions =
-        '<button class="action-btn" style="background:var(--primary);color:var(--gold);border:none" onclick="openCrossModal(\'' + m.memberId + '\',\'' + safeName + '\')">Cross 🎉</button> ' +
-        '<button class="action-btn btn-photo" onclick="openAdminEditModal(\'' + m.memberId + '\')">Edit</button> ' +
-        '<button class="action-btn btn-fail" onclick="deleteAdminMember(\'' + m.memberId + '\',\'' + safeName + '\')">Remove</button>';
-    } else if (m.status === 'active') {
-      actions =
-        (!m.bkNumber ? '<button class="action-btn btn-photo" onclick="openAssignBkModal(\'' + m.memberId + '\',\'' + safeName + '\')">Assign BK</button> ' : '') +
-        '<button class="action-btn btn-photo" onclick="openAdminEditModal(\'' + m.memberId + '\')">Edit</button> ' +
-        '<button class="action-btn" style="background:#f3e8ff;color:#9333ea;border:1px solid #e9d5ff" onclick="doGraduateMember(\'' + m.memberId + '\',\'' + safeName + '\')">Graduate</button> ' +
-        '<button class="action-btn btn-fail" onclick="toggleMemberStatus(\'' + m.memberId + '\',\'inactive\',\'' + safeName + '\')">Deactivate</button>';
-    } else if (m.status === 'alumni') {
-      actions =
-        '<button class="action-btn btn-photo" onclick="openAdminEditModal(\'' + m.memberId + '\')">Edit</button> ' +
-        '<button class="action-btn btn-fail" onclick="deleteAdminMember(\'' + m.memberId + '\',\'' + safeName + '\')">Delete</button>';
-    } else {
-      actions =
-        '<button class="action-btn btn-verify" onclick="toggleMemberStatus(\'' + m.memberId + '\',\'active\',\'' + safeName + '\')">Activate</button> ' +
-        '<button class="action-btn btn-photo" onclick="openAdminEditModal(\'' + m.memberId + '\')">Edit</button> ' +
-        '<button class="action-btn btn-fail" onclick="deleteAdminMember(\'' + m.memberId + '\',\'' + safeName + '\')">Delete</button>';
-    }
-    if (m.fineCount > 0) {
-      actions += ' <button class="action-btn" style="background:var(--red-bg);color:var(--red);border:1px solid #fecaca" onclick="openAdminFineModal(\'' + m.memberId + '\',\'' + safeName + '\')">Fines</button>';
-    }
-
-    tbody.insertAdjacentHTML('beforeend',
-      '<tr>' +
-      '<td>' + bkCell + '</td>' +
-      '<td><strong>' + safeName + '</strong></td>' +
-      '<td style="font-size:0.82rem">' + esc(m.email || '—') + '</td>' +
-      '<td>' + esc(m.pledgeClass || '—') + '</td>' +
-      '<td>' + badge + '</td>' +
-      '<td style="font-size:0.82rem">' + choreCell + '</td>' +
-      '<td>' + fineCell + '</td>' +
-      '<td style="white-space:nowrap">' + actions + '</td>' +
-      '</tr>'
-    );
-  });
-}
-
-var adminMemberStatusFilter = 'all';
-
-function setAdminMemberFilter(status) {
-  adminMemberStatusFilter = status;
-  var colors = {
-    all:       ['var(--primary)', 'var(--gold)', 'none'],
-    active:    ['transparent', 'var(--green)',  '1px solid #bbf7d0'],
-    associate: ['transparent', '#2563eb',       '1px solid #bfdbfe'],
-    inactive:  ['transparent', 'var(--muted)',  '1px solid var(--border)'],
-    alumni:    ['transparent', '#9333ea',       '1px solid #e9d5ff']
-  };
-  ['all', 'active', 'associate', 'inactive', 'alumni'].forEach(function(s) {
-    var btn = document.getElementById('amf-btn-' + s);
-    if (!btn) return;
-    var active = s === status;
-    var c = colors[s];
-    btn.style.background = active ? 'var(--primary)' : c[0];
-    btn.style.color      = active ? 'var(--gold)'    : c[1];
-    btn.style.border     = active ? 'none'            : c[2];
-  });
-  filterAdminMembers();
-}
-
-function filterAdminMembers() {
-  var q = (document.getElementById('admin-member-search') ? document.getElementById('admin-member-search').value : '').toLowerCase();
-  renderAdminMembersTable(adminMembersData.filter(function(m) {
-    if (m.status === 'alumni' && adminMemberStatusFilter !== 'alumni') return false;
-    var matchesSearch = m.name.toLowerCase().includes(q) ||
-           (m.email || '').toLowerCase().includes(q) ||
-           (m.pledgeClass || '').toLowerCase().includes(q);
-    var matchesStatus = adminMemberStatusFilter === 'all' || m.status === adminMemberStatusFilter;
-    return matchesSearch && matchesStatus;
-  }));
-}
-
-function toggleMemberStatus(memberId, newStatus, name) {
-  if (!confirm('Set ' + name + ' to ' + newStatus + '?')) return;
-  google.script.run
-    .withSuccessHandler(function(json) {
-      var r = JSON.parse(json);
-      showToast(r.success ? name + ' is now ' + newStatus + '.' : 'Error: ' + r.error);
-      if (r.success) loadAdminMembers();
-    })
-    .withFailureHandler(onError)
-    .updateMemberStatus(memberId, newStatus);
-}
-
-function deleteAdminMember(memberId, name) {
-  if (!confirm('Delete member "' + name + '"? This cannot be undone.')) return;
-  google.script.run
-    .withSuccessHandler(function(json) {
-      var r = JSON.parse(json);
-      showToast(r.success ? name + ' deleted.' : 'Error: ' + r.error);
-      if (r.success) loadAdminMembers();
-    })
-    .withFailureHandler(onError)
-    .deleteMember(memberId);
-}
-
 // ---- Admin Edit Modal ------------------------------------
 var adminEditPending = null;
 
 function openAdminEditModal(memberId) {
-  var m = adminMembersData.find(function(x) { return x.memberId === memberId; });
+  var m = mmData.find(function(x) { return x.memberId === memberId; });
   if (!m) return;
   adminEditPending = memberId;
   document.getElementById('admin-edit-name').value   = m.name || '';
@@ -1357,7 +1491,7 @@ function saveAdminEdit() {
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
       showToast(r.success ? 'Member updated!' : 'Error: ' + (r.error || r.message));
-      if (r.success) loadAdminMembers();
+      if (r.success) loadMemberManager();
     })
     .withFailureHandler(onError)
     .updateMember(memberId, name, email, pledge, status);
@@ -1397,50 +1531,65 @@ function closeAdminFineModal() {
   adminFinePending = null;
 }
 
-// ---- Admin Add Member Modal ------------------------------
-function openAdminAddModal() {
-  document.getElementById('admin-add-name').value    = '';
-  document.getElementById('admin-add-email').value   = '';
-  document.getElementById('admin-add-pledge').value  = '';
-  document.getElementById('admin-add-bk').value      = '';
-  document.getElementById('admin-add-status').value  = 'active';
+// ---- Add Member Modal (new expanded version) --------------
+function openAddMemberModal() {
+  ['add-legal-first','add-legal-last','add-preferred','add-personal-email','add-gt-email','add-phone','add-pledge','add-bk'].forEach(function(id) {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('add-status').value = 'associate';
+  document.getElementById('add-bk-req').style.display = 'none';
   document.getElementById('admin-add-modal').classList.add('open');
-  setTimeout(function() { document.getElementById('admin-add-name').focus(); }, 80);
+  setTimeout(function() { document.getElementById('add-legal-first').focus(); }, 80);
 }
 
-function closeAdminAddModal() {
+function closeAddMemberModal() {
   document.getElementById('admin-add-modal').classList.remove('open');
 }
 
-function confirmAdminAdd() {
-  var name   = document.getElementById('admin-add-name').value.trim();
-  var email  = document.getElementById('admin-add-email').value.trim();
-  var pledge = document.getElementById('admin-add-pledge').value.trim();
-  var bk     = document.getElementById('admin-add-bk').value.trim();
-  var status = document.getElementById('admin-add-status').value;
-  if (!name || !email) { showToast('Name and email are required.'); return; }
-  closeAdminAddModal();
+function onAddStatusChange() {
+  var isActive = document.getElementById('add-status').value === 'active';
+  document.getElementById('add-bk-req').style.display = isActive ? 'inline' : 'none';
+}
+
+function confirmAddMember() {
+  var legalFirst = document.getElementById('add-legal-first').value.trim();
+  var legalLast  = document.getElementById('add-legal-last').value.trim();
+  var preferred  = document.getElementById('add-preferred').value.trim();
+  var email      = document.getElementById('add-personal-email').value.trim();
+  var gtEmail    = document.getElementById('add-gt-email').value.trim();
+  var phone      = document.getElementById('add-phone').value.trim();
+  var pledge     = document.getElementById('add-pledge').value.trim();
+  var bk         = document.getElementById('add-bk').value.trim();
+  var status     = document.getElementById('add-status').value;
+  if (!legalFirst || !legalLast) { showToast('Legal first and last name are required.'); return; }
+  if (!email) { showToast('Personal email is required.'); return; }
+  if (status === 'active' && !bk) { showToast('BK Number is required for Active (Brother) members.'); return; }
+  closeAddMemberModal();
   google.script.run
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
-      if (r.success) { showToast('Member added!'); loadAdminMembers(); }
+      if (r.success) { showToast('Member added!'); loadMemberManager(); }
       else           { showToast('Error: ' + r.error); }
     })
     .withFailureHandler(onError)
-    .addMember(name, email, pledge, bk, status);
+    .addMember(legalFirst, legalLast, preferred, email, gtEmail, phone, pledge, bk || '', status);
 }
+
+// Keep old aliases for backward compat
+function openAdminAddModal() { openAddMemberModal(); }
+function closeAdminAddModal() { closeAddMemberModal(); }
 
 // ---- Graduate Member -------------------------------------
 function doGraduateMember(memberId, name) {
-  if (!confirm('Graduate ' + name + '? This moves them to Alumni status.')) return;
+  if (!confirm('Graduate ' + name + '? This moves them to Alumni.')) return;
   google.script.run
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
       showToast(r.success ? name + ' graduated to Alumni.' : 'Error: ' + (r.error || r.message));
-      if (r.success) loadAdminMembers();
+      if (r.success) loadMemberManager();
     })
     .withFailureHandler(onError)
-    .graduateMember(memberId);
+    .graduateMember(memberId, 'Officer');
 }
 
 // ---- QR Code Functions (Change 2) -----------------------
@@ -1716,12 +1865,779 @@ function confirmCross() {
   google.script.run
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
-      showToast(r.success ? '🎉 Member crossed into brotherhood!' : 'Error: ' + r.error);
-      if (r.success) loadAdminMembers();
+      showToast(r.success ? 'Member initiated into brotherhood!' : 'Error: ' + r.error);
+      if (r.success) loadMemberManager();
     })
     .withFailureHandler(onError)
     .crossMember(memberId, bk);
 }
+
+// ============================================================
+// MARK COMPLETE + FLAG FRAUD
+// ============================================================
+var _mcPending = null;
+function openMarkCompleteModal(memberId, memberName, choreName) {
+  _mcPending = { memberId: memberId, choreName: choreName };
+  document.getElementById('mc-sub').textContent = memberName + ' — ' + choreName;
+  document.getElementById('mc-officer').value = '';
+  document.getElementById('mc-notes').value = '';
+  document.getElementById('mark-complete-modal').classList.add('open');
+  setTimeout(function() { document.getElementById('mc-officer').focus(); }, 80);
+}
+function closeMarkCompleteModal() {
+  document.getElementById('mark-complete-modal').classList.remove('open');
+  _mcPending = null;
+}
+function confirmMarkComplete() {
+  if (!_mcPending) return;
+  var officer = document.getElementById('mc-officer').value.trim();
+  var notes   = document.getElementById('mc-notes').value.trim();
+  if (!officer) { showToast('Enter your name.'); return; }
+  if (!notes)   { showToast('Notes are required — explain why marking manually.'); return; }
+  if (!_mcPending.memberId) { showToast('Member ID not available — reload and try again.'); return; }
+  var p = _mcPending;
+  closeMarkCompleteModal();
+  showToast('Marking complete...');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? 'Chore marked complete!' : 'Error: ' + r.error);
+      if (r.success) loadWeeklyStatus();
+    })
+    .withFailureHandler(onError)
+    .markChoreComplete(p.memberId, p.choreName, officer, notes);
+}
+
+var _ffPending = null;
+function openFlagFraudModal(submissionId, memberName, choreName) {
+  _ffPending = { submissionId: submissionId };
+  document.getElementById('ff-sub').textContent = memberName + ' — ' + choreName;
+  document.getElementById('ff-reason').value = '';
+  document.getElementById('flag-fraud-modal').classList.add('open');
+  setTimeout(function() { document.getElementById('ff-reason').focus(); }, 80);
+}
+function closeFlagFraudModal() {
+  document.getElementById('flag-fraud-modal').classList.remove('open');
+  _ffPending = null;
+}
+function confirmFlagFraud() {
+  if (!_ffPending) return;
+  var reason = document.getElementById('ff-reason').value.trim();
+  if (!reason) { showToast('Reason is required.'); return; }
+  var p = _ffPending;
+  closeFlagFraudModal();
+  showToast('Flagging submission...');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? 'Submission flagged as fraud.' : 'Error: ' + r.error);
+      if (r.success) loadWeeklyStatus();
+    })
+    .withFailureHandler(onError)
+    .flagFraud(p.submissionId, reason, 'Officer');
+}
+
+// ============================================================
+// MEMBER MANAGER TAB
+// ============================================================
+var mmData = [];
+var mmFilter = 'all';
+
+function loadMemberManager() {
+  document.getElementById('mm-loading').style.display = 'block';
+  document.getElementById('mm-table').style.display = 'none';
+  document.getElementById('mm-alumni-table').style.display = 'none';
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      document.getElementById('mm-loading').style.display = 'none';
+      if (!r.success) { showToast('Error loading members: ' + r.error); return; }
+      mmData = r.data;
+      updateMMCounts();
+      filterMM();
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('mm-loading').textContent = 'Failed to load members.';
+      onError(err);
+    })
+    .getMemberDirectoryData();
+}
+
+function updateMMCounts() {
+  var counts = { all:0, active:0, associate:0, inactive:0, alumni:0 };
+  mmData.forEach(function(m) {
+    counts.all++;
+    if (counts[m.status] !== undefined) counts[m.status]++;
+  });
+  ['all','active','associate','inactive','alumni'].forEach(function(s) {
+    var el = document.getElementById('mm-cnt-' + s);
+    if (el) el.textContent = '(' + (counts[s]||0) + ')';
+  });
+}
+
+var _mmFilterColors = {
+  all:       ['var(--primary)','var(--gold)','none'],
+  active:    ['transparent','var(--green)','1px solid #bbf7d0'],
+  associate: ['transparent','#2563eb','1px solid #bfdbfe'],
+  inactive:  ['transparent','var(--muted)','1px solid var(--border)'],
+  alumni:    ['transparent','#b45309','1px solid #fde68a']
+};
+
+function setMMFilter(status) {
+  mmFilter = status;
+  ['all','active','associate','inactive','alumni'].forEach(function(s) {
+    var btn = document.getElementById('mmf-' + s);
+    if (!btn) return;
+    var active = s === status;
+    var c = _mmFilterColors[s];
+    btn.style.background = active ? 'var(--primary)' : c[0];
+    btn.style.color      = active ? 'var(--gold)'    : c[1];
+    btn.style.border     = active ? 'none'            : c[2];
+  });
+  filterMM();
+}
+
+function filterMM() {
+  var q = (document.getElementById('mm-search') ? document.getElementById('mm-search').value : '').toLowerCase();
+  var filtered = mmData.filter(function(m) {
+    if (mmFilter !== 'all' && m.status !== mmFilter) return false;
+    if (!q) return true;
+    return (m.name||'').toLowerCase().includes(q) ||
+           (m.email||'').toLowerCase().includes(q) ||
+           (m.pledgeClass||'').toLowerCase().includes(q) ||
+           (m.bkNumber||'').toLowerCase().includes(q);
+  });
+  if (mmFilter === 'alumni') {
+    document.getElementById('mm-table').style.display = 'none';
+    document.getElementById('mm-alumni-table').style.display = filtered.length ? '' : 'none';
+    renderMMAlumni(filtered);
+  } else {
+    document.getElementById('mm-alumni-table').style.display = 'none';
+    document.getElementById('mm-table').style.display = filtered.length ? '' : 'none';
+    renderMMTable(filtered);
+  }
+}
+
+function _statusBadgeMM(m) {
+  var label = m.status.charAt(0).toUpperCase() + m.status.slice(1);
+  if (m.status === 'active') {
+    if (m.suspension || m.academicSuspension) return '<span class="badge badge-susp-m">Suspended</span>';
+    if (m.probation) return '<span class="badge badge-prob-m">Probation</span>';
+    return '<span class="badge badge-active-m">Active</span>';
+  }
+  if (m.status === 'associate') return '<span class="badge badge-assoc-m">AM</span>';
+  if (m.status === 'inactive')  return '<span class="badge badge-inactive-m">Inactive</span>';
+  if (m.status === 'alumni')    return '<span class="badge badge-alumni-m">Alumni</span>';
+  return '<span class="badge badge-pending">' + esc(label) + '</span>';
+}
+
+function _formBadge(m) {
+  if (m.status === 'alumni') return '<span style="color:var(--muted)">—</span>';
+  if (m.formCompleted === true || String(m.formCompleted).toUpperCase() === 'TRUE') return '<span style="color:var(--green);font-size:1rem">✅</span>';
+  return '<span style="color:var(--red);font-size:1rem">🔴</span>';
+}
+
+function renderMMTable(data) {
+  var tbody = document.getElementById('mm-tbody');
+  tbody.innerHTML = '';
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No members found.</td></tr>';
+    return;
+  }
+  data.forEach(function(m) {
+    var bkCell = m.bkNumber
+      ? '<span style="font-family:monospace;font-weight:700;color:var(--gold)">' + esc(m.bkNumber) + '</span>'
+      : '<span style="color:var(--muted)">—</span>';
+    var nameCell = '<a href="#" onclick="openProfileModal(\'' + m.memberId + '\');return false;" style="color:var(--primary);font-weight:700;text-decoration:none">' + esc(m.name) + '</a>';
+    var choreCell = m.chore ? esc(m.chore) : '<span style="color:var(--muted)">—</span>';
+    var fineCell  = m.fineCount > 0
+      ? '<span style="color:var(--red);font-weight:700">' + m.fineCount + '</span>'
+      : '<span style="color:var(--muted)">0</span>';
+    var quickAct =
+      '<button class="qa-btn" title="Notes" onclick="openNotesPanel(\'' + m.memberId + '\',\'' + esc(m.name) + '\')">📝</button>' +
+      '<button class="qa-btn" title="History" onclick="openHistoryModal(\'' + m.memberId + '\',\'' + esc(m.name) + '\')">📜</button>' +
+      '<button class="qa-btn" title="Edit" onclick="openAdminEditModal(\'' + m.memberId + '\')">✏️</button>' +
+      '<button class="qa-btn more" title="More actions" onclick="openCtxMenu(event,\'' + m.memberId + '\')">···</button>';
+
+    tbody.insertAdjacentHTML('beforeend',
+      '<tr>' +
+      '<td>' + bkCell + '</td>' +
+      '<td>' + nameCell + '</td>' +
+      '<td>' + esc(m.pledgeClass || '—') + '</td>' +
+      '<td>' + _statusBadgeMM(m) + '</td>' +
+      '<td style="font-size:0.82rem">' + choreCell + '</td>' +
+      '<td>' + fineCell + '</td>' +
+      '<td style="text-align:center">' + _formBadge(m) + '</td>' +
+      '<td style="white-space:nowrap">' + quickAct + '</td>' +
+      '</tr>'
+    );
+  });
+}
+
+function renderMMAlumni(data) {
+  var tbody = document.getElementById('mm-alumni-tbody');
+  tbody.innerHTML = '';
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No alumni found.</td></tr>';
+    return;
+  }
+  data.forEach(function(m) {
+    var bkCell = m.bkNumber
+      ? '<span style="font-family:monospace;font-weight:700;color:var(--gold)">' + esc(m.bkNumber) + '</span>'
+      : '<span style="color:var(--muted)">—</span>';
+    tbody.insertAdjacentHTML('beforeend',
+      '<tr>' +
+      '<td>' + bkCell + '</td>' +
+      '<td><strong>' + esc(m.name) + '</strong></td>' +
+      '<td>' + esc(m.pledgeClass || '—') + '</td>' +
+      '<td style="font-size:0.82rem">' + esc(m.officerRole || '—') + '</td>' +
+      '<td style="white-space:nowrap">' +
+        '<button class="qa-btn" onclick="openProfileModal(\'' + m.memberId + '\')">View Record</button> ' +
+        '<button class="qa-btn" onclick="doReactivate(\'' + m.memberId + '\',\'' + esc(m.name) + '\')">Restore Active</button>' +
+      '</td>' +
+      '</tr>'
+    );
+  });
+}
+
+function exportMembersCSV() {
+  if (!mmData.length) { showToast('No member data loaded.'); return; }
+  var rows = [['BK#','Name','Email','Pledge Class','Status','Chore','Fines','Form Completed','Officer Role']];
+  mmData.forEach(function(m) {
+    rows.push([m.bkNumber||'',m.name||'',m.email||'',m.pledgeClass||'',m.status||'',m.chore||'',m.fineCount||0,m.formCompleted||'',m.officerRole||'']);
+  });
+  var csv = rows.map(function(r) { return r.map(function(c) { return '"' + String(c).replace(/"/g,'""') + '"'; }).join(','); }).join('\r\n');
+  var blob = new Blob([csv], { type:'text/csv' });
+  saveAs(blob, 'members-export.csv');
+}
+
+// ============================================================
+// CONTEXTUAL ACTION DROPDOWN
+// ============================================================
+var _ctxMemberId = null;
+
+function openCtxMenu(evt, memberId) {
+  evt.stopPropagation();
+  _ctxMemberId = memberId;
+  var m = mmData.find(function(x) { return x.memberId === memberId; });
+  if (!m) return;
+  var menu = document.getElementById('ctx-menu');
+  menu.innerHTML = '';
+
+  var items = [];
+  if (m.status === 'active') {
+    items = [
+      { label:'Graduate', fn:"openActModal('graduate','" + memberId + "','" + esc(m.name) + "')" },
+      { label:'Mark Inactive', fn:"openActModal('inactive','" + memberId + "','" + esc(m.name) + "')" },
+      { label: m.suspended ? 'Lift Suspension' : 'Place Suspension', fn:"openActModal('" + (m.suspended?'lift_susp':'suspend') + "','" + memberId + "','" + esc(m.name) + "')" },
+      { label: m.probation ? 'Lift Probation' : 'Place Probation', fn:"openActModal('" + (m.probation?'lift_prob':'probation') + "','" + memberId + "','" + esc(m.name) + "')" },
+      { label:'Issue Fine', fn:"openActModal('fine','" + memberId + "','" + esc(m.name) + "')" },
+      { label:'Set Officer Role', fn:"openActModal('officer_role','" + memberId + "','" + esc(m.name) + "')" },
+      { label:'Dissociate', danger:true, fn:"openActModal('dissociate','" + memberId + "','" + esc(m.name) + "')" }
+    ];
+  } else if (m.status === 'associate') {
+    items = [
+      { label:'Initiate (Cross)', fn:"openCrossModal('" + memberId + "','" + esc(m.name) + "')" },
+      { label:'Mark Inactive', fn:"openActModal('inactive','" + memberId + "','" + esc(m.name) + "')" },
+      { label:'Dissociate', danger:true, fn:"openActModal('dissociate','" + memberId + "','" + esc(m.name) + "')" }
+    ];
+  } else if (m.status === 'inactive') {
+    items = [
+      { label:'Reactivate', fn:"doReactivate('" + memberId + "','" + esc(m.name) + "')" },
+      { label:'Graduate', fn:"openActModal('graduate','" + memberId + "','" + esc(m.name) + "')" },
+      { label:'Dissociate', danger:true, fn:"openActModal('dissociate','" + memberId + "','" + esc(m.name) + "')" }
+    ];
+  }
+
+  items.forEach(function(item) {
+    var btn = document.createElement('button');
+    btn.className = 'ctx-item' + (item.danger ? ' danger' : '');
+    btn.textContent = item.label;
+    btn.setAttribute('onclick', item.fn + ';closeCtxMenu()');
+    menu.appendChild(btn);
+  });
+
+  var rect = evt.target.getBoundingClientRect();
+  menu.style.top  = (rect.bottom + 4) + 'px';
+  menu.style.left = Math.min(rect.left, window.innerWidth - 200) + 'px';
+  menu.classList.add('open');
+}
+
+function closeCtxMenu() {
+  document.getElementById('ctx-menu').classList.remove('open');
+  _ctxMemberId = null;
+}
+document.addEventListener('click', function() { closeCtxMenu(); });
+
+// ============================================================
+// GENERIC ACTION MODAL
+// ============================================================
+var _actPending = null;
+
+var _actConfigs = {
+  graduate:    { title:'Graduate Member', btnLabel:'Graduate', btnClass:'btn-primary', fields:[] },
+  inactive:    { title:'Mark Inactive', btnLabel:'Mark Inactive', btnClass:'btn-primary',
+    fields:[{ id:'act-reason', label:'Reason', type:'select', opts:['co-op','study_abroad','voluntary','other'] }] },
+  dissociate:  { title:'Dissociate Member', btnLabel:'Dissociate', btnClass:'btn-danger',
+    fields:[{ id:'act-reason', label:'Reason *', type:'textarea' }] },
+  suspend:     { title:'Place Suspension', btnLabel:'Place Suspension', btnClass:'btn-danger',
+    fields:[
+      { id:'act-reason',   label:'Reason *', type:'textarea' },
+      { id:'act-end-date', label:'Suspension End Date', type:'date' },
+      { id:'act-academic', label:'Academic Suspension', type:'checkbox' }
+    ]},
+  lift_susp:   { title:'Lift Suspension', btnLabel:'Lift Suspension', btnClass:'btn-primary', fields:[] },
+  probation:   { title:'Place Probation', btnLabel:'Place Probation', btnClass:'btn-primary',
+    fields:[
+      { id:'act-prob-type', label:'Probation Type', type:'select', opts:['chapter','social'] },
+      { id:'act-reason',    label:'Reason *', type:'textarea' },
+      { id:'act-end-date',  label:'End Date', type:'date' }
+    ]},
+  lift_prob:   { title:'Lift Probation', btnLabel:'Lift Probation', btnClass:'btn-primary', fields:[] },
+  fine:        { title:'Issue Manual Fine', btnLabel:'Issue Fine', btnClass:'btn-danger',
+    fields:[
+      { id:'act-chore',  label:'Chore Name *', type:'text' },
+      { id:'act-reason', label:'Reason *', type:'textarea' }
+    ]},
+  officer_role:{ title:'Set Officer Role', btnLabel:'Save Role', btnClass:'btn-primary',
+    fields:[{ id:'act-role', label:'Role (leave blank to clear)', type:'text', placeholder:'e.g. HC, Steward' }] }
+};
+
+function openActModal(action, memberId, memberName) {
+  var cfg = _actConfigs[action];
+  if (!cfg) return;
+  _actPending = { action:action, memberId:memberId, memberName:memberName };
+  document.getElementById('act-title').textContent = cfg.title;
+  document.getElementById('act-sub').textContent = memberName;
+  var btn = document.getElementById('act-confirm');
+  btn.textContent = cfg.btnLabel;
+  btn.className = 'btn-primary ' + cfg.btnClass;
+
+  var fields = document.getElementById('act-fields');
+  fields.innerHTML = '';
+  (cfg.fields || []).forEach(function(f) {
+    var wrap = document.createElement('div');
+    var label = '<label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">' + f.label + '</label>';
+    var input = '';
+    if (f.type === 'select') {
+      input = '<select id="' + f.id + '" class="inline-input" style="width:100%">' +
+        f.opts.map(function(o) { return '<option value="' + o + '">' + o + '</option>'; }).join('') + '</select>';
+    } else if (f.type === 'textarea') {
+      input = '<textarea id="' + f.id + '" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:7px;font-size:0.85rem;resize:vertical;min-height:60px;font-family:inherit" placeholder="' + (f.placeholder||'') + '"></textarea>';
+    } else if (f.type === 'date') {
+      input = '<input type="date" id="' + f.id + '" class="inline-input" style="width:100%">';
+    } else if (f.type === 'checkbox') {
+      input = '<label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="' + f.id + '" style="width:16px;height:16px"> ' + f.label + '</label>';
+      wrap.innerHTML = input;
+      fields.appendChild(wrap);
+      return;
+    } else {
+      input = '<input type="text" id="' + f.id + '" class="inline-input" style="width:100%" placeholder="' + (f.placeholder||'') + '">';
+    }
+    wrap.innerHTML = label + input;
+    fields.appendChild(wrap);
+  });
+  document.getElementById('action-modal').classList.add('open');
+}
+
+function closeActionModal() {
+  document.getElementById('action-modal').classList.remove('open');
+  _actPending = null;
+}
+
+function _gv(id) { var el = document.getElementById(id); return el ? (el.type==='checkbox' ? el.checked : el.value.trim()) : ''; }
+
+function executeAction() {
+  if (!_actPending) return;
+  var p = _actPending;
+  var mid = p.memberId, mname = p.memberName;
+  var performer = 'Officer';
+
+  function done(json) {
+    var r = JSON.parse(json);
+    showToast(r.success ? (r.message || 'Done!') : 'Error: ' + (r.error || r.message));
+    if (r.success) { loadMemberManager(); _mmLoaded = true; }
+  }
+
+  closeActionModal();
+
+  if (p.action === 'graduate') {
+    google.script.run.withSuccessHandler(done).withFailureHandler(onError).graduateMember(mid, performer);
+  } else if (p.action === 'inactive') {
+    var reason = _gv('act-reason') || 'voluntary';
+    google.script.run.withSuccessHandler(done).withFailureHandler(onError).markInactive(mid, reason, performer);
+  } else if (p.action === 'dissociate') {
+    var reason = _gv('act-reason');
+    if (!reason) { showToast('Reason is required.'); _actPending = p; document.getElementById('action-modal').classList.add('open'); return; }
+    google.script.run.withSuccessHandler(done).withFailureHandler(onError).dissociateMember(mid, reason, performer);
+  } else if (p.action === 'suspend') {
+    var reason = _gv('act-reason');
+    if (!reason) { showToast('Reason is required.'); _actPending = p; document.getElementById('action-modal').classList.add('open'); return; }
+    var endDate = _gv('act-end-date');
+    var isAcad  = _gv('act-academic');
+    google.script.run.withSuccessHandler(done).withFailureHandler(onError).placeSuspension(mid, reason, endDate, isAcad, performer);
+  } else if (p.action === 'lift_susp') {
+    google.script.run.withSuccessHandler(done).withFailureHandler(onError).liftSuspension(mid, performer);
+  } else if (p.action === 'probation') {
+    var reason = _gv('act-reason');
+    if (!reason) { showToast('Reason is required.'); _actPending = p; document.getElementById('action-modal').classList.add('open'); return; }
+    var ptype = _gv('act-prob-type') || 'chapter';
+    var endDate = _gv('act-end-date');
+    google.script.run.withSuccessHandler(done).withFailureHandler(onError).placeProbation(mid, ptype, reason, endDate, performer);
+  } else if (p.action === 'lift_prob') {
+    google.script.run.withSuccessHandler(done).withFailureHandler(onError).liftProbation(mid, performer);
+  } else if (p.action === 'fine') {
+    var chore  = _gv('act-chore');
+    var reason = _gv('act-reason');
+    if (!chore || !reason) { showToast('Chore and reason are required.'); _actPending = p; document.getElementById('action-modal').classList.add('open'); return; }
+    google.script.run.withSuccessHandler(done).withFailureHandler(onError).issueFine(mid, chore, reason, performer);
+  } else if (p.action === 'officer_role') {
+    var role = _gv('act-role');
+    google.script.run.withSuccessHandler(done).withFailureHandler(onError).setOfficerRole(mid, role, performer);
+  }
+}
+
+function doReactivate(memberId, name) {
+  if (!confirm('Reactivate ' + name + ' to Active status?')) return;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? name + ' reactivated!' : 'Error: ' + r.error);
+      if (r.success) loadMemberManager();
+    })
+    .withFailureHandler(onError)
+    .reactivateMember(memberId, 'Officer');
+}
+
+// ============================================================
+// NOTES PANEL
+// ============================================================
+var _notesMemberId = null;
+
+function openNotesPanel(memberId, memberName) {
+  _notesMemberId = memberId;
+  document.getElementById('notes-panel-title').textContent = 'Notes — ' + memberName;
+  document.getElementById('notes-list').innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Loading...</div>';
+  document.getElementById('note-text-input').value = '';
+  document.getElementById('note-author').value = '';
+  document.getElementById('notes-panel').classList.add('open');
+  document.getElementById('panel-backdrop').classList.add('open');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (!r.success) { document.getElementById('notes-list').innerHTML = '<div style="padding:16px;color:var(--red)">Failed to load notes.</div>'; return; }
+      renderNotes(r.notes || []);
+    })
+    .withFailureHandler(function() {
+      document.getElementById('notes-list').innerHTML = '<div style="padding:16px;color:var(--red)">Error loading notes.</div>';
+    })
+    .getMemberNotes(memberId);
+}
+
+function closeNotesPanel() {
+  document.getElementById('notes-panel').classList.remove('open');
+  document.getElementById('panel-backdrop').classList.remove('open');
+  _notesMemberId = null;
+}
+
+function renderNotes(notes) {
+  var list = document.getElementById('notes-list');
+  if (!notes.length) {
+    list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--muted)">No notes yet.</div>';
+    return;
+  }
+  list.innerHTML = notes.map(function(n) {
+    var cls = 'note-' + (n.noteType || 'general');
+    var typeLabel = (n.noteType || 'general').toUpperCase().replace('_',' ');
+    return '<div class="note-item ' + cls + '">' +
+      '<div class="note-type-label">' + typeLabel + '</div>' +
+      '<div class="note-text">' + esc(n.noteText) + '</div>' +
+      '<div class="note-meta">' + esc(n.createdBy || '—') + ' · ' + (n.createdAt ? String(n.createdAt).substring(0,10) : '') + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function submitNote() {
+  if (!_notesMemberId) return;
+  var text   = document.getElementById('note-text-input').value.trim();
+  var type   = document.getElementById('note-type-select').value;
+  var author = document.getElementById('note-author').value.trim() || 'Officer';
+  if (!text) { showToast('Enter note text.'); return; }
+  var mid = _notesMemberId;
+  document.getElementById('note-text-input').value = '';
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (r.success) {
+        showToast('Note added!');
+        openNotesPanel(mid, document.getElementById('notes-panel-title').textContent.replace('Notes — ',''));
+      } else { showToast('Error: ' + r.error); }
+    })
+    .withFailureHandler(onError)
+    .addMemberNote(mid, text, type, author);
+}
+
+// ============================================================
+// HISTORY MODAL
+// ============================================================
+function openHistoryModal(memberId, memberName) {
+  document.getElementById('hist-title').textContent = 'History — ' + memberName;
+  document.getElementById('hist-loading').style.display = 'block';
+  document.getElementById('hist-list').style.display = 'none';
+  document.getElementById('history-modal').classList.add('open');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      document.getElementById('hist-loading').style.display = 'none';
+      var list = document.getElementById('hist-list');
+      list.style.display = 'block';
+      if (!r.success || !r.history || !r.history.length) {
+        list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">No history found.</div>';
+        return;
+      }
+      list.innerHTML = r.history.map(function(h) {
+        return '<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">' +
+          '<div style="color:var(--muted);font-size:0.72rem;white-space:nowrap;min-width:90px">' + esc(String(h.timestamp||'').substring(0,10)) + '</div>' +
+          '<div><div style="font-size:0.83rem;font-weight:600">' + esc(h.action||'') + '</div>' +
+          '<div style="font-size:0.78rem;color:var(--muted)">' + esc(h.details||'') + '</div></div>' +
+          '</div>';
+      }).join('');
+    })
+    .withFailureHandler(function() {
+      document.getElementById('hist-loading').textContent = 'Failed to load history.';
+    })
+    .getMemberHistory(memberId);
+}
+
+function closeHistoryModal() {
+  document.getElementById('history-modal').classList.remove('open');
+}
+
+// ============================================================
+// FULL PROFILE MODAL
+// ============================================================
+function openProfileModal(memberId) {
+  document.getElementById('prof-title').textContent = 'Loading...';
+  document.getElementById('prof-loading').style.display = 'block';
+  document.getElementById('prof-content').style.display = 'none';
+  document.getElementById('profile-modal').classList.add('open');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      document.getElementById('prof-loading').style.display = 'none';
+      if (!r.success) { document.getElementById('prof-loading').textContent = 'Failed to load.'; return; }
+      renderProfile(r);
+    })
+    .withFailureHandler(function() {
+      document.getElementById('prof-loading').textContent = 'Failed to load profile.';
+    })
+    .getMemberFullProfile(memberId);
+}
+
+function closeProfileModal() {
+  document.getElementById('profile-modal').classList.remove('open');
+}
+
+// r = full response from getMemberFullProfile: { member, currentChore, fines, notes, complianceRate, ... }
+function renderProfile(r) {
+  var p = r.member || {};
+  var fines = r.fines || [];
+  var notes = r.notes || [];
+  var complianceRate = r.complianceRate || 0;
+  var currentChore = r.currentChore || null;
+
+  document.getElementById('prof-title').textContent = (p.preferredName || p.legalFirst || '') + ' ' + (p.legalLast || '');
+  var pf = function(label, val) {
+    return '<div class="profile-field"><div class="label">' + label + '</div><div>' + esc(val || '—') + '</div></div>';
+  };
+  var statusBadge = _statusBadgeMM({ status: p.status, suspension: p.suspension, academicSuspension: p.academicSuspension, probation: p.probation });
+  var compColor = complianceRate >= 80 ? 'var(--green)' : complianceRate >= 50 ? 'var(--yellow)' : 'var(--red)';
+
+  var finesHtml = '';
+  if (fines.length) {
+    finesHtml = fines.map(function(f) {
+      return '<div style="display:flex;gap:12px;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.82rem">' +
+        '<div style="color:var(--muted);min-width:80px">' + esc(String(f.weekStart||'').substring(0,10)) + '</div>' +
+        '<div><strong>' + esc(f.choreName||'') + '</strong> — ' + esc(f.reason||'') + '</div></div>';
+    }).join('');
+  } else { finesHtml = '<div style="color:var(--muted);font-size:0.83rem">No fines this semester.</div>'; }
+
+  var notesHtml = '';
+  if (notes.length) {
+    notesHtml = notes.slice(0,5).map(function(n) {
+      var cls = 'note-' + (n.noteType||'general');
+      return '<div class="note-item ' + cls + '" style="margin-bottom:6px">' +
+        '<div class="note-type-label">' + (n.noteType||'general').toUpperCase() + '</div>' +
+        '<div class="note-text">' + esc(n.noteText) + '</div>' +
+        '<div class="note-meta">' + esc(n.createdBy||'') + '</div></div>';
+    }).join('');
+  } else { notesHtml = '<div style="color:var(--muted);font-size:0.83rem">No notes.</div>'; }
+
+  document.getElementById('prof-content').innerHTML =
+    '<div class="profile-section"><h4>Identity</h4><div class="profile-grid">' +
+      pf('Legal Name', (p.legalFirst||'') + ' ' + (p.legalLast||'')) +
+      pf('Preferred Name', p.preferredName) +
+      pf('Personal Email', p.email) +
+      pf('GT Email', p.gtEmail) +
+      pf('Phone', p.phone) +
+      pf('BK Number', p.bkNumber) +
+      pf('Pledge Class', p.pledgeClass) +
+      pf('Anticipated Grad', p.anticipatedGraduation) +
+    '</div></div>' +
+    '<div class="profile-section"><h4>This Semester</h4><div class="profile-grid">' +
+      '<div class="profile-field"><div class="label">Status</div><div>' + statusBadge + '</div></div>' +
+      pf('Assigned Chore', currentChore) +
+      '<div class="profile-field"><div class="label">Form Completed</div><div>' + (p.formCompleted ? '✅ Yes' : '🔴 No') + '</div></div>' +
+      '<div class="profile-field"><div class="label">Compliance Rate</div><div style="color:' + compColor + ';font-weight:700">' + complianceRate + '%</div></div>' +
+      (p.suspension ? pf('Suspension Reason', p.suspensionReason) : '') +
+      (p.probation  ? pf('Probation Type', p.probationType) : '') +
+    '</div></div>' +
+    '<div class="profile-section"><h4>Officer Info</h4><div class="profile-grid">' +
+      pf('Officer Role', p.officerRole) +
+    '</div></div>' +
+    '<div class="profile-section"><h4>Fines This Semester</h4>' + finesHtml + '</div>' +
+    '<div class="profile-section"><h4>Notes</h4>' + notesHtml + '</div>';
+
+  document.getElementById('prof-content').style.display = 'block';
+}
+
+// ============================================================
+// SEMESTER TOOLS
+// ============================================================
+function openSemesterSyncModal() {
+  document.getElementById('sem-sync-modal').classList.add('open');
+}
+function closeSemesterSyncModal() {
+  document.getElementById('sem-sync-modal').classList.remove('open');
+}
+function confirmSemesterSync() {
+  closeSemesterSyncModal();
+  showToast('Running Semester Sync — this may take a minute...');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (!r.success) { showToast('Sync error: ' + r.error); return; }
+      showToast('Sync complete! New: ' + (r.newAdded||0) + ' | Returning: ' + (r.returningUpdated||0) + ' | Incomplete: ' + (r.incompleteCount||0));
+      loadMemberManager();
+    })
+    .withFailureHandler(onError)
+    .runSemesterSync(correctPin);
+}
+
+function openGradReview() {
+  document.getElementById('grad-list').innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">Loading...</div>';
+  document.getElementById('grad-review-modal').classList.add('open');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      var list = document.getElementById('grad-list');
+      if (!r.success || !r.data || !r.data.length) {
+        list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--green)">No graduation candidates at this time.</div>';
+        return;
+      }
+      list.innerHTML = '<table class="data-table"><thead><tr><th>BK#</th><th>Name</th><th>Pledge Class</th><th>Anticipated Grad</th></tr></thead><tbody>' +
+        r.data.map(function(c) {
+          return '<tr><td style="font-family:monospace;color:var(--gold)">' + esc(c.bkNumber||'—') + '</td>' +
+            '<td><strong>' + esc(c.name) + '</strong></td>' +
+            '<td>' + esc(c.pledgeClass||'—') + '</td>' +
+            '<td>' + esc(c.anticipatedGraduation||'—') + '</td></tr>';
+        }).join('') + '</tbody></table>';
+    })
+    .withFailureHandler(function() {
+      document.getElementById('grad-list').innerHTML = '<div style="text-align:center;color:var(--red);padding:20px">Failed to load.</div>';
+    })
+    .getGraduationCandidates();
+}
+
+function closeGradReview() {
+  document.getElementById('grad-review-modal').classList.remove('open');
+}
+
+function runMigrateRoster(btn) {
+  if (!confirm('Run one-time roster migration from old sheet? This cannot be undone and will be disabled after running.')) return;
+  btn.disabled = true; btn.textContent = 'Running...';
+  showToast('Migrating roster...');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? 'Migration complete! ' + (r.message||'') : 'Error: ' + r.error);
+      if (r.success) { btn.classList.add('done'); btn.textContent = 'Migration Done'; }
+      else           { btn.disabled = false; btn.textContent = 'Migrate Old Roster'; }
+    })
+    .withFailureHandler(function(err) { onError(err); btn.disabled = false; btn.textContent = 'Migrate Old Roster'; })
+    .migrateFromRosterSheet();
+}
+
+function runRelinkForms(btn) {
+  if (!confirm('Relink Google Forms to this spreadsheet? Run this once after initial setup.')) return;
+  btn.disabled = true; btn.textContent = 'Running...';
+  showToast('Relinking forms...');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? 'Forms relinked! ' + (r.message||'') : 'Error: ' + r.error);
+      if (r.success) { btn.classList.add('done'); btn.textContent = 'Forms Relinked'; }
+      else           { btn.disabled = false; btn.textContent = 'Relink Forms'; }
+    })
+    .withFailureHandler(function(err) { onError(err); btn.disabled = false; btn.textContent = 'Relink Forms'; })
+    .relinkForms();
+}
+
+// ============================================================
+// OFFICER HANDOFF
+// ============================================================
+function doGenerateHandoff() {
+  showToast('Generating handoff report...');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r;
+      try { r = JSON.parse(json); } catch(_) { showToast('Error: invalid response from server.'); return; }
+      if (!r.success) { showToast('Error: ' + (r.error || 'Unknown error.')); return; }
+      var w = window.open('', '_blank');
+      if (!w) { showToast('Popup blocked — allow popups and try again.'); return; }
+      w.document.write(r.html);
+      w.document.close();
+    })
+    .withFailureHandler(onError)
+    .generateHandoffReport();
+}
+
+function openChangePinModal() {
+  document.getElementById('pin-current').value = '';
+  document.getElementById('pin-new').value = '';
+  document.getElementById('pin-confirm').value = '';
+  document.getElementById('change-pin-modal').classList.add('open');
+  setTimeout(function() { document.getElementById('pin-current').focus(); }, 80);
+}
+
+function closeChangePinModal() {
+  document.getElementById('change-pin-modal').classList.remove('open');
+}
+
+function confirmChangePin() {
+  var current  = document.getElementById('pin-current').value;
+  var newPin   = document.getElementById('pin-new').value;
+  var confirm2 = document.getElementById('pin-confirm').value;
+  if (!current) { showToast('Enter your current PIN.'); return; }
+  if (!newPin || newPin.length < 4) { showToast('New PIN must be at least 4 characters.'); return; }
+  if (newPin !== confirm2) { showToast('New PINs do not match.'); return; }
+  closeChangePinModal();
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (r.success) {
+        correctPin = newPin;
+        showToast('PIN changed successfully!');
+      } else {
+        showToast('Error: ' + r.error);
+      }
+    })
+    .withFailureHandler(onError)
+    .changeOfficerPin(newPin, current);
+}
+
+// Wire loadAdminMembers → loadMemberManager for legacy callers
+function loadAdminMembers() { loadMemberManager(); }
 </script>
 </body>
 </html>
