@@ -11,11 +11,12 @@ function processPhotoSubmission(memberId, choreName, photoBase64, mimeType, clie
     const ss              = getSpreadsheet();
 
     // ── Guard 1: member must be active ───────────────────────────────────────
-    const memData = ss.getSheetByName('members').getDataRange().getValues();
-    let memberActive = false;
-    for (let i = 1; i < memData.length; i++) {
-      if (memData[i][0] === memberId && memData[i][3] === 'active') { memberActive = true; break; }
-    }
+    // Uses _getMembersStructured() (Code.gs) instead of a fixed column index —
+    // the 'members' tab schema varies (old 7-col vs. new 46-col from the real
+    // roster import), and 'status' lives at a different index in each.
+    const memberActive = _getMembersStructured().some(function(m) {
+      return m.memberId === memberId && m.status === 'active';
+    });
     if (!memberActive) {
       logError('processPhotoSubmission', `Inactive/unknown member tried to submit: ${memberId}`);
       return JSON.stringify({ success: false, autoStatus: 'rejected',

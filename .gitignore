@@ -7,3 +7,6 @@ python/smart_assignments.csv
 __pycache__/
 *.pyc
 .DS_Store
+node_modules/
+.clasp.json
+.clasprc.json

@@ -433,19 +433,24 @@
           <h2>Member Manager</h2>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="exportMembersCSV()">Export CSV</button>
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" title="All fields, all members + alumni — for university/compliance requests" onclick="exportFullCSV()">Export Full CSV</button>
             <button class="btn-primary" style="padding:6px 14px;font-size:0.8rem" onclick="openAddMemberModal()">+ Add Member</button>
           </div>
         </div>
         <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-          <input type="text" id="mm-search" class="inline-input" placeholder="Search name, email, pledge class..." style="width:260px" oninput="filterMM()">
+          <input type="text" id="mm-search" class="inline-input" placeholder="Search name, email, BK#..." style="width:260px" oninput="filterMM()">
           <div style="display:flex;gap:4px;flex-wrap:wrap">
             <button id="mmf-all"      class="action-btn" onclick="setMMFilter('all')"      style="background:var(--primary);color:var(--gold);border:none">All <span id="mm-cnt-all"></span></button>
             <button id="mmf-active"   class="action-btn" onclick="setMMFilter('active')"   style="background:transparent;color:var(--green);border:1px solid #bbf7d0">Active <span id="mm-cnt-active"></span></button>
             <button id="mmf-associate"class="action-btn" onclick="setMMFilter('associate')" style="background:transparent;color:#2563eb;border:1px solid #bfdbfe">AMs <span id="mm-cnt-associate"></span></button>
             <button id="mmf-inactive" class="action-btn" onclick="setMMFilter('inactive')" style="background:transparent;color:var(--muted);border:1px solid var(--border)">Inactive <span id="mm-cnt-inactive"></span></button>
             <button id="mmf-alumni"   class="action-btn" onclick="setMMFilter('alumni')"   style="background:transparent;color:#b45309;border:1px solid #fde68a">Alumni <span id="mm-cnt-alumni"></span></button>
+            <span style="width:1px;background:var(--border);align-self:stretch;margin:0 2px"></span>
+            <button id="mmf-suspended" class="action-btn" onclick="setMMFilter('suspended')" style="background:transparent;color:#b91c1c;border:1px solid #fecaca">Suspended <span id="mm-cnt-suspended"></span></button>
+            <button id="mmf-probation" class="action-btn" onclick="setMMFilter('probation')" style="background:transparent;color:#a16207;border:1px solid #fde68a">Probation <span id="mm-cnt-probation"></span></button>
           </div>
         </div>
+        <div id="mm-stats" style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:20px;font-size:0.8rem;color:var(--muted)"></div>
         <div class="card-body" style="overflow-x:auto">
           <div id="mm-loading" style="text-align:center;padding:30px;color:var(--muted)">Loading members...</div>
           <!-- Regular member table -->
@@ -453,10 +458,11 @@
             <thead><tr>
               <th onclick="sortTable('mm-table',0)">BK#</th>
               <th onclick="sortTable('mm-table',1)">Name</th>
-              <th onclick="sortTable('mm-table',2)">Pledge Class</th>
-              <th onclick="sortTable('mm-table',3)">Status</th>
-              <th onclick="sortTable('mm-table',4)">Chore</th>
-              <th onclick="sortTable('mm-table',5)">Fines</th>
+              <th onclick="sortTable('mm-table',2)">Status</th>
+              <th>Housing</th>
+              <th>Meal</th>
+              <th onclick="sortTable('mm-table',5)">Chore</th>
+              <th onclick="sortTable('mm-table',6)">Fines</th>
               <th>Form</th>
               <th>Actions</th>
             </tr></thead>
@@ -467,9 +473,9 @@
             <thead><tr>
               <th>BK#</th>
               <th>Name</th>
-              <th>Pledge Class</th>
-              <th>Officer Roles</th>
-              <th>Actions</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th></th>
             </tr></thead>
             <tbody id="mm-alumni-tbody"></tbody>
           </table>
@@ -732,17 +738,33 @@
         <input type="email" id="admin-edit-email" class="inline-input" style="width:100%">
       </div>
       <div>
-        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Pledge Class</label>
-        <input type="text" id="admin-edit-pledge" class="inline-input" style="width:100%" placeholder="Spring 2025">
-      </div>
-      <div>
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Status</label>
         <select id="admin-edit-status" class="inline-input" style="width:100%">
           <option value="active">Active (Brother)</option>
           <option value="associate">Associate Member (AM)</option>
           <option value="inactive">Inactive</option>
-          <option value="alumni">Alumni</option>
         </select>
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Meal Plan</label>
+        <select id="admin-edit-mealplan" class="inline-input" style="width:100%">
+          <option value="">— Not set —</option>
+          <option value="Full">Full</option>
+          <option value="Half">Half</option>
+          <option value="None">None</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Living in the house?</label>
+        <select id="admin-edit-living" class="inline-input" style="width:100%" onchange="onAdminEditLivingChange()">
+          <option value="">— Not set —</option>
+          <option value="Yes">Yes</option>
+          <option value="No">No</option>
+        </select>
+      </div>
+      <div id="admin-edit-room-wrap" style="display:none">
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Room Number</label>
+        <input type="text" id="admin-edit-room" class="inline-input" style="width:100%" placeholder="e.g. 214">
       </div>
     </div>
     <div class="modal-btns">
@@ -796,10 +818,6 @@
       <div>
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Phone</label>
         <input type="text" id="add-phone" class="inline-input" style="width:100%" placeholder="404-555-1234">
-      </div>
-      <div>
-        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Pledge Class</label>
-        <input type="text" id="add-pledge" class="inline-input" style="width:100%" placeholder="Spring 2025">
       </div>
       <div>
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">BK Number <span id="add-bk-req" style="color:var(--red);display:none">*</span></label>
@@ -940,6 +958,17 @@
     <div class="modal-btns">
       <button class="btn-outline" onclick="closeSemesterSyncModal()">Cancel</button>
       <button class="btn-primary" onclick="confirmSemesterSync()">Run Semester Sync</button>
+    </div>
+  </div>
+</div>
+
+<!-- Semester Sync Results Modal -->
+<div class="modal-overlay" id="sem-sync-results-modal">
+  <div class="modal modal-lg">
+    <h3>Semester Sync Results</h3>
+    <div id="sem-sync-results-body" style="max-height:60vh;overflow-y:auto"></div>
+    <div class="modal-btns" style="margin-top:14px">
+      <button class="btn-primary" onclick="closeSemesterSyncResults()">Close</button>
     </div>
   </div>
 </div>
@@ -1465,12 +1494,20 @@ function openAdminEditModal(memberId) {
   var m = mmData.find(function(x) { return x.memberId === memberId; });
   if (!m) return;
   adminEditPending = memberId;
-  document.getElementById('admin-edit-name').value   = m.name || '';
-  document.getElementById('admin-edit-email').value  = m.email || '';
-  document.getElementById('admin-edit-pledge').value = m.pledgeClass || '';
-  document.getElementById('admin-edit-status').value = m.status || 'active';
+  document.getElementById('admin-edit-name').value     = m.name || '';
+  document.getElementById('admin-edit-email').value    = m.email || '';
+  document.getElementById('admin-edit-status').value   = (m.status === 'alumni') ? 'active' : (m.status || 'active');
+  document.getElementById('admin-edit-mealplan').value = m.mealPlan || '';
+  document.getElementById('admin-edit-living').value   = m.livingInHouse || '';
+  document.getElementById('admin-edit-room').value     = m.roomNumber || '';
+  onAdminEditLivingChange();
   document.getElementById('admin-edit-modal').classList.add('open');
   setTimeout(function() { document.getElementById('admin-edit-name').focus(); }, 80);
+}
+
+function onAdminEditLivingChange() {
+  var living = document.getElementById('admin-edit-living').value;
+  document.getElementById('admin-edit-room-wrap').style.display = (living === 'Yes') ? '' : 'none';
 }
 
 function closeAdminEditModal() {
@@ -1480,10 +1517,14 @@ function closeAdminEditModal() {
 
 function saveAdminEdit() {
   if (!adminEditPending) return;
+  var m = mmData.find(function(x) { return x.memberId === adminEditPending; }) || {};
   var name   = document.getElementById('admin-edit-name').value.trim();
   var email  = document.getElementById('admin-edit-email').value.trim();
-  var pledge = document.getElementById('admin-edit-pledge').value.trim();
+  var pledge = m.pledgeClass || ''; // pledge class isn't tracked/editable in this UI — pass through unchanged
   var status = document.getElementById('admin-edit-status').value;
+  var mealPlan = document.getElementById('admin-edit-mealplan').value;
+  var living   = document.getElementById('admin-edit-living').value;
+  var room     = document.getElementById('admin-edit-room').value.trim();
   if (!name || !email) { showToast('Name and email are required.'); return; }
   var memberId = adminEditPending;
   closeAdminEditModal();
@@ -1494,7 +1535,7 @@ function saveAdminEdit() {
       if (r.success) loadMemberManager();
     })
     .withFailureHandler(onError)
-    .updateMember(memberId, name, email, pledge, status);
+    .updateMember(memberId, name, email, pledge, m.bkNumber || '', status, mealPlan, living, room);
 }
 
 // ---- Admin Fine History Modal ----------------------------
@@ -1533,7 +1574,7 @@ function closeAdminFineModal() {
 
 // ---- Add Member Modal (new expanded version) --------------
 function openAddMemberModal() {
-  ['add-legal-first','add-legal-last','add-preferred','add-personal-email','add-gt-email','add-phone','add-pledge','add-bk'].forEach(function(id) {
+  ['add-legal-first','add-legal-last','add-preferred','add-personal-email','add-gt-email','add-phone','add-bk'].forEach(function(id) {
     document.getElementById(id).value = '';
   });
   document.getElementById('add-status').value = 'associate';
@@ -1558,7 +1599,7 @@ function confirmAddMember() {
   var email      = document.getElementById('add-personal-email').value.trim();
   var gtEmail    = document.getElementById('add-gt-email').value.trim();
   var phone      = document.getElementById('add-phone').value.trim();
-  var pledge     = document.getElementById('add-pledge').value.trim();
+  var pledge     = ''; // pledge class isn't tracked by the chapter
   var bk         = document.getElementById('add-bk').value.trim();
   var status     = document.getElementById('add-status').value;
   if (!legalFirst || !legalLast) { showToast('Legal first and last name are required.'); return; }
@@ -1964,15 +2005,32 @@ function loadMemberManager() {
 }
 
 function updateMMCounts() {
-  var counts = { all:0, active:0, associate:0, inactive:0, alumni:0 };
+  var counts = { all:0, active:0, associate:0, inactive:0, alumni:0, suspended:0, probation:0 };
+  var housing = 0, mealFull = 0, mealHalf = 0;
   mmData.forEach(function(m) {
-    counts.all++;
+    var isCurrent = m.status !== 'alumni';
+    if (isCurrent) counts.all++; // "All" = current members only, alumni live in their own tab
     if (counts[m.status] !== undefined) counts[m.status]++;
+    if (m.suspension || m.academicSuspension) counts.suspended++;
+    if (m.probation) counts.probation++;
+    if (isCurrent && String(m.livingInHouse).toLowerCase() === 'yes') housing++;
+    if (isCurrent && /full/i.test(m.mealPlan || '')) mealFull++;
+    if (isCurrent && /half/i.test(m.mealPlan || '')) mealHalf++;
   });
-  ['all','active','associate','inactive','alumni'].forEach(function(s) {
+  ['all','active','associate','inactive','alumni','suspended','probation'].forEach(function(s) {
     var el = document.getElementById('mm-cnt-' + s);
     if (el) el.textContent = '(' + (counts[s]||0) + ')';
   });
+  var statsEl = document.getElementById('mm-stats');
+  if (statsEl) {
+    statsEl.innerHTML =
+      '<span><strong style="color:var(--primary)">' + counts.active + '</strong> active brothers</span>' +
+      '<span><strong style="color:var(--primary)">' + housing + '</strong> living in the house</span>' +
+      '<span><strong style="color:var(--primary)">' + mealFull + '</strong> full meal plan</span>' +
+      '<span><strong style="color:var(--primary)">' + mealHalf + '</strong> half meal plan</span>' +
+      (counts.suspended ? '<span style="color:#b91c1c"><strong>' + counts.suspended + '</strong> suspended</span>' : '') +
+      (counts.probation ? '<span style="color:#a16207"><strong>' + counts.probation + '</strong> on probation</span>' : '');
+  }
 }
 
 var _mmFilterColors = {
@@ -1980,12 +2038,14 @@ var _mmFilterColors = {
   active:    ['transparent','var(--green)','1px solid #bbf7d0'],
   associate: ['transparent','#2563eb','1px solid #bfdbfe'],
   inactive:  ['transparent','var(--muted)','1px solid var(--border)'],
-  alumni:    ['transparent','#b45309','1px solid #fde68a']
+  alumni:    ['transparent','#b45309','1px solid #fde68a'],
+  suspended: ['transparent','#b91c1c','1px solid #fecaca'],
+  probation: ['transparent','#a16207','1px solid #fde68a']
 };
 
 function setMMFilter(status) {
   mmFilter = status;
-  ['all','active','associate','inactive','alumni'].forEach(function(s) {
+  ['all','active','associate','inactive','alumni','suspended','probation'].forEach(function(s) {
     var btn = document.getElementById('mmf-' + s);
     if (!btn) return;
     var active = s === status;
@@ -2000,12 +2060,28 @@ function setMMFilter(status) {
 function filterMM() {
   var q = (document.getElementById('mm-search') ? document.getElementById('mm-search').value : '').toLowerCase();
   var filtered = mmData.filter(function(m) {
-    if (mmFilter !== 'all' && m.status !== mmFilter) return false;
+    // "All" means all current (non-alumni) members — alumni only ever show
+    // up under their own tab, never mixed into Active/Inactive/All.
+    // Suspended/Probation are flags on top of status, not statuses themselves,
+    // so they get their own matching instead of a plain status comparison.
+    if (mmFilter === 'all') { if (m.status === 'alumni') return false; }
+    else if (mmFilter === 'suspended') { if (!(m.suspension || m.academicSuspension)) return false; }
+    else if (mmFilter === 'probation') { if (!m.probation) return false; }
+    else if (m.status !== mmFilter) return false;
     if (!q) return true;
     return (m.name||'').toLowerCase().includes(q) ||
            (m.email||'').toLowerCase().includes(q) ||
-           (m.pledgeClass||'').toLowerCase().includes(q) ||
            (m.bkNumber||'').toLowerCase().includes(q);
+  });
+  // Sort by BK# ascending within whichever category is showing; members
+  // without a valid BK# fall to the end, sorted by name.
+  filtered.sort(function(a, b) {
+    var an = parseInt(a.bkNumber, 10), bn = parseInt(b.bkNumber, 10);
+    var aValid = !isNaN(an), bValid = !isNaN(bn);
+    if (aValid && bValid) return an - bn;
+    if (aValid) return -1;
+    if (bValid) return 1;
+    return (a.name||'').localeCompare(b.name||'');
   });
   if (mmFilter === 'alumni') {
     document.getElementById('mm-table').style.display = 'none';
@@ -2041,18 +2117,31 @@ function renderMMTable(data) {
   var tbody = document.getElementById('mm-tbody');
   tbody.innerHTML = '';
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No members found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No members found.</td></tr>';
     return;
   }
   data.forEach(function(m) {
     var bkCell = m.bkNumber
       ? '<span style="font-family:monospace;font-weight:700;color:var(--gold)">' + esc(m.bkNumber) + '</span>'
       : '<span style="color:var(--muted)">—</span>';
-    var nameCell = '<a href="#" onclick="openProfileModal(\'' + m.memberId + '\');return false;" style="color:var(--primary);font-weight:700;text-decoration:none">' + esc(m.name) + '</a>';
+    var toggleCell = '<span id="mm-toggle-' + m.memberId + '" onclick="toggleMMExpand(\'' + m.memberId + '\')" ' +
+      'style="cursor:pointer;display:inline-block;width:14px;color:var(--muted);user-select:none" title="More info">▸</span>';
+    var nameCell = toggleCell + '<a href="#" onclick="openProfileModal(\'' + m.memberId + '\');return false;" style="color:var(--primary);font-weight:700;text-decoration:none">' + esc(m.name) + '</a>';
     var choreCell = m.chore ? esc(m.chore) : '<span style="color:var(--muted)">—</span>';
     var fineCell  = m.fineCount > 0
       ? '<span style="color:var(--red);font-weight:700">' + m.fineCount + '</span>'
       : '<span style="color:var(--muted)">0</span>';
+    var housingOk = /^y/i.test(m.livingInHouse || '');
+    var housingCell = housingOk
+      ? '🏠' + (m.roomNumber ? ' ' + esc(m.roomNumber) : '')
+      : (m.livingInHouse ? '<span style="color:var(--muted)">Off-campus</span>' : '<span style="color:var(--muted)">—</span>');
+    var mealCell = (m.mealPlan && !/^#?n\/?a$/i.test(m.mealPlan))
+      ? esc(m.mealPlan)
+      : '<span style="color:var(--muted)">—</span>';
+    var flagged = m.suspension || m.academicSuspension || m.probation;
+    var rowStyle = flagged
+      ? ' style="background:' + ((m.suspension || m.academicSuspension) ? '#fef2f2' : '#fffbeb') + '"'
+      : '';
     var quickAct =
       '<button class="qa-btn" title="Notes" onclick="openNotesPanel(\'' + m.memberId + '\',\'' + esc(m.name) + '\')">📝</button>' +
       '<button class="qa-btn" title="History" onclick="openHistoryModal(\'' + m.memberId + '\',\'' + esc(m.name) + '\')">📜</button>' +
@@ -2060,18 +2149,49 @@ function renderMMTable(data) {
       '<button class="qa-btn more" title="More actions" onclick="openCtxMenu(event,\'' + m.memberId + '\')">···</button>';
 
     tbody.insertAdjacentHTML('beforeend',
-      '<tr>' +
+      '<tr' + rowStyle + '>' +
       '<td>' + bkCell + '</td>' +
       '<td>' + nameCell + '</td>' +
-      '<td>' + esc(m.pledgeClass || '—') + '</td>' +
       '<td>' + _statusBadgeMM(m) + '</td>' +
+      '<td style="font-size:0.82rem;white-space:nowrap">' + housingCell + '</td>' +
+      '<td style="font-size:0.82rem">' + mealCell + '</td>' +
       '<td style="font-size:0.82rem">' + choreCell + '</td>' +
       '<td>' + fineCell + '</td>' +
       '<td style="text-align:center">' + _formBadge(m) + '</td>' +
       '<td style="white-space:nowrap">' + quickAct + '</td>' +
-      '</tr>'
+      '</tr>' +
+      '<tr id="mm-expand-' + m.memberId + '" style="display:none;background:var(--bg-alt,#f7f7f5)">' +
+      '<td colspan="9" style="padding:0">' + _mmExpandHtml(m) + '</td></tr>'
     );
   });
+}
+
+function toggleMMExpand(memberId) {
+  var row = document.getElementById('mm-expand-' + memberId);
+  var toggle = document.getElementById('mm-toggle-' + memberId);
+  if (!row) return;
+  var showing = row.style.display !== 'none';
+  row.style.display = showing ? 'none' : '';
+  if (toggle) toggle.textContent = showing ? '▸' : '▾';
+}
+
+function _mmExpandHtml(m) {
+  var ex = m.extra || {};
+  var fields = [
+    ['Phone', m.phone], ['Major', ex.major], ['Year', ex.year],
+    ['GTID', ex.GTID], ['BuzzCard', ex.buzzcard], ['GT Username', ex.GT_username],
+    ['Hometown', ex.hometown], ['Birthday', ex.birthday], ['Shirt Size', ex.shirt_size],
+    ['Car on Campus', ex.car_on_campus], ['Dietary Restrictions', ex.dietary_restrictions],
+    ['Allergies', ex.allergies], ['Emergency Contact', ex.emergency_contact_name],
+    ['Emergency Phone', ex.emergency_contact_phone], ['Campus Orgs', ex.campus_orgs],
+    ['Leadership Positions', ex.leadership_positions], ['Which Positions', ex.which_positions],
+    ['Service Orgs', ex.service_orgs], ['Anything Else', ex.anything_else]
+  ];
+  return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px 16px;padding:12px 14px">' +
+    fields.map(function(f) {
+      return '<div><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em">' + f[0] + '</div>' +
+        '<div style="font-size:0.82rem">' + esc(f[1] || '—') + '</div></div>';
+    }).join('') + '</div>';
 }
 
 function renderMMAlumni(data) {
@@ -2089,11 +2209,11 @@ function renderMMAlumni(data) {
       '<tr>' +
       '<td>' + bkCell + '</td>' +
       '<td><strong>' + esc(m.name) + '</strong></td>' +
-      '<td>' + esc(m.pledgeClass || '—') + '</td>' +
-      '<td style="font-size:0.82rem">' + esc(m.officerRole || '—') + '</td>' +
-      '<td style="white-space:nowrap">' +
-        '<button class="qa-btn" onclick="openProfileModal(\'' + m.memberId + '\')">View Record</button> ' +
-        '<button class="qa-btn" onclick="doReactivate(\'' + m.memberId + '\',\'' + esc(m.name) + '\')">Restore Active</button>' +
+      '<td style="font-size:0.82rem">' + esc(m.phone || '—') + '</td>' +
+      '<td style="font-size:0.82rem">' + esc(m.email || '—') + '</td>' +
+      '<td style="white-space:nowrap;text-align:right">' +
+        '<button class="qa-btn" title="View Record" onclick="openProfileModal(\'' + m.memberId + '\')">📄</button> ' +
+        '<button class="qa-btn" title="Restore Active" onclick="doReactivate(\'' + m.memberId + '\',\'' + esc(m.name) + '\')">↩️</button>' +
       '</td>' +
       '</tr>'
     );
@@ -2102,13 +2222,44 @@ function renderMMAlumni(data) {
 
 function exportMembersCSV() {
   if (!mmData.length) { showToast('No member data loaded.'); return; }
-  var rows = [['BK#','Name','Email','Pledge Class','Status','Chore','Fines','Form Completed','Officer Role']];
+  var rows = [['BK#','Name','Email','Status','Living in House','Room','Meal Plan','Chore','Fines','Form Completed','Officer Role']];
   mmData.forEach(function(m) {
-    rows.push([m.bkNumber||'',m.name||'',m.email||'',m.pledgeClass||'',m.status||'',m.chore||'',m.fineCount||0,m.formCompleted||'',m.officerRole||'']);
+    rows.push([m.bkNumber||'',m.name||'',m.email||'',m.status||'',m.livingInHouse||'',m.roomNumber||'',m.mealPlan||'',m.chore||'',m.fineCount||0,m.formCompleted||'',m.officerRole||'']);
   });
   var csv = rows.map(function(r) { return r.map(function(c) { return '"' + String(c).replace(/"/g,'""') + '"'; }).join(','); }).join('\r\n');
   var blob = new Blob([csv], { type:'text/csv' });
   saveAs(blob, 'members-export.csv');
+}
+
+function exportFullCSV() {
+  if (!mmData.length) { showToast('No member data loaded.'); return; }
+  var header = ['BK#','Name','Status','Email','GT Email','Phone','Officer Role',
+    'Living in House','Room Number','Meal Plan',
+    'GTID','BuzzCard','GT Username','Major','Year','Anticipated Graduation',
+    'Hometown','Birthday','Shirt Size','Dietary Restrictions','Allergies','Car on Campus',
+    'Emergency Contact Name','Emergency Contact Phone',
+    'Campus Orgs','Leadership Positions','Which Positions','Service Orgs','Anything Else',
+    'Suspended','Suspension Reason','Suspension End','Academic Suspension',
+    'Probation','Probation Type',
+    'Graduated Semester','Chore','Fines'];
+  var rows = [header];
+  mmData.forEach(function(m) {
+    var x = m.extra || {};
+    rows.push([
+      m.bkNumber||'', m.name||'', m.status||'', m.email||'', m.gtEmail||'', m.phone||'', m.officerRole||'',
+      m.livingInHouse||'', m.roomNumber||'', m.mealPlan||'',
+      x.GTID||'', x.buzzcard||'', x.GT_username||'', x.major||'', x.year||'', m.anticipatedGraduation||'',
+      x.hometown||'', x.birthday||'', x.shirt_size||'', x.dietary_restrictions||'', x.allergies||'', x.car_on_campus||'',
+      x.emergency_contact_name||'', x.emergency_contact_phone||'',
+      x.campus_orgs||'', x.leadership_positions||'', x.which_positions||'', x.service_orgs||'', x.anything_else||'',
+      (m.suspension || m.academicSuspension) ? 'Yes' : 'No', m.suspensionReason||'', m.suspensionEnd||'', m.academicSuspension ? 'Yes' : 'No',
+      m.probation ? 'Yes' : 'No', m.probationType||'',
+      m.graduatedSemester||'', m.chore||'', m.fineCount||0
+    ]);
+  });
+  var csv = rows.map(function(r) { return r.map(function(c) { return '"' + String(c).replace(/"/g,'""') + '"'; }).join(','); }).join('\r\n');
+  var blob = new Blob([csv], { type:'text/csv' });
+  saveAs(blob, 'members-full-export-' + new Date().toISOString().slice(0,10) + '.csv');
 }
 
 // ============================================================
@@ -2129,7 +2280,7 @@ function openCtxMenu(evt, memberId) {
     items = [
       { label:'Graduate', fn:"openActModal('graduate','" + memberId + "','" + esc(m.name) + "')" },
       { label:'Mark Inactive', fn:"openActModal('inactive','" + memberId + "','" + esc(m.name) + "')" },
-      { label: m.suspended ? 'Lift Suspension' : 'Place Suspension', fn:"openActModal('" + (m.suspended?'lift_susp':'suspend') + "','" + memberId + "','" + esc(m.name) + "')" },
+      { label: (m.suspension || m.academicSuspension) ? 'Lift Suspension' : 'Place Suspension', fn:"openActModal('" + ((m.suspension || m.academicSuspension)?'lift_susp':'suspend') + "','" + memberId + "','" + esc(m.name) + "')" },
       { label: m.probation ? 'Lift Probation' : 'Place Probation', fn:"openActModal('" + (m.probation?'lift_prob':'probation') + "','" + memberId + "','" + esc(m.name) + "')" },
       { label:'Issue Fine', fn:"openActModal('fine','" + memberId + "','" + esc(m.name) + "')" },
       { label:'Set Officer Role', fn:"openActModal('officer_role','" + memberId + "','" + esc(m.name) + "')" },
@@ -2481,7 +2632,6 @@ function renderProfile(r) {
       pf('GT Email', p.gtEmail) +
       pf('Phone', p.phone) +
       pf('BK Number', p.bkNumber) +
-      pf('Pledge Class', p.pledgeClass) +
       pf('Anticipated Grad', p.anticipatedGraduation) +
     '</div></div>' +
     '<div class="profile-section"><h4>This Semester</h4><div class="profile-grid">' +
@@ -2489,6 +2639,9 @@ function renderProfile(r) {
       pf('Assigned Chore', currentChore) +
       '<div class="profile-field"><div class="label">Form Completed</div><div>' + (p.formCompleted ? '✅ Yes' : '🔴 No') + '</div></div>' +
       '<div class="profile-field"><div class="label">Compliance Rate</div><div style="color:' + compColor + ';font-weight:700">' + complianceRate + '%</div></div>' +
+      pf('Meal Plan', p.mealPlan) +
+      pf('Living in House', p.livingInHouse) +
+      (p.livingInHouse === 'Yes' ? pf('Room Number', p.roomNumber) : '') +
       (p.suspension ? pf('Suspension Reason', p.suspensionReason) : '') +
       (p.probation  ? pf('Probation Type', p.probationType) : '') +
     '</div></div>' +
@@ -2517,11 +2670,40 @@ function confirmSemesterSync() {
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
       if (!r.success) { showToast('Sync error: ' + r.error); return; }
-      showToast('Sync complete! New: ' + (r.newAdded||0) + ' | Returning: ' + (r.returningUpdated||0) + ' | Incomplete: ' + (r.incompleteCount||0));
+      showSemesterSyncResults(r);
       loadMemberManager();
     })
     .withFailureHandler(onError)
     .runSemesterSync(correctPin);
+}
+
+function _syncListBlock(title, items, color, hint) {
+  if (!items || !items.length) return '';
+  return '<div style="margin-bottom:16px">' +
+    '<div style="font-weight:700;color:' + color + ';margin-bottom:6px">' + esc(title) + ' (' + items.length + ')</div>' +
+    (hint ? '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:6px">' + esc(hint) + '</div>' : '') +
+    '<ul style="font-size:0.83rem;padding-left:18px;line-height:1.8;color:var(--text)">' +
+      items.map(function(i) { return '<li>' + esc(i) + '</li>'; }).join('') +
+    '</ul></div>';
+}
+
+function showSemesterSyncResults(r) {
+  var html =
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:18px">' +
+      '<div style="background:var(--green-bg);border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:var(--green)">' + (r.newAdded||0) + '</div><div style="font-size:0.72rem;color:var(--muted)">NEW MEMBERS</div></div>' +
+      '<div style="background:#eff6ff;border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#2563eb">' + (r.returningUpdated||0) + '</div><div style="font-size:0.72rem;color:var(--muted)">RETURNING UPDATED</div></div>' +
+      '<div style="background:#fffbeb;border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#a16207">' + (r.incompleteCount||0) + '</div><div style="font-size:0.72rem;color:var(--muted)">FORM NOT SUBMITTED</div></div>' +
+    '</div>' +
+    _syncListBlock('❗ Unmatched returning forms', r.unmatchedReturning, '#b91c1c', 'Nobody was updated for these — match manually via Edit or have them resubmit with the right BK#.') +
+    _syncListBlock('⚠️ Potential graduates', r.potentialGrads, '#a16207', 'Review in Member Manager and graduate manually — nothing was changed automatically.') +
+    _syncListBlock('📋 Inactive last semester', r.inactiveMembers, 'var(--muted)', 'Still marked inactive — reactivate manually if they\'re back.') +
+    _syncListBlock('⚠️ Duplicate new-member submissions', r.duplicateNew, '#a16207', 'Same email submitted the new-member form more than once — only the first was used.') +
+    _syncListBlock('Forms not submitted', r.incompleteMembers, 'var(--muted)', '');
+  document.getElementById('sem-sync-results-body').innerHTML = html || '<div style="color:var(--muted);text-align:center;padding:20px">Nothing to review — all forms matched cleanly.</div>';
+  document.getElementById('sem-sync-results-modal').classList.add('open');
+}
+function closeSemesterSyncResults() {
+  document.getElementById('sem-sync-results-modal').classList.remove('open');
 }
 
 function openGradReview() {
@@ -2535,11 +2717,10 @@ function openGradReview() {
         list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--green)">No graduation candidates at this time.</div>';
         return;
       }
-      list.innerHTML = '<table class="data-table"><thead><tr><th>BK#</th><th>Name</th><th>Pledge Class</th><th>Anticipated Grad</th></tr></thead><tbody>' +
+      list.innerHTML = '<table class="data-table"><thead><tr><th>BK#</th><th>Name</th><th>Anticipated Grad</th></tr></thead><tbody>' +
         r.data.map(function(c) {
           return '<tr><td style="font-family:monospace;color:var(--gold)">' + esc(c.bkNumber||'—') + '</td>' +
             '<td><strong>' + esc(c.name) + '</strong></td>' +
-            '<td>' + esc(c.pledgeClass||'—') + '</td>' +
             '<td>' + esc(c.anticipatedGraduation||'—') + '</td></tr>';
         }).join('') + '</tbody></table>';
     })

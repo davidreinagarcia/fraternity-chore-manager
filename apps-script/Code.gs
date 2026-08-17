@@ -108,9 +108,15 @@ function _getMembersStructured() {
   if (data.length < 1) return [];
   var headers = data[0];
   var cm = _buildColMap(headers);
+  var extraFields = ['GTID','buzzcard','GT_username','hometown','birthday','shirt_size',
+    'dietary_restrictions','car_on_campus','allergies','emergency_contact_name',
+    'emergency_contact_phone','campus_orgs','leadership_positions','which_positions',
+    'service_orgs','anything_else','major','year'];
   var out = [];
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
+    var extra = {};
+    extraFields.forEach(function(f) { extra[f] = cm[f] !== undefined ? String(r[cm[f]] || '') : ''; });
     out.push({
       memberId:      String(r[0] || ''),
       bkNumber:      String(r[cm['BK#'] !== undefined ? cm['BK#'] : 1] || ''),
@@ -134,8 +140,53 @@ function _getMembersStructured() {
       legalLast:     cm['legal_last']     !== undefined ? String(r[cm['legal_last']]     || '') : '',
       phone:         cm['phone']          !== undefined ? String(r[cm['phone']]          || '') : '',
       addedDate:     cm['added_date']     !== undefined ? String(r[cm['added_date']]     || '') : String(r[6] || ''),
+      mealPlan:      cm['meal_plan']      !== undefined ? String(r[cm['meal_plan']]      || '') : '',
+      livingInHouse: cm['living_in_house']!== undefined ? String(r[cm['living_in_house']]|| '') : '',
+      roomNumber:    cm['room_number']    !== undefined ? String(r[cm['room_number']]    || '') : '',
+      extra: extra,
       _rowNum: i + 1,
       _cm: cm
+    });
+  }
+  return out;
+}
+
+// Returns all alumni rows as structured objects, shaped compatibly with
+// _getMembersStructured() so the officer UI can treat them uniformly.
+function _getAlumniStructured() {
+  var sheet = getSpreadsheet().getSheetByName('alumni');
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 1) return [];
+  var cm = _buildColMap(data[0]);
+  var extraFields = ['GTID','buzzcard','GT_username','hometown','birthday','shirt_size',
+    'dietary_restrictions','car_on_campus','allergies','emergency_contact_name',
+    'emergency_contact_phone','campus_orgs','leadership_positions','which_positions',
+    'service_orgs','anything_else','major','year'];
+  var out = [];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (!r.join('').trim()) continue;
+    var extra = {};
+    extraFields.forEach(function(f) { extra[f] = cm[f] !== undefined ? String(r[cm[f]] || '') : ''; });
+    extra['moved_to_alumni_date'] = cm['moved_to_alumni_date'] !== undefined ? String(r[cm['moved_to_alumni_date']] || '') : '';
+    extra['notes'] = cm['notes'] !== undefined ? String(r[cm['notes']] || '') : '';
+    out.push({
+      memberId:    cm['member_id'] !== undefined ? String(r[cm['member_id']] || '') : '',
+      bkNumber:    cm['BK#']       !== undefined ? String(r[cm['BK#']]       || '') : '',
+      name:        _displayName(r, cm),
+      email:       _memberEmail(r, cm),
+      gtEmail:     cm['GT_email']  !== undefined ? String(r[cm['GT_email']]  || '') : '',
+      pledgeClass: cm['pledge_class'] !== undefined ? String(r[cm['pledge_class']] || '') : '',
+      officerRole: cm['officer_role'] !== undefined ? String(r[cm['officer_role']] || '') : '',
+      graduatedSemester: cm['graduated_semester'] !== undefined ? String(r[cm['graduated_semester']] || '') : '',
+      anticipatedGraduation: cm['anticipated_graduation'] !== undefined ? String(r[cm['anticipated_graduation']] || '') : '',
+      legalFirst:    cm['legal_first']    !== undefined ? String(r[cm['legal_first']]    || '') : '',
+      preferredName: cm['preferred_name'] !== undefined ? String(r[cm['preferred_name']] || '') : '',
+      legalLast:     cm['legal_last']     !== undefined ? String(r[cm['legal_last']]     || '') : '',
+      phone:         cm['phone']          !== undefined ? String(r[cm['phone']]          || '') : '',
+      extra: extra,
+      _rowNum: i + 1
     });
   }
   return out;
@@ -1457,12 +1508,34 @@ function getMemberDirectoryData() {
         academicSuspension: m.academicSuspension,
         probation: m.probation, probationType: m.probationType,
         formCompleted: m.formCompleted,
+        mealPlan: m.mealPlan, livingInHouse: m.livingInHouse, roomNumber: m.roomNumber,
+        phone: m.phone, anticipatedGraduation: m.anticipatedGraduation, extra: m.extra,
         chore: asgMap[m.memberId] || null,
         fineCount: fineMap[m.memberId] || 0
       };
     });
 
-    return JSON.stringify({ success: true, data: members, semester: semester });
+    // Alumni live on a separate sheet (graduateMember / migrateFromRosterSheet
+    // both write there) — merge them in, tagged status:'alumni', so the
+    // Member Manager's Alumni tab has something to show.
+    var alumni = _getAlumniStructured().map(function(m) {
+      return {
+        memberId: m.memberId, bkNumber: m.bkNumber, name: m.name,
+        email: m.email, gtEmail: m.gtEmail, status: 'alumni',
+        pledgeClass: m.pledgeClass, officerRole: m.officerRole,
+        inactiveReason: '',
+        suspension: false, suspensionReason: '', suspensionEnd: '',
+        academicSuspension: false,
+        probation: false, probationType: '',
+        formCompleted: null,
+        phone: m.phone, anticipatedGraduation: m.anticipatedGraduation, extra: m.extra,
+        graduatedSemester: m.graduatedSemester,
+        chore: null,
+        fineCount: 0
+      };
+    });
+
+    return JSON.stringify({ success: true, data: members.concat(alumni), semester: semester });
   } catch (err) {
     logError('getMemberDirectoryData', err);
     return JSON.stringify({ success: false, error: err.toString() });
@@ -1470,7 +1543,7 @@ function getMemberDirectoryData() {
 }
 
 // Edits basic fields for an existing member (name, email, pledgeClass, bkNumber, status).
-function updateMember(memberId, name, email, pledgeClass, bkNumber, status) {
+function updateMember(memberId, name, email, pledgeClass, bkNumber, status, mealPlan, livingInHouse, roomNumber) {
   try {
     if (!name || !email) return JSON.stringify({ success: false, error: 'Name and email are required.' });
     var sheet = getSpreadsheet().getSheetByName('members');
@@ -1507,6 +1580,9 @@ function updateMember(memberId, name, email, pledgeClass, bkNumber, status) {
           if (cm['personal_email'] !== undefined) sheet.getRange(i + 1, cm['personal_email']+ 1).setValue(email);
           if (cm['pledge_class'] !== undefined)  sheet.getRange(i + 1, cm['pledge_class']  + 1).setValue(pledgeClass || '');
           if (status && cm['status'] !== undefined) sheet.getRange(i + 1, cm['status'] + 1).setValue(status);
+          if (cm['meal_plan']       !== undefined) sheet.getRange(i + 1, cm['meal_plan']       + 1).setValue(mealPlan || '');
+          if (cm['living_in_house'] !== undefined) sheet.getRange(i + 1, cm['living_in_house'] + 1).setValue(livingInHouse || '');
+          if (cm['room_number']     !== undefined) sheet.getRange(i + 1, cm['room_number']     + 1).setValue(livingInHouse === 'Yes' ? (roomNumber || '') : '');
           if (cm['last_updated'] !== undefined)  sheet.getRange(i + 1, cm['last_updated']  + 1).setValue(new Date().toISOString());
         } else {
           var nameCol = cm['name'] !== undefined ? cm['name'] : 2;
@@ -1568,14 +1644,9 @@ function graduateMember(memberId, performedBy) {
     var displayName = _displayName(memberRow, cm);
     var semester = getConfigValue('semester') || '';
 
-    // Build alumni row
-    var ALUMNI_HEADERS = ['BK#','legal_first','preferred_name','legal_last','phone','personal_email',
-      'GTID','buzzcard','GT_username','GT_email','major','year','anticipated_graduation','hometown',
-      'birthday','shirt_size','dietary_restrictions','car_on_campus','allergies',
-      'emergency_contact_name','emergency_contact_phone','campus_orgs','leadership_positions',
-      'which_positions','service_orgs','anything_else','pledge_class','officer_role',
-      'graduated_semester','moved_to_alumni_date','notes'];
-
+    // Build alumni row (ALUMNI_HEADERS is the global const — its 'member_id'
+    // entry carries the id over automatically via the forEach below, since
+    // cm['member_id'] resolves to column 0 on the members sheet).
     var alSheet = ss.getSheetByName('alumni');
     if (!alSheet) { alSheet = ss.insertSheet('alumni'); alSheet.appendRow(ALUMNI_HEADERS); alSheet.setFrozenRows(1); }
     var alData = alSheet.getDataRange().getValues();
@@ -1652,10 +1723,12 @@ var MEMBER_HEADERS = [
   'status','inactive_reason','suspension','suspension_reason','suspension_end',
   'probation','probation_type','probation_reason','probation_end',
   'academic_suspension','officer_role','pledge_class',
-  'form_completed_this_semester','co_op_semester','added_date','last_updated'
+  'form_completed_this_semester','co_op_semester','added_date','last_updated',
+  'room_number'
 ];
 
 var ALUMNI_HEADERS = [
+  'member_id',
   'BK#','legal_first','preferred_name','legal_last','phone','personal_email',
   'GTID','buzzcard','GT_username','GT_email','major','year',
   'anticipated_graduation','hometown','birthday','shirt_size',
@@ -1761,21 +1834,119 @@ function migrateFromRosterSheet() {
   }
 
   try {
-    var OLD_ROSTER_ID = '1Fy2lKxpzdGsPyAWTVFcETsxNmhrX3UScVKI2NGEsMsU';
+    // Real chapter roster. For a one-off test run against a copy, set the
+    // TEST_ROSTER_ID script property instead of editing this constant — that
+    // way the real ID can never get shipped-over-by-accident from a test run.
+    var OLD_ROSTER_ID = PropertiesService.getScriptProperties().getProperty('TEST_ROSTER_ID')
+      || '1Fy2lKxpzdGsPyAWTVFcETsxNmhrX3UScVKI2NGEsMsU';
     var oldSS = SpreadsheetApp.openById(OLD_ROSTER_ID);
     var sheets = oldSS.getSheets();
 
-    // Find most recent active semester tab
-    var skipNames = ['alumni', 'instructions', 'Alumni', 'Instructions'];
+    // Find the active semester tab. Real chapter workbooks also contain
+    // Form-response sheets and computed views (e.g. "Fall 2026 Roster Form",
+    // "Active Brothers + Numbers") that are NOT the roster table — skip those
+    // too. Word-boundary matching avoids false hits like "Fall Formal" or
+    // "Uniform Info", which a bare substring check would wrongly exclude.
+    var skipPattern = /^(alumni|instructions)$/i;
+    var skipSubstring = /\bform\b|\bnumbers\b|active brothers/i;
     var semesterSheets = sheets.filter(function(s) {
-      return !s.isSheetHidden() && skipNames.indexOf(s.getName().toLowerCase()) === -1
-        && skipNames.indexOf(s.getName()) === -1;
+      var n = s.getName();
+      return !s.isSheetHidden() && !skipPattern.test(n) && !skipSubstring.test(n);
     });
     if (!semesterSheets.length) throw new Error('No visible semester tab found in old roster.');
-    var rosterSheet = semesterSheets[semesterSheets.length - 1];
 
-    var rosterData = rosterSheet.getDataRange().getValues();
+    // Prefer the tab whose name matches the configured semester exactly.
+    var currentSemester = String(getConfigValue('semester') || '').trim();
+    var rosterSheet = null;
+    for (var si = 0; si < semesterSheets.length; si++) {
+      if (semesterSheets[si].getName().trim() === currentSemester) { rosterSheet = semesterSheets[si]; break; }
+    }
+    if (!rosterSheet) rosterSheet = semesterSheets[semesterSheets.length - 1];
+
+    // The real header row isn't always row 1 — chapters often keep a stats
+    // dashboard above the table. Scan the first rows for the one that looks
+    // like the roster's header (has both a BK# column and a first-name column).
+    var rosterAll = rosterSheet.getDataRange().getValues();
+    var headerRowIdx = 0;
+    var headerRowFound = false;
+    for (var hr = 0; hr < Math.min(rosterAll.length, 25); hr++) {
+      var rowJoined = rosterAll[hr].join('|').toLowerCase();
+      if (rowJoined.indexOf('bk') !== -1 && rowJoined.indexOf('first') !== -1) { headerRowIdx = hr; headerRowFound = true; break; }
+    }
+    if (!headerRowFound) {
+      logError('migrateFromRosterSheet',
+        'Could not confidently locate the roster header row in "' + rosterSheet.getName() +
+        '" (looked for a row containing both "bk" and "first" in the first 25 rows). ' +
+        'Defaulting to row 1 — verify the migrated data before trusting it.');
+    }
+    var rosterData = rosterAll.slice(headerRowIdx);
     var rosterCM = _buildColMap(rosterData[0]);
+
+    // Chapter rosters use verbose Google-Form-style headers that don't match
+    // our internal field names exactly (e.g. 'BK #' vs 'BK#', 'Legal First Name'
+    // vs 'legal_first'). Resolve each field against a list of known variants
+    // instead of relying on a single fallback column index.
+    var _findColByCandidates = function(cm, candidates) {
+      for (var i = 0; i < candidates.length; i++) {
+        if (cm[candidates[i]] !== undefined) return cm[candidates[i]];
+      }
+      var keys = Object.keys(cm);
+      for (var c = 0; c < candidates.length; c++) {
+        var want = candidates[c].toLowerCase();
+        for (var k = 0; k < keys.length; k++) {
+          if (keys[k].toLowerCase().indexOf(want) !== -1) return cm[keys[k]];
+        }
+      }
+      return undefined;
+    };
+    var _findRosterCol = function(candidates) { return _findColByCandidates(rosterCM, candidates); };
+    var colBK     = _findRosterCol(['BK#', 'BK #', 'bk_number']);
+    var colFirst  = _findRosterCol(['First Name', 'Legal First Name', 'legal_first']);
+    var colLast   = _findRosterCol(['Last Name', 'Legal Last Name', 'legal_last']);
+    // 'Personal Email' tried before the bare 'Email' substring so a sheet with
+    // no exact match doesn't fall back onto 'GT Email' (a school address).
+    var colEmail  = _findRosterCol(['Personal Email', 'personal_email', 'Email']);
+    var colStatus = _findRosterCol(['Status', 'Status this semester', 'status']);
+    var colName   = _findRosterCol(['Name', 'Full Name']);
+    var colPledge = _findRosterCol(['Pledge Class', 'pledge_class']);
+
+    // The rest of MEMBER_HEADERS — descriptive/profile fields the officer
+    // dashboard shows but doesn't need to specially transform — resolved the
+    // same way and copied straight across for newly-created members.
+    var memberFieldCandidates = {
+      'preferred_name':          ['Preferred Name'],
+      'phone':                   ['Phone Number', 'Phone'],
+      'GTID':                    ['GTID'],
+      'buzzcard':                ['BuzzCard'],
+      'GT_username':             ['GT Username'],
+      'GT_email':                ['GT Email'],
+      'major':                   ['Major'],
+      'year':                    ['Year'],
+      'anticipated_graduation':  ['Anticipated Graduation'],
+      'hometown':                ['Hometown'],
+      'birthday':                ['Birthday'],
+      'shirt_size':              ['Shirt Size', 'T-Shirt Size'],
+      'dietary_restrictions':    ['Dietary Restrictions'],
+      'car_on_campus':           ['car on campus'],
+      'allergies':               ['Allergies'],
+      'emergency_contact_name':  ['Emergency Contact Name'],
+      'emergency_contact_phone': ['Emergency Contact Phone'],
+      'campus_orgs':             ['campus organizations'],
+      'leadership_positions':    ['leadership position'],
+      'which_positions':         ['which ones', 'what position'],
+      'service_orgs':            ['service-based', 'service organizations'],
+      'anything_else':           ['anything else'],
+      // Exact known phrasing tried first — the meal-plan question's own text
+      // contains "...Living in the house..." as boilerplate, which would
+      // otherwise wrongly substring-match the living_in_house field onto the
+      // meal-plan column (and vice versa isn't an issue, but be precise both ways).
+      'meal_plan':               ['Will you be on the meal plan?', 'meal plan'],
+      'living_in_house':         ['Are you living in the house?', 'are you living in the house']
+    };
+    var memberColIdx = {};
+    Object.keys(memberFieldCandidates).forEach(function(h) {
+      memberColIdx[h] = _findColByCandidates(rosterCM, memberFieldCandidates[h]);
+    });
 
     // Ensure our tabs exist
     ensureTabsExist();
@@ -1799,9 +1970,10 @@ function migrateFromRosterSheet() {
 
     for (var r = 1; r < rosterData.length; r++) {
       var row = rosterData[r];
-      var rEmail  = String(row[rosterCM['Email'] !== undefined ? rosterCM['Email'] : (rosterCM['email'] || 3)] || '').trim().toLowerCase();
-      var rBK     = String(row[rosterCM['BK#'] !== undefined ? rosterCM['BK#'] : (rosterCM['bk_number'] || 1)] || '').trim();
-      var rStatus = String(row[rosterCM['Status'] !== undefined ? rosterCM['Status'] : (rosterCM['status'] || 4)] || '').trim();
+      if (!row.join('').trim()) continue; // skip fully blank spacer rows
+      var rEmail  = String((colEmail  !== undefined ? row[colEmail]  : '') || '').trim().toLowerCase();
+      var rBK     = String((colBK     !== undefined ? row[colBK]     : '') || '').trim();
+      var rStatus = String((colStatus !== undefined ? row[colStatus] : '') || '').trim();
       if (rStatus.toLowerCase() === 'alumni') { skipped++; continue; }
 
       var matchIdx = emailToRow[rEmail] || (rBK ? bkToRow[rBK] : null);
@@ -1818,10 +1990,10 @@ function migrateFromRosterSheet() {
         var mid = 'M' + Utilities.getUuid().replace(/-/g,'').substring(0,8).toUpperCase();
         newRow[0]  = mid;
         newRow[1]  = rBK;
-        var rFirst = String(row[rosterCM['First Name'] !== undefined ? rosterCM['First Name'] : (rosterCM['legal_first'] || 3)] || '').trim();
-        var rLast  = String(row[rosterCM['Last Name']  !== undefined ? rosterCM['Last Name']  : (rosterCM['legal_last']  || 5)] || '').trim();
+        var rFirst = String((colFirst !== undefined ? row[colFirst] : '') || '').trim();
+        var rLast  = String((colLast  !== undefined ? row[colLast]  : '') || '').trim();
         if (!rFirst) {
-          var rName = String(row[rosterCM['Name'] !== undefined ? rosterCM['Name'] : 2] || '').trim();
+          var rName = String((colName !== undefined ? row[colName] : '') || '').trim();
           var parts = rName.split(' ');
           rFirst = parts[0] || ''; rLast = parts.slice(1).join(' ') || '';
         }
@@ -1830,8 +2002,12 @@ function migrateFromRosterSheet() {
         newRow[memCM['personal_email']]= rEmail;
         newRow[memCM['BK#']]           = rBK;
         newRow[memCM['status']]        = mappedStatus;
-        if (memCM['pledge_class'] !== undefined) newRow[memCM['pledge_class']] = String(row[rosterCM['Pledge Class'] !== undefined ? rosterCM['Pledge Class'] : 5] || '');
+        if (memCM['pledge_class'] !== undefined) newRow[memCM['pledge_class']] = String((colPledge !== undefined ? row[colPledge] : '') || '');
         newRow[memCM['added_date']]    = new Date().toISOString();
+        Object.keys(memberColIdx).forEach(function(h) {
+          var srcCol = memberColIdx[h];
+          if (srcCol !== undefined && memCM[h] !== undefined) newRow[memCM[h]] = row[srcCol];
+        });
         memSheet.appendRow(newRow);
         added++;
       }
@@ -1845,13 +2021,60 @@ function migrateFromRosterSheet() {
       var alCM   = _buildColMap(alData[0]);
       var ourAlSheet = ss.getSheetByName('alumni');
       if (!ourAlSheet) { ourAlSheet = ss.insertSheet('alumni'); ourAlSheet.appendRow(ALUMNI_HEADERS); ourAlSheet.setFrozenRows(1); }
-      var ourAlCM = _buildColMap(ourAlSheet.getRange(1,1,1,ourAlSheet.getLastColumn()).getValues()[0]);
+
+      // Same verbose-header mismatch as the main roster — resolve each
+      // ALUMNI_HEADERS field against known real-world header variants instead
+      // of requiring an exact snake_case match.
+      var alFieldCandidates = {
+        'BK#': ['BK#', 'BK #'],
+        'legal_first': ['First Name', 'Legal First Name'],
+        'preferred_name': ['Preferred Name'],
+        'legal_last': ['Last Name', 'Legal Last Name'],
+        'phone': ['Phone Number', 'Phone'],
+        'personal_email': ['Email', 'Personal Email'],
+        'GTID': ['GTID'],
+        'buzzcard': ['BuzzCard'],
+        'GT_username': ['GT Username'],
+        'GT_email': ['GT Email'],
+        'major': ['Major'],
+        'year': ['Year'],
+        'anticipated_graduation': ['Anticipated Graduation'],
+        'hometown': ['Hometown'],
+        'birthday': ['Birthday'],
+        'shirt_size': ['Shirt Size', 'T-Shirt Size'],
+        'dietary_restrictions': ['Dietary Restrictions'],
+        'car_on_campus': ['car on campus'],
+        'allergies': ['Allergies'],
+        'emergency_contact_name': ['Emergency Contact Name'],
+        'emergency_contact_phone': ['Emergency Contact Phone'],
+        'campus_orgs': ['campus organizations'],
+        'leadership_positions': ['leadership position'],
+        'which_positions': ['which ones', 'what position'],
+        'service_orgs': ['service-based', 'service organizations'],
+        'anything_else': ['anything else'],
+        'pledge_class': ['Pledge Class'],
+        'officer_role': ['Officer']
+        // graduated_semester / moved_to_alumni_date / notes have no source column — left blank.
+      };
+      var alColIdx = {};
+      Object.keys(alFieldCandidates).forEach(function(h) {
+        alColIdx[h] = _findColByCandidates(alCM, alFieldCandidates[h]);
+      });
+
       for (var a = 1; a < alData.length; a++) {
         var aRow = alData[a];
+        if (!aRow.join('').trim()) continue; // skip blank spacer rows
         var alNewRow = new Array(ALUMNI_HEADERS.length).fill('');
         ALUMNI_HEADERS.forEach(function(h, idx) {
-          if (alCM[h] !== undefined) alNewRow[idx] = aRow[alCM[h]];
+          var srcCol = alColIdx[h];
+          if (srcCol !== undefined) alNewRow[idx] = aRow[srcCol];
         });
+        // The old roster's Alumni tab has no member_id — mint one so this
+        // record is addressable (view/reactivate) from the officer UI.
+        var midIdx = ALUMNI_HEADERS.indexOf('member_id');
+        if (midIdx !== -1 && !alNewRow[midIdx]) {
+          alNewRow[midIdx] = 'M' + Utilities.getUuid().replace(/-/g,'').substring(0,8).toUpperCase();
+        }
         ourAlSheet.appendRow(alNewRow);
         alumniMigrated++;
       }
@@ -1923,7 +2146,7 @@ function runSemesterSync(pin) {
     var memCM    = _buildColMap(memData[0]);
 
     var log = ['=== SEMESTER SYNC: ' + semester + ' @ ' + new Date().toISOString() + ' ==='];
-    var newAdded = 0, returning = 0, incomplete = [], potentialGrads = [], inactivePrev = [];
+    var newAdded = 0, returning = 0, incomplete = [], potentialGrads = [], inactivePrev = [], unmatchedReturning = [], duplicateNew = [];
 
     // ---- STEP 1: Process new member responses ----
     var nmSheet = ss.getSheetByName('new_member_responses');
@@ -1935,7 +2158,7 @@ function runSemesterSync(pin) {
         var nr = nmData[i];
         var nmEmail = String(nr[nmCM['Personal Email'] !== undefined ? nmCM['Personal Email'] : 6] || '').trim().toLowerCase();
         if (!nmEmail) continue;
-        if (seenEmails[nmEmail]) { log.push('WARN: Duplicate new-member form: ' + nmEmail); continue; }
+        if (seenEmails[nmEmail]) { log.push('WARN: Duplicate new-member form: ' + nmEmail); duplicateNew.push(nmEmail); continue; }
         seenEmails[nmEmail] = true;
 
         // Check if exists
@@ -2003,17 +2226,43 @@ function runSemesterSync(pin) {
         var rrFirst = String(rr[rmCM['Legal First Name'] !== undefined ? rmCM['Legal First Name'] : 2] || '').trim().toLowerCase();
         var rrLast  = String(rr[rmCM['Legal Last Name']  !== undefined ? rmCM['Legal Last Name']  : 3] || '').trim().toLowerCase();
 
+        // Match by BK# only — it's the stable, unique key. Fall back to a
+        // full-name match (first + last, not just first) ONLY when no BK#
+        // was submitted, and ONLY if exactly one member matches; an
+        // ambiguous or missing match is logged for manual review rather
+        // than guessed, since a wrong guess silently overwrites someone
+        // else's semester data.
         var matchRow = -1;
-        for (var k = 1; k < memData.length; k++) {
-          var mBK = String(memData[k][memCM['BK#'] !== undefined ? memCM['BK#'] : 1] || '').trim();
-          if (rrBK && mBK === rrBK) { matchRow = k; break; }
-          // Fallback: name match
-          var mFirst = _displayName(memData[k], memCM).split(' ')[0].toLowerCase();
-          if (mFirst === rrFirst && rrFirst) matchRow = k;
-        }
-
-        if (matchRow === -1) {
-          log.push('WARN: No match for returning form: ' + rrFirst + ' ' + rrLast + ' BK#' + rrBK);
+        if (rrBK) {
+          for (var k = 1; k < memData.length; k++) {
+            var mBK = String(memData[k][memCM['BK#'] !== undefined ? memCM['BK#'] : 1] || '').trim();
+            if (mBK === rrBK) { matchRow = k; break; }
+          }
+          if (matchRow === -1) {
+            var msg1 = 'No member matches BK#' + rrBK + ' (' + rrFirst + ' ' + rrLast + ')';
+            log.push('WARN: ' + msg1);
+            unmatchedReturning.push(msg1);
+            continue;
+          }
+        } else if (rrFirst || rrLast) {
+          var nameMatches = [];
+          for (var k2 = 1; k2 < memData.length; k2++) {
+            var nameParts = _displayName(memData[k2], memCM).toLowerCase().split(' ');
+            var mFirst = nameParts[0] || '';
+            var mLast  = nameParts.slice(1).join(' ');
+            if (mFirst === rrFirst && mLast === rrLast) nameMatches.push(k2);
+          }
+          if (nameMatches.length === 1) {
+            matchRow = nameMatches[0];
+          } else {
+            var msg2 = 'No BK# submitted, ' + nameMatches.length + ' name matches for ' + rrFirst + ' ' + rrLast + ' — needs manual review.';
+            log.push('WARN: ' + msg2);
+            unmatchedReturning.push(msg2);
+            continue;
+          }
+        } else {
+          log.push('WARN: Returning form row with no BK# and no name — skipped.');
+          unmatchedReturning.push('Row with no BK# and no name submitted');
           continue;
         }
 
@@ -2028,9 +2277,13 @@ function runSemesterSync(pin) {
           'car_on_campus': 'Do you have a car on campus?',
           'shirt_size': 'T-Shirt Size', 'anything_else': 'Anything else we should know?'
         };
+        // Only overwrite a field when the form actually answered it — a
+        // blank/skipped question must never wipe out a value that was
+        // already on file (e.g. from a previous semester or a manual edit).
         Object.keys(semMap).forEach(function(col) {
           if (memCM[col] !== undefined && rmCM[semMap[col]] !== undefined) {
-            memSheet.getRange(matchRow + 1, memCM[col] + 1).setValue(String(rr[rmCM[semMap[col]]] || ''));
+            var newVal = String(rr[rmCM[semMap[col]]] || '').trim();
+            if (newVal) memSheet.getRange(matchRow + 1, memCM[col] + 1).setValue(newVal);
           }
         });
         if (memCM['form_completed_this_semester'] !== undefined) {
@@ -2086,6 +2339,7 @@ function runSemesterSync(pin) {
       success: true, newAdded: newAdded, returningUpdated: returning,
       incompleteCount: incomplete.length, incompleteMembers: incomplete,
       potentialGrads: potentialGrads, inactiveMembers: inactivePrev,
+      unmatchedReturning: unmatchedReturning, duplicateNew: duplicateNew,
       log: log
     };
 
@@ -2096,6 +2350,7 @@ function runSemesterSync(pin) {
         'New members added: ' + newAdded + '\n' +
         'Returning members updated: ' + returning + '\n' +
         'Forms not submitted: ' + incomplete.length + (incomplete.length ? '\n  → ' + incomplete.slice(0,5).join(', ') + (incomplete.length > 5 ? '...' : '') : '') + '\n\n' +
+        (unmatchedReturning.length ? '❗ Unmatched returning forms (' + unmatchedReturning.length + ') — needs manual review:\n  ' + unmatchedReturning.slice(0,5).join('\n  ') + '\n\n' : '') +
         (potentialGrads.length ? '⚠️ Potential graduates (' + potentialGrads.length + '):\n  ' + potentialGrads.slice(0,5).join('\n  ') + '\n\n' : '') +
         (inactivePrev.length ? '📋 Inactive last semester (' + inactivePrev.length + '):\n  ' + inactivePrev.slice(0,5).join('\n  ') : '');
       ui.alert('Semester Sync', summaryMsg, ui.ButtonSet.OK);
@@ -2167,7 +2422,8 @@ function dissociateMember(memberId, reason, performedBy) {
 function reactivateMember(memberId, performedBy) {
   try {
     performedBy = performedBy || 'Officer';
-    var memSheet = getSpreadsheet().getSheetByName('members');
+    var ss = getSpreadsheet();
+    var memSheet = ss.getSheetByName('members');
     var data = memSheet.getDataRange().getValues();
     var cm   = _buildColMap(data[0]);
     for (var i = 1; i < data.length; i++) {
@@ -2180,6 +2436,33 @@ function reactivateMember(memberId, performedBy) {
         return JSON.stringify({ success: true, message: name + ' reactivated.' });
       }
     }
+
+    // Not found among current members — check whether they're an alumnus
+    // and, if so, move their record back from 'alumni' into 'members'.
+    var alSheet = ss.getSheetByName('alumni');
+    if (alSheet && alSheet.getLastRow() > 1) {
+      var alData = alSheet.getDataRange().getValues();
+      var alCM = _buildColMap(alData[0]);
+      if (alCM['member_id'] !== undefined) {
+        for (var a = 1; a < alData.length; a++) {
+          if (String(alData[a][alCM['member_id']]) === String(memberId)) {
+            var alRow = alData[a];
+            var alName = _displayName(alRow, alCM);
+            var newRow = new Array(MEMBER_HEADERS.length).fill('');
+            MEMBER_HEADERS.forEach(function(h, idx) {
+              if (alCM[h] !== undefined) newRow[idx] = alRow[alCM[h]];
+            });
+            if (cm['status'] !== undefined)     newRow[cm['status']] = 'active';
+            if (cm['added_date'] !== undefined) newRow[cm['added_date']] = new Date().toISOString();
+            memSheet.appendRow(newRow);
+            alSheet.deleteRow(a + 1);
+            _logAudit('reactivateMember', memberId, alName, performedBy, 'restored from alumni');
+            return JSON.stringify({ success: true, message: alName + ' restored from alumni.' });
+          }
+        }
+      }
+    }
+
     return JSON.stringify({ success: false, error: 'Member not found.' });
   } catch (err) { logError('reactivateMember', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
@@ -2485,7 +2768,22 @@ function getMemberFullProfile(memberId) {
     var semester = getConfigValue('semester') || '';
     var members = _getMembersStructured();
     var member = members.filter(function(m) { return m.memberId === memberId; })[0];
+    var isAlumnus = false;
+    if (!member) {
+      member = _getAlumniStructured().filter(function(m) { return m.memberId === memberId; })[0];
+      if (member) { member.status = 'alumni'; isAlumnus = true; }
+    }
     if (!member) return JSON.stringify({ success: false, error: 'Member not found.' });
+
+    // Alumni have no chore/fine/submission history in the active sheets —
+    // return the profile with those sections empty instead of erroring.
+    if (isAlumnus) {
+      return JSON.stringify({
+        success: true, member: member, currentChore: null, assignments: [],
+        fines: [], fineTotal: 0, notes: [], submissionsTotal: 0, submissionsPassed: 0,
+        complianceRate: 100
+      });
+    }
 
     // Chore assignments
     var asgData  = ss.getSheetByName('chore_assignments').getDataRange().getValues();

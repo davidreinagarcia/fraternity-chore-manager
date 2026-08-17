@@ -157,12 +157,19 @@ Print on cardstock, laminate, and post in each chore area. When members scan a Q
 
 ## Semester Start Workflow
 
-1. **Import members**: Go to **Officer Dashboard > Admin > Semester Tools > Import Members CSV**. Paste CSV rows in `name, email, pledge_class` format. Members not in the CSV will be deactivated automatically. Alternatively, use **Admin > Member Manager > Import CSV** for the same flow.
-2. **Graduate outgoing brothers**: In **Admin > Member Manager**, filter by Active and click **Graduate** on any brother who has crossed out. This sets their status to Alumni and hides them from all chore views.
-3. **Auto-split or manual draft**:
+The recommended path is **Semester Sync**, which updates the roster from two Google Forms without ever touching a member's existing chore/fine history:
+
+1. **New Member form**: brothers who just got their bid fill this out once; Semester Sync adds them as `associate` status. Existing members (matched by personal email) are skipped automatically.
+2. **Returning Member form**: sent to the whole active/associate roster each semester to update the fields that actually change — living situation, meal plan, major/year, campus orgs, etc. Semester Sync matches responses to existing members **by BK# only** (a name-based match is used as a last resort, and only if there's exactly one unambiguous match — anything uncertain is reported, never guessed). A blank answer on the form never overwrites a value that's already on file.
+3. Both forms must be linked once via **Admin > Semester Tools > Relink Google Forms** (`RUN ONCE` — this repoints the two chapter forms' destination sheet, so only run it against the live production spreadsheet, never a test copy).
+4. Run **Admin > Semester Tools > Run Semester Sync**. It reports, in a results modal: new members added, returning members updated, forms not submitted, unmatched returning-form rows (needs manual fix), potential graduates, and members left inactive from last semester. Nothing is changed automatically beyond the new/returning member fields — graduating, dissociating, or flipping status is always a manual officer action.
+5. **Graduate outgoing brothers**: In **Admin > Member Manager**, filter by Active and click **Graduate** (or use **Review Graduation Candidates** in Semester Tools, which is pre-filtered from the sync). This moves them to the separate **Alumni** tab — alumni never mix into the Active/Inactive/All views.
+6. **Auto-split or manual draft**:
    - *Auto-split*: Officer Dashboard > Admin > Quick Actions > **Run Auto-Split**. Or open DraftApp > Manager Mode (PIN required) > **Auto-Split Remaining**.
    - *Draft night*: Put DraftApp (Display Mode) on the TV via HDMI. House manager uses Manager Mode (PIN-gated) on a laptop to assign members live.
-4. **Verify config**: Check that `semester` and `week_start` in the `config` tab (or Config Editor in Admin) are correct.
+7. **Verify config**: Check that `semester` and `week_start` in the `config` tab (or Config Editor in Admin) are correct.
+
+**Import Members CSV** (Admin > Semester Tools, or Member Manager > Import CSV) still exists as a manual fallback for one-off batch adds/updates — pasted rows in `name, email, pledge_class` format. Prefer Semester Sync for the normal per-semester roster refresh.
 
 ---
 
@@ -175,6 +182,21 @@ Print on cardstock, laminate, and post in each chore area. When members scan a Q
 | Monday 6am ET | Monday Reset runs automatically | Automated |
 | Monday Reset | Cross-references assignments vs. submissions, writes fines, emails officers, clears submissions, advances week | Automated |
 | As needed | Officers verify/fail photos in Officer Dashboard | Manual |
+
+---
+
+## Member Manager
+
+**Admin > Member Manager** is the roster's single source of truth.
+
+- **Filters**: All / Active / AMs / Inactive / Alumni, plus Suspended and Probation (flags, not statuses — a suspended member can be filtered on top of any status). Every list sorts by BK# ascending. Alumni never mix into Active/Inactive/All — they live only under their own tab.
+- **Stats strip**: active brother count, how many are living in the house, and full/half meal plan counts — updates live with the current filter.
+- **Table columns**: BK# · Name · Status · Housing (🏠 + room number, or Off-campus) · Meal Plan · Chore · Fines · Form Completed · Actions. Suspended/probation rows get a red/amber row tint so they're visible without opening a filter.
+- **Alumni tab**: a lightweight contact sheet — BK#, Name, Phone, Email — for when someone just needs to reach an alum. A 📄 icon opens their full record, ↩️ restores them to Active if they come back.
+- **Per-row expand**: click the ▸ next to a name to reveal secondary info (major, year, GTID, BuzzCard, emergency contact, allergies, campus orgs, etc.) without cluttering the main table.
+- **Suspension/Probation**: place or lift both from the **···** menu on any active member (`Place Suspension` / `Lift Suspension`, `Place Probation` / `Lift Probation`) — the label and action flip automatically based on current status.
+- **Export CSV**: a lightweight roster export (BK#, name, status, housing, meal plan, chore, fines, form, officer role).
+- **Export Full CSV**: every field on file for every member and alumnus — GTID, BuzzCard, emergency contact, allergies, campus orgs, suspension/probation state, everything — for university or compliance requests that need the complete record.
 
 ---
 
