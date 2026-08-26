@@ -203,14 +203,16 @@
   #print-view th { background: #003087; color: #FFD700; }
 
   /* Reassign chip */
-  .chip-wrap { display: inline-flex; align-items: center; gap: 2px; }
-  .chip-move {
-    background: transparent; border: none; color: var(--gold);
-    font-size: 0.6rem; cursor: pointer; padding: 1px 3px;
-    opacity: 0.55; transition: opacity 0.15s; line-height: 1;
-    border-radius: 3px;
+  .chip-wrap {
+    display: inline-flex; align-items: center; gap: 3px;
+    cursor: pointer; border-radius: 20px; padding: 1px;
+    transition: background 0.15s;
   }
-  .chip-move:hover { opacity: 1; background: rgba(255,183,29,0.15); }
+  .chip-wrap:hover { background: rgba(255,183,29,0.22); }
+  .chip-move {
+    color: var(--gold); font-size: 0.72rem; line-height: 1;
+    opacity: 0.9;
+  }
 
   /* Reassign modal */
   #reassign-modal {
@@ -281,7 +283,7 @@
   <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
     <div style="padding:8px 12px;background:#0d1b2e;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
       <span style="font-size:0.85rem;color:var(--muted)">
-        Click a member → then click a chore to assign
+        Click a member → then click a chore to assign. Already assigned? Click their name on a chore card to move or remove them.
       </span>
       <span id="selected-member-label" style="font-weight:700;color:var(--gold);font-size:0.9rem"></span>
     </div>
@@ -539,10 +541,10 @@ function renderManageBoard() {
       </div>
       <div class="member-chips">
         ${(c.assignedMembers || []).slice().sort(bkCompare).map(m =>
-          `<span class="chip-wrap">` +
+          `<span class="chip-wrap" title="Move or remove ${esc(m.memberName)}" ` +
+          `onclick="event.stopPropagation();openReassignModal('${m.assignmentId}','${esc(m.memberName)}','${esc(c.name)}')">` +
           `<span class="chip">${esc(firstName(m.memberName))}</span>` +
-          `<button class="chip-move" title="Move ${esc(m.memberName)}" ` +
-          `onclick="event.stopPropagation();openReassignModal('${m.assignmentId}','${esc(m.memberName)}','${esc(c.name)}')">✎</button>` +
+          `<span class="chip-move">✎</span>` +
           `</span>`
         ).join('')}
       </div>
