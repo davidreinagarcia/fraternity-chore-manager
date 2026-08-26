@@ -1412,6 +1412,27 @@ function reassignMember(assignmentId, newChoreName) {
   }
 }
 
+// Removes one specific assignment (send member back to the unassigned pool),
+// as opposed to _removeChoreAssignments() which wipes every chore for a member.
+function unassignMember(assignmentId) {
+  try {
+    var ss = getSpreadsheet();
+    var sheet = ss.getSheetByName('chore_assignments');
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === assignmentId) {
+        sheet.deleteRow(i + 1);
+        logInfo('unassignMember', assignmentId);
+        return JSON.stringify({ success: true });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Assignment not found.' });
+  } catch (err) {
+    logError('unassignMember', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
 // ---- Change 2: Officer PIN for HomeApp ----------------------
 
 function getOfficerPin() {

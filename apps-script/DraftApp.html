@@ -724,12 +724,23 @@ function openReassignModal(assignmentId, memberName, currentChore) {
   var list = document.getElementById('reassign-chore-list');
   list.innerHTML = '';
 
+  var unassignBtn = document.createElement('button');
+  unassignBtn.className = 'reassign-chore-btn';
+  unassignBtn.style.borderColor = 'var(--red, #c0392b)';
+  unassignBtn.innerHTML = '<strong style="color:var(--red, #c0392b)">Unassign</strong>' +
+    ' <span style="color:var(--muted);font-size:0.75rem">(send back to unassigned pool)</span>';
+  unassignBtn.onclick = function() { doUnassign(); };
+  list.appendChild(unassignBtn);
+
   var open = allChores.filter(function(c) {
     return c.name !== currentChore && (c.assignedMembers || []).length < c.people;
   });
 
   if (!open.length) {
-    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">No open chore slots available.</div>';
+    var noneMsg = document.createElement('div');
+    noneMsg.style.cssText = 'text-align:center;padding:20px;color:var(--muted)';
+    noneMsg.textContent = 'No open chore slots available.';
+    list.appendChild(noneMsg);
   } else {
     open.forEach(function(c) {
       var avail = c.people - (c.assignedMembers || []).length;
@@ -771,6 +782,29 @@ function doReassign(newChoreName) {
       document.getElementById('action-status').textContent = '';
     })
     .reassignMember(pending.assignmentId, newChoreName);
+}
+
+function doUnassign() {
+  if (!reassignPending) return;
+  var pending = reassignPending;
+  closeReassignModal();
+  document.getElementById('action-status').textContent = 'Unassigning ' + pending.memberName + '...';
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (r.success) {
+        showToast(pending.memberName + ' unassigned');
+        refreshAll();
+      } else {
+        showToast('Error: ' + (r.error || 'Unassign failed'));
+      }
+      document.getElementById('action-status').textContent = '';
+    })
+    .withFailureHandler(function(e) {
+      showToast('Unassign failed: ' + (e.message || e));
+      document.getElementById('action-status').textContent = '';
+    })
+    .unassignMember(pending.assignmentId);
 }
 </script>
 </body>
