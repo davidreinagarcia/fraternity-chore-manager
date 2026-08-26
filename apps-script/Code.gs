@@ -742,7 +742,8 @@ function getAssignments() {
     const asgData   = ss.getSheetByName('chore_assignments').getDataRange().getValues();
 
     const memMap = {};
-    _getMembersStructured().forEach(function(m) { memMap[m.memberId] = m.name; });
+    const bkMap = {};
+    _getMembersStructured().forEach(function(m) { memMap[m.memberId] = m.name; bkMap[m.memberId] = m.bkNumber; });
 
     const grouped = {};
     for (let i = 1; i < asgData.length; i++) {
@@ -753,6 +754,7 @@ function getAssignments() {
         assignmentId: r[0],
         memberId: r[1],
         memberName: memMap[r[1]] || r[1],
+        bkNumber: bkMap[r[1]] || '',
         groupId: r[3]
       });
     }
@@ -1087,7 +1089,7 @@ function getMemberStats() {
 function getActiveMembers() {
   try {
     var active = _getMembersStructured().filter(function(m) { return m.status === 'active'; })
-      .map(function(m) { return { id: m.memberId, name: m.name, email: m.email, pledgeClass: m.pledgeClass }; });
+      .map(function(m) { return { id: m.memberId, name: m.name, email: m.email, pledgeClass: m.pledgeClass, bkNumber: m.bkNumber }; });
     return JSON.stringify(active);
   } catch (err) {
     logError('getActiveMembers', err);

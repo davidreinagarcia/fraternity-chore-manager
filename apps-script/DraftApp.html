@@ -508,7 +508,7 @@ function renderDisplayBoard() {
         <span class="filled-count">${filled}</span> / ${c.people} filled
       </div>
       <div class="member-chips">
-        ${(c.assignedMembers || []).map(m =>
+        ${(c.assignedMembers || []).slice().sort(bkCompare).map(m =>
           `<span class="chip">${esc(firstName(m.memberName))}</span>`
         ).join('')}
         ${filled < c.people ? `<span style="color:var(--muted);font-size:0.7rem;align-self:center">${c.people - filled} open</span>` : ''}
@@ -538,7 +538,7 @@ function renderManageBoard() {
         ${isFull ? '<span style="color:var(--green);font-size:0.7rem"> FULL</span>' : ''}
       </div>
       <div class="member-chips">
-        ${(c.assignedMembers || []).map(m =>
+        ${(c.assignedMembers || []).slice().sort(bkCompare).map(m =>
           `<span class="chip-wrap">` +
           `<span class="chip">${esc(firstName(m.memberName))}</span>` +
           `<button class="chip-move" title="Move ${esc(m.memberName)}" ` +
@@ -578,7 +578,7 @@ function renderMemberList() {
     return;
   }
 
-  unassigned.sort((a, b) => a.name.localeCompare(b.name));
+  unassigned.sort(bkCompare);
   for (const m of unassigned) {
     const item = document.createElement('div');
     item.className = 'member-item' + (selectedMember && selectedMember.id === m.id ? ' selected' : '');
@@ -670,7 +670,7 @@ function exportReferenceSheet() {
   const tbody = document.querySelector('#print-table tbody');
   tbody.innerHTML = '';
   for (const c of allChores) {
-    const names = (c.assignedMembers || []).map(m => m.memberName).join(', ') || '—';
+    const names = (c.assignedMembers || []).slice().sort(bkCompare).map(m => m.memberName).join(', ') || '—';
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${esc(c.name)}</td><td>${esc(names)}</td><td>${c.assignedMembers ? c.assignedMembers.length : 0}/${c.people}</td>`;
     tbody.appendChild(tr);
@@ -697,6 +697,16 @@ function showToast(msg) {
 function firstName(name) {
   if (!name) return '?';
   return name.split(' ')[0];
+}
+
+// Older (smaller) BK# first; non-numeric/missing BK# sort last.
+function bkCompare(a, b) {
+  const na = parseInt(a.bkNumber, 10);
+  const nb = parseInt(b.bkNumber, 10);
+  const va = isNaN(na) ? Infinity : na;
+  const vb = isNaN(nb) ? Infinity : nb;
+  if (va !== vb) return va - vb;
+  return String(a.name || a.memberName || '').localeCompare(String(b.name || b.memberName || ''));
 }
 
 function esc(s) {
