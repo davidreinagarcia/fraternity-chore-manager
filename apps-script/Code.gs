@@ -320,6 +320,7 @@ function doGet(e) {
         tmpl = HtmlService.createTemplateFromFile('MemberView');
         break;
     }
+    tmpl.baseUrl = ScriptApp.getService().getUrl();
     return tmpl.evaluate()
       .setTitle('Frat Chores')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')

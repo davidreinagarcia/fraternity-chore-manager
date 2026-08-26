@@ -28,7 +28,7 @@
   <button class="btn" onclick="redirect()">Go to Officer Dashboard</button>
 </div>
 <script>
-var BASE = 'https://script.google.com/macros/s/AKfycbwqaJpQFFSCVveHVryNizO9YKbjsBG3IbYErjGBcqGUv8AdZIdA-JZEorWlFiaaXiZ_/exec';
+var BASE = '<?= baseUrl ?>';
 function redirect() { window.open(BASE + '?app=officer', '_blank'); }
 setTimeout(redirect, 1500);
 </script>
