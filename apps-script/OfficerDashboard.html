@@ -229,11 +229,6 @@
   .config-key { min-width: 170px; }
   .config-key-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 3px; }
   .config-help { font-size: 0.75rem; color: var(--muted); max-width: 260px; line-height: 1.4; }
-  .config-pin-note {
-    background: var(--yellow-bg); border-radius: 8px; padding: 12px 14px;
-    font-size: 0.8rem; margin-bottom: 16px; display: flex; align-items: center;
-    justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  }
   .config-group-label {
     font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
     color: var(--muted); margin-bottom: 6px;
@@ -1768,12 +1763,6 @@ function renderConfigEditor() {
       '</div>';
   };
 
-  var pinNoteHtml =
-    '<div class="config-pin-note">' +
-    'The officer PIN is changed from <strong>Officer Handoff</strong>, not here — that flow requires the current PIN. ' +
-    '<button class="action-btn btn-verify" onclick="jumpToChangePin()">Go there</button>' +
-    '</div>';
-
   var keyRows = '';
   var advancedRows = '';
   adminConfigData.forEach(function(item, idx) {
@@ -1785,7 +1774,7 @@ function renderConfigEditor() {
     }
   });
 
-  var html = pinNoteHtml + '<div class="config-group-label">Key Settings</div>' + keyRows;
+  var html = '<div class="config-group-label">Key Settings</div>' + keyRows;
   if (advancedRows) {
     html += '<div class="config-advanced-toggle" onclick="toggleAdvancedConfig()">' +
       '<span id="config-advanced-toggle-icon">▶</span> Advanced settings' +
@@ -1793,12 +1782,6 @@ function renderConfigEditor() {
       '<div id="config-advanced-body" style="display:none">' + advancedRows + '</div>';
   }
   container.innerHTML = html;
-}
-
-function jumpToChangePin() {
-  document.getElementById('admin-handoff-body').style.display = 'block';
-  document.getElementById('admin-handoff-toggle').textContent = '▲';
-  openChangePinModal();
 }
 
 function toggleAdvancedConfig() {
