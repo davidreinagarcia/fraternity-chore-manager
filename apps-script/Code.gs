@@ -1285,13 +1285,18 @@ function deleteMember(memberId) {
 
 // ---- Config Editor -----------------------------------------
 
-// Returns all key-value rows from the config sheet.
+// Config keys with their own dedicated, validated UI flow — excluded from the
+// generic Config Editor so there is exactly one place to change each of them.
+var CONFIG_EDITOR_HIDDEN_KEYS = ['officer_pin'];
+
+// Returns all key-value rows from the config sheet, excluding keys that have
+// their own dedicated editor elsewhere (see CONFIG_EDITOR_HIDDEN_KEYS).
 function getConfig() {
   try {
     var data = getSpreadsheet().getSheetByName('config').getDataRange().getValues();
     var config = [];
     for (var i = 1; i < data.length; i++) {  // skip header row (BUG 3)
-      if (data[i][0]) {
+      if (data[i][0] && CONFIG_EDITOR_HIDDEN_KEYS.indexOf(String(data[i][0]).trim()) === -1) {
         var val = data[i][1];
         if (val instanceof Date) val = Utilities.formatDate(val, 'America/New_York', 'yyyy-MM-dd');  // BUG 4: normalize date cells
         config.push({ key: String(data[i][0]), value: val });
@@ -1305,8 +1310,13 @@ function getConfig() {
 }
 
 // Writes a single config key-value pair back to the config sheet.
+// Keys with a dedicated editor (see CONFIG_EDITOR_HIDDEN_KEYS) are rejected here
+// so a PIN change always goes through its own current-PIN-verified flow.
 function saveConfig(key, value) {
   try {
+    if (CONFIG_EDITOR_HIDDEN_KEYS.indexOf(String(key).trim()) !== -1) {
+      return JSON.stringify({ success: false, error: key + ' must be changed from its dedicated screen, not the config editor.' });
+    }
     setConfigValue(key, value);
     logInfo('saveConfig', key + ' = ' + value);
     return JSON.stringify({ success: true });
@@ -3081,13 +3091,3 @@ function getMemberById(memberId) {
   } catch (err) { logError('getMemberById', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
 
-// PIN change alias: changedBy is the officer name/identifier (for audit logging).
-// Validates against the stored PIN rather than accepting the current PIN as input.
-function changePin(newPin, changedBy) {
-  try {
-    if (!newPin || String(newPin).length < 4) return JSON.stringify({ success: false, error: 'New PIN must be at least 4 characters.' });
-    setConfigValue('officer_pin', String(newPin));
-    logInfo('changePin', 'Officer PIN changed by ' + (changedBy || 'unknown') + '.');
-    return JSON.stringify({ success: true });
-  } catch (err) { logError('changePin', err); return JSON.stringify({ success: false, error: err.toString() }); }
-}

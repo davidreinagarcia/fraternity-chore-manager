@@ -228,10 +228,21 @@
   .config-row:last-child { border-bottom: none; }
   .config-key { min-width: 170px; }
   .config-key-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 3px; }
-  .config-important {
-    font-size: 0.68rem; background: var(--yellow-bg); color: var(--yellow);
-    padding: 1px 7px; border-radius: 4px; font-weight: 700; text-transform: uppercase;
+  .config-help { font-size: 0.75rem; color: var(--muted); max-width: 260px; line-height: 1.4; }
+  .config-pin-note {
+    background: var(--yellow-bg); border-radius: 8px; padding: 12px 14px;
+    font-size: 0.8rem; margin-bottom: 16px; display: flex; align-items: center;
+    justify-content: space-between; gap: 12px; flex-wrap: wrap;
   }
+  .config-group-label {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+    color: var(--muted); margin-bottom: 6px;
+  }
+  .config-advanced-toggle {
+    margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border);
+    font-size: 0.82rem; font-weight: 600; color: var(--muted); cursor: pointer; user-select: none;
+  }
+  .config-advanced-toggle:hover { color: var(--primary); }
   .config-val-input {
     flex: 1; min-width: 180px; padding: 7px 10px;
     border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; font-family: inherit;
@@ -1393,7 +1404,17 @@ function esc(s) {
 // ---- Admin Tab --------------------------------------------
 var adminChores = [];
 var adminConfigData = [];
-var IMPORTANT_KEYS = ['semester', 'week_start', 'officer_emails', 'fine_amount', 'officer_pin'];
+var IMPORTANT_KEYS = ['semester', 'week_start', 'officer_emails', 'fine_amount'];
+var CONFIG_LABELS = {
+  semester:        { label: 'Semester',        help: 'e.g. "Fall 2026" — tags all records created this term.' },
+  week_start:      { label: 'Week Start Day',  help: 'Day the chore week resets (e.g. Monday).' },
+  officer_emails:  { label: 'Officer Emails',  help: 'Comma-separated addresses that get fine reports and alerts.' },
+  fine_amount:     { label: 'Fine Amount',     help: 'Dollar amount charged for a missed or incomplete chore.' }
+};
+var ADVANCED_CONFIG_HELP = {
+  bigquery_project_id: 'Only used if BigQuery sync is turned back on — currently inactive.',
+  bigquery_dataset:    'Only used if BigQuery sync is turned back on — currently inactive.'
+};
 var _adminSectionsLoaded = {};
 
 function initAdminTab() { /* sections lazy-load on first expand */ }
@@ -1735,19 +1756,57 @@ function renderConfigEditor() {
     container.innerHTML = '<div class="empty-state">No config values found.</div>';
     return;
   }
-  adminConfigData.forEach(function(item, idx) {
-    var isKey = IMPORTANT_KEYS.indexOf(item.key) !== -1;
-    container.insertAdjacentHTML('beforeend',
-      '<div class="config-row">' +
+
+  var configRowHtml = function(item, idx, friendlyLabel, help) {
+    return '<div class="config-row">' +
       '<div class="config-key">' +
-      '<div class="config-key-name">' + esc(item.key) + '</div>' +
-      (isKey ? '<span class="config-important">Key Config</span>' : '') +
+      '<div class="config-key-name">' + esc(friendlyLabel || item.key) + '</div>' +
+      (help ? '<div class="config-help">' + esc(help) + '</div>' : '') +
       '</div>' +
       '<input type="text" class="config-val-input" id="cfg-' + idx + '" value="' + esc(String(item.value)) + '">' +
       '<button class="action-btn btn-verify" onclick="saveConfigItem(' + idx + ',\'' + esc(item.key) + '\')">Save</button>' +
-      '</div>'
-    );
+      '</div>';
+  };
+
+  var pinNoteHtml =
+    '<div class="config-pin-note">' +
+    'The officer PIN is changed from <strong>Officer Handoff</strong>, not here — that flow requires the current PIN. ' +
+    '<button class="action-btn btn-verify" onclick="jumpToChangePin()">Go there</button>' +
+    '</div>';
+
+  var keyRows = '';
+  var advancedRows = '';
+  adminConfigData.forEach(function(item, idx) {
+    if (IMPORTANT_KEYS.indexOf(item.key) !== -1) {
+      var meta = CONFIG_LABELS[item.key];
+      keyRows += configRowHtml(item, idx, meta && meta.label, meta && meta.help);
+    } else {
+      advancedRows += configRowHtml(item, idx, null, ADVANCED_CONFIG_HELP[item.key]);
+    }
   });
+
+  var html = pinNoteHtml + '<div class="config-group-label">Key Settings</div>' + keyRows;
+  if (advancedRows) {
+    html += '<div class="config-advanced-toggle" onclick="toggleAdvancedConfig()">' +
+      '<span id="config-advanced-toggle-icon">▶</span> Advanced settings' +
+      '</div>' +
+      '<div id="config-advanced-body" style="display:none">' + advancedRows + '</div>';
+  }
+  container.innerHTML = html;
+}
+
+function jumpToChangePin() {
+  document.getElementById('admin-handoff-body').style.display = 'block';
+  document.getElementById('admin-handoff-toggle').textContent = '▲';
+  openChangePinModal();
+}
+
+function toggleAdvancedConfig() {
+  var body = document.getElementById('config-advanced-body');
+  var icon = document.getElementById('config-advanced-toggle-icon');
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  icon.textContent = isOpen ? '▶' : '▼';
 }
 
 function saveConfigItem(idx, key) {
