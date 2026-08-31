@@ -2743,6 +2743,24 @@ function getMemberNotes(memberId) {
   } catch (err) { logError('getMemberNotes', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
 
+function deleteMemberNote(noteId) {
+  try {
+    var notesSheet = getSpreadsheet().getSheetByName('member_notes');
+    if (!notesSheet) return JSON.stringify({ success: false, error: 'No notes found.' });
+    var data = notesSheet.getDataRange().getValues();
+    var cm = _buildColMap(data[0]);
+    var idCol = cm['note_id'] !== undefined ? cm['note_id'] : 0;
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][idCol]) === String(noteId)) {
+        notesSheet.deleteRow(i + 1);
+        logInfo('deleteMemberNote', 'Deleted note ' + noteId);
+        return JSON.stringify({ success: true });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Note not found.' });
+  } catch (err) { logError('deleteMemberNote', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
 function getMemberHistory(memberId) {
   try {
     var logsSheet = getSpreadsheet().getSheetByName('logs');
