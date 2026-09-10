@@ -1519,6 +1519,27 @@ function assignBkNumber(memberId, bkNumber) {
 
 // ---- Change 4: AM crossing ----------------------------------
 
+// Returns the next sequential 4-digit BK number (current max across 'members' + 1).
+// Crossing auto-assigns this instead of an officer typing one in, so the only
+// way points order becomes BK order is by crossing AMs top-to-bottom in the AM
+// Manager list (sorted points descending) — see crossMember.
+function getNextBkNumber() {
+  try {
+    var memSheet = getSpreadsheet().getSheetByName('members');
+    var memData = memSheet.getDataRange().getValues();
+    var memCM = _buildColMap(memData[0]);
+    var bkCol = memCM['BK#'] !== undefined ? memCM['BK#'] : 1;
+    var max = 0;
+    for (var i = 1; i < memData.length; i++) {
+      var n = parseInt(memData[i][bkCol], 10);
+      if (!isNaN(n) && n > max) max = n;
+    }
+    var next = max + 1;
+    if (next > 9999) return JSON.stringify({ success: false, error: 'BK numbers have run out of 4-digit range — next would be ' + next + '.' });
+    return JSON.stringify({ success: true, bkNumber: String(next).padStart(4, '0') });
+  } catch (err) { logError('getNextBkNumber', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
 // Converts an Associate Member to an active brother: moves their row from the
 // 'AMs' sheet to 'members' (same MEMBER_HEADERS schema, mirrors graduateMember's
 // members→alumni move), assigning their BK number in one step.

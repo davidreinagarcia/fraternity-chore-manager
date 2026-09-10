@@ -790,12 +790,16 @@
       <p id="cross-member-sub" style="color:rgba(255,255,255,0.75);font-size:0.85rem"></p>
     </div>
     <div style="padding:24px 28px">
-      <div style="margin-bottom:16px">
-        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:6px">Assign BK Number (4 digits)</label>
-        <input type="text" id="cross-bk-input" class="inline-input" maxlength="4" placeholder="1234"
-               style="width:100%;font-size:1.6rem;text-align:center;letter-spacing:8px;font-family:monospace"
-               onkeydown="if(event.key==='Enter')confirmCross()">
+      <div style="margin-bottom:12px">
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:6px">Next BK Number (auto-assigned)</label>
+        <div id="cross-bk-input" style="width:100%;box-sizing:border-box;font-size:1.6rem;text-align:center;letter-spacing:8px;font-family:monospace;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg)">…</div>
+        <p style="font-size:0.72rem;color:var(--muted);margin-top:6px;line-height:1.4">
+          BK numbers auto-assign as the next sequential number in order — so it only lands in points order if you cross AMs top-to-bottom in the AM Manager list (already sorted by points, highest first).
+        </p>
       </div>
+      <p id="cross-tie-warning" style="display:none;font-size:0.75rem;color:#92400e;background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:8px 10px;margin-bottom:12px;line-height:1.4">
+        ⚠️ This AM is tied on points with another associate in the same pledge class. Remember to add a point to whichever one accepted their bid first, so the crossing order is unambiguous.
+      </p>
       <div class="modal-btns">
         <button class="btn-outline" onclick="closeCrossModal()">Cancel</button>
         <button style="background:var(--primary);color:var(--gold);border:none;padding:10px 20px;border-radius:8px;font-size:0.95rem;font-weight:700;cursor:pointer" onclick="confirmCross()">Cross Into Brotherhood</button>
@@ -1999,24 +2003,49 @@ function confirmAssignBk() {
 }
 
 // ---- Cross Member Modal -----------------------------------
+// BK numbers auto-assign to the next sequential number (see getNextBkNumber)
+// instead of being typed in, so "highest points = first BK#" holds as long as
+// AMs are crossed top-to-bottom off the points-descending AM Manager list.
 var crossMemberPending = null;
+var crossMemberPendingBk = null;
 
 function openCrossModal(memberId, name) {
   crossMemberPending = memberId;
+  crossMemberPendingBk = null;
   document.getElementById('cross-member-sub').textContent = name;
-  document.getElementById('cross-bk-input').value = '';
+  document.getElementById('cross-bk-input').textContent = '…';
   document.getElementById('cross-member-modal').classList.add('open');
-  setTimeout(function() { document.getElementById('cross-bk-input').focus(); }, 80);
+
+  // Tie warning: another still-associate AM in the same pledge class with equal points
+  // makes "first BK number" ambiguous — flag it so an officer breaks the tie first.
+  var member = mmData.filter(function(m) { return m.memberId === memberId; })[0];
+  var tieEl = document.getElementById('cross-tie-warning');
+  var tied = member && mmData.some(function(m) {
+    return m.isAM && m.status === 'associate' && m.memberId !== memberId &&
+           m.pledgeClass === member.pledgeClass && (m.points || 0) === (member.points || 0);
+  });
+  tieEl.style.display = tied ? 'block' : 'none';
+
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      document.getElementById('cross-bk-input').textContent = r.success ? r.bkNumber : '—';
+      crossMemberPendingBk = r.success ? r.bkNumber : null;
+      if (!r.success) showToast('Error: ' + r.error);
+    })
+    .withFailureHandler(onError)
+    .getNextBkNumber();
 }
 
 function closeCrossModal() {
   document.getElementById('cross-member-modal').classList.remove('open');
   crossMemberPending = null;
+  crossMemberPendingBk = null;
 }
 
 function confirmCross() {
-  var bk = document.getElementById('cross-bk-input').value.trim();
-  if (!/^\d{4}$/.test(bk)) { showToast('BK number must be exactly 4 digits.'); return; }
+  var bk = crossMemberPendingBk;
+  if (!bk) { showToast('Still fetching the next BK number — try again in a moment.'); return; }
   var memberId = crossMemberPending;
   closeCrossModal();
   google.script.run
