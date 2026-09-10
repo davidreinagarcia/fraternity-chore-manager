@@ -102,8 +102,11 @@ function _memberStatus(row, cm) {
 }
 
 // Returns all member rows as structured objects — schema-agnostic.
-function _getMembersStructured() {
-  var sheet = getSpreadsheet().getSheetByName('members');
+// sheetName defaults to 'members'; pass 'AMs' to read the associate-member roster
+// (same MEMBER_HEADERS schema, so every field maps identically).
+function _getMembersStructured(sheetName) {
+  var sheet = getSpreadsheet().getSheetByName(sheetName || 'members');
+  if (!sheet) return [];
   var data  = sheet.getDataRange().getValues();
   if (data.length < 1) return [];
   var headers = data[0];
@@ -206,6 +209,27 @@ function _setMemberField(sheet, memberId, cm, fieldName, value) {
     }
   }
   return false;
+}
+
+// Finds a member row by id across the 'members' and 'AMs' sheets (brothers and
+// associate members are stored separately — see project notes on AM crossing).
+// Returns { sheet, sheetName, rowNum, data, cm } for the sheet that has it, or null.
+function _findMemberRowAcrossSheets(memberId) {
+  var ss = getSpreadsheet();
+  var sheetNames = ['members', 'AMs'];
+  for (var s = 0; s < sheetNames.length; s++) {
+    var sheet = ss.getSheetByName(sheetNames[s]);
+    if (!sheet) continue;
+    var data = sheet.getDataRange().getValues();
+    if (!data.length) continue;
+    var cm = _buildColMap(data[0]);
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(memberId)) {
+        return { sheet: sheet, sheetName: sheetNames[s], rowNum: i + 1, data: data, cm: cm };
+      }
+    }
+  }
+  return null;
 }
 
 // Write a timestamp to the audit log.
@@ -1195,20 +1219,32 @@ function getMembers() {
 function addMember(legalFirst, legalLast, preferredName, personalEmail, gtEmail, phone, pledgeClass, bkNumber, status) {
   try {
     if (!legalFirst || !personalEmail) return JSON.stringify({ success: false, error: 'First name and email are required.' });
-    var sheet = getSpreadsheet().getSheetByName('members');
-    if (!sheet) return JSON.stringify({ success: false, error: 'Members sheet not found.' });
+    var memberStatus = (status === 'associate' || status === 'inactive') ? status : 'active';
+    var ss = getSpreadsheet();
+    var targetSheetName = memberStatus === 'associate' ? 'AMs' : 'members';
+    var sheet = ss.getSheetByName(targetSheetName);
+    if (!sheet) { sheet = ss.insertSheet(targetSheetName); sheet.appendRow(MEMBER_HEADERS); sheet.setFrozenRows(1); }
+
+    // Email must be unique across both brothers and AMs, not just the target sheet.
+    var dupEmail = false;
+    ['members', 'AMs'].forEach(function(sn) {
+      if (dupEmail) return;
+      var s = ss.getSheetByName(sn);
+      if (!s) return;
+      var d = s.getDataRange().getValues();
+      var c = _buildColMap(d[0]);
+      var ecOld = c['email'] !== undefined ? c['email'] : 3;
+      var ecNew = c['personal_email'];
+      for (var i = 1; i < d.length; i++) {
+        var existingEmail = ecNew !== undefined ? String(d[i][ecNew] || '') : String(d[i][ecOld] || '');
+        if (existingEmail.toLowerCase() === String(personalEmail).toLowerCase()) { dupEmail = true; break; }
+      }
+    });
+    if (dupEmail) return JSON.stringify({ success: false, error: 'A member with this email already exists.' });
+
     var data = sheet.getDataRange().getValues();
     var headers = data[0];
     var cm = _buildColMap(headers);
-    var emailColOld = cm['email'] !== undefined ? cm['email'] : 3;
-    var emailColNew = cm['personal_email'];
-    for (var i = 1; i < data.length; i++) {
-      var existingEmail = emailColNew !== undefined ? String(data[i][emailColNew] || '') : String(data[i][emailColOld] || '');
-      if (existingEmail.toLowerCase() === String(personalEmail).toLowerCase()) {
-        return JSON.stringify({ success: false, error: 'A member with this email already exists.' });
-      }
-    }
-    var memberStatus = (status === 'associate' || status === 'inactive') ? status : 'active';
     var mid = 'M' + Utilities.getUuid().replace(/-/g, '').substring(0, 8).toUpperCase();
 
     // Build new row using column map
@@ -1481,31 +1517,51 @@ function assignBkNumber(memberId, bkNumber) {
 
 // ---- Change 4: AM crossing ----------------------------------
 
-// Converts an Associate Member to an active brother, assigning their BK number in one step.
+// Converts an Associate Member to an active brother: moves their row from the
+// 'AMs' sheet to 'members' (same MEMBER_HEADERS schema, mirrors graduateMember's
+// members→alumni move), assigning their BK number in one step.
 function crossMember(memberId, bkNumber) {
   try {
     if (!bkNumber || !/^\d{4}$/.test(String(bkNumber))) {
       return JSON.stringify({ success: false, error: 'BK number must be exactly 4 digits.' });
     }
-    var sheet = getSpreadsheet().getSheetByName('members');
-    var data = sheet.getDataRange().getValues();
-    for (var i = 1; i < data.length; i++) {
-      if (String(data[i][1]) === String(bkNumber) && data[i][0] !== memberId) {
+    var ss = getSpreadsheet();
+    var memSheet = ss.getSheetByName('members');
+    var memData  = memSheet.getDataRange().getValues();
+    var memCM    = _buildColMap(memData[0]);
+    var bkCol = memCM['BK#'] !== undefined ? memCM['BK#'] : 1;
+    for (var i = 1; i < memData.length; i++) {
+      if (String(memData[i][bkCol] || '') === String(bkNumber)) {
         return JSON.stringify({ success: false, error: 'BK ' + bkNumber + ' is already in use.' });
       }
     }
-    for (var i = 1; i < data.length; i++) {
-      if (data[i][0] === memberId) {
-        if (data[i][4] !== 'associate') {
-          return JSON.stringify({ success: false, error: 'Member is not an Associate Member.' });
-        }
-        sheet.getRange(i + 1, 2).setValue(bkNumber); // bk_number col
-        sheet.getRange(i + 1, 5).setValue('active');  // status col
-        logInfo('crossMember', memberId + ' crossed → BK ' + bkNumber);
-        return JSON.stringify({ success: true });
-      }
+
+    var amSheet = ss.getSheetByName('AMs');
+    var amData  = amSheet ? amSheet.getDataRange().getValues() : [];
+    var amCM    = amSheet ? _buildColMap(amData[0]) : {};
+    var amRow = null, amRowNum = -1;
+    for (var j = 1; j < amData.length; j++) {
+      if (String(amData[j][0]) === String(memberId)) { amRow = amData[j]; amRowNum = j + 1; break; }
     }
-    return JSON.stringify({ success: false, error: 'Member not found.' });
+    if (!amRow) return JSON.stringify({ success: false, error: 'Member is not an Associate Member.' });
+    var statusCol = amCM['status'] !== undefined ? amCM['status'] : 30;
+    if (String(amRow[statusCol] || '') !== 'associate') {
+      return JSON.stringify({ success: false, error: 'Member is not an Associate Member.' });
+    }
+
+    var displayName = _displayName(amRow, amCM);
+    var newRow = new Array(MEMBER_HEADERS.length).fill('');
+    MEMBER_HEADERS.forEach(function(h, idx) {
+      if (amCM[h] !== undefined) newRow[idx] = amRow[amCM[h]];
+    });
+    if (memCM['BK#'] !== undefined)          newRow[memCM['BK#']]          = bkNumber;
+    if (memCM['status'] !== undefined)       newRow[memCM['status']]       = 'active';
+    if (memCM['last_updated'] !== undefined) newRow[memCM['last_updated']] = new Date().toISOString();
+    memSheet.appendRow(newRow);
+    amSheet.deleteRow(amRowNum);
+
+    logInfo('crossMember', memberId + ' crossed → BK ' + bkNumber);
+    return JSON.stringify({ success: true, message: displayName + ' crossed as BK#' + bkNumber + '.' });
   } catch (err) {
     logError('crossMember', err);
     return JSON.stringify({ success: false, error: err.toString() });
@@ -1549,6 +1605,26 @@ function getMemberDirectoryData() {
       };
     });
 
+    // AMs live on a separate sheet too (same MEMBER_HEADERS schema as 'members' —
+    // see AM crossing below) — merge them in so the Member Manager's AMs tab
+    // reads from there instead of filtering associates out of 'members'.
+    var ams = _getMembersStructured('AMs').map(function(m) {
+      return {
+        memberId: m.memberId, bkNumber: m.bkNumber, name: m.name,
+        email: m.email, gtEmail: m.gtEmail, status: m.status,
+        pledgeClass: m.pledgeClass, officerRole: m.officerRole,
+        inactiveReason: m.inactiveReason,
+        suspension: m.suspension, suspensionReason: m.suspensionReason, suspensionEnd: m.suspensionEnd,
+        academicSuspension: m.academicSuspension,
+        probation: m.probation, probationType: m.probationType,
+        formCompleted: m.formCompleted,
+        mealPlan: m.mealPlan, livingInHouse: m.livingInHouse, roomNumber: m.roomNumber,
+        phone: m.phone, anticipatedGraduation: m.anticipatedGraduation, extra: m.extra,
+        chore: asgMap[m.memberId] || null,
+        fineCount: fineMap[m.memberId] || 0
+      };
+    });
+
     // Alumni live on a separate sheet (graduateMember / migrateFromRosterSheet
     // both write there) — merge them in, tagged status:'alumni', so the
     // Member Manager's Alumni tab has something to show.
@@ -1569,7 +1645,7 @@ function getMemberDirectoryData() {
       };
     });
 
-    return JSON.stringify({ success: true, data: members.concat(alumni), semester: semester });
+    return JSON.stringify({ success: true, data: members.concat(ams).concat(alumni), semester: semester });
   } catch (err) {
     logError('getMemberDirectoryData', err);
     return JSON.stringify({ success: false, error: err.toString() });
@@ -1580,59 +1656,64 @@ function getMemberDirectoryData() {
 function updateMember(memberId, name, email, pledgeClass, bkNumber, status, mealPlan, livingInHouse, roomNumber) {
   try {
     if (!name || !email) return JSON.stringify({ success: false, error: 'Name and email are required.' });
-    var sheet = getSpreadsheet().getSheetByName('members');
-    var data  = sheet.getDataRange().getValues();
-    var cm    = _buildColMap(data[0]);
+    var found = _findMemberRowAcrossSheets(memberId);
+    if (!found) return JSON.stringify({ success: false, error: 'Member not found.' });
+    var sheet = found.sheet;
+    var data  = found.data;
+    var cm    = found.cm;
     var isNewSchema = cm['legal_first'] !== undefined;
-    var emailCol = isNewSchema ? cm['personal_email'] : (cm['email'] !== undefined ? cm['email'] : 3);
 
-    for (var i = 1; i < data.length; i++) {
-      if (String(data[i][emailCol] || '').toLowerCase() === String(email).toLowerCase() && String(data[i][0]) !== String(memberId)) {
-        return JSON.stringify({ success: false, error: 'That email is already used by another member.' });
+    // Email/BK uniqueness must hold across both brothers and AMs, not just this row's sheet.
+    var ss = getSpreadsheet();
+    var dupEmail = false, dupBk = false;
+    ['members', 'AMs'].forEach(function(sn) {
+      var s = ss.getSheetByName(sn);
+      if (!s) return;
+      var d = s.getDataRange().getValues();
+      var c = _buildColMap(d[0]);
+      var ec = c['legal_first'] !== undefined ? c['personal_email'] : (c['email'] !== undefined ? c['email'] : 3);
+      var bc = c['BK#'] !== undefined ? c['BK#'] : 1;
+      for (var i = 1; i < d.length; i++) {
+        if (String(d[i][0]) === String(memberId)) continue;
+        if (String(d[i][ec] || '').toLowerCase() === String(email).toLowerCase()) dupEmail = true;
+        if (bkNumber && String(d[i][bc] || '') === String(bkNumber)) dupBk = true;
       }
-    }
+    });
+    if (dupEmail) return JSON.stringify({ success: false, error: 'That email is already used by another member.' });
     if (bkNumber) {
       if (!/^\d{4}$/.test(String(bkNumber))) return JSON.stringify({ success: false, error: 'BK number must be exactly 4 digits.' });
-      var bkCol = cm['BK#'] !== undefined ? cm['BK#'] : 1;
-      for (var i = 1; i < data.length; i++) {
-        if (String(data[i][bkCol] || '') === String(bkNumber) && String(data[i][0]) !== String(memberId)) {
-          return JSON.stringify({ success: false, error: 'BK ' + bkNumber + ' is already in use.' });
-        }
-      }
+      if (dupBk) return JSON.stringify({ success: false, error: 'BK ' + bkNumber + ' is already in use.' });
     }
-    for (var i = 1; i < data.length; i++) {
-      if (String(data[i][0]) === String(memberId)) {
-        var bkColW = cm['BK#'] !== undefined ? cm['BK#'] : 1;
-        sheet.getRange(i + 1, bkColW + 1).setValue(bkNumber || '');
-        if (isNewSchema) {
-          // Split name into first/last for new schema
-          var parts = name.trim().split(' ');
-          var first = parts[0] || '';
-          var last  = parts.slice(1).join(' ') || '';
-          if (cm['legal_first'] !== undefined)   sheet.getRange(i + 1, cm['legal_first']   + 1).setValue(first);
-          if (cm['legal_last']  !== undefined)   sheet.getRange(i + 1, cm['legal_last']    + 1).setValue(last);
-          if (cm['personal_email'] !== undefined) sheet.getRange(i + 1, cm['personal_email']+ 1).setValue(email);
-          if (cm['pledge_class'] !== undefined)  sheet.getRange(i + 1, cm['pledge_class']  + 1).setValue(pledgeClass || '');
-          if (status && cm['status'] !== undefined) sheet.getRange(i + 1, cm['status'] + 1).setValue(status);
-          if (cm['meal_plan']       !== undefined) sheet.getRange(i + 1, cm['meal_plan']       + 1).setValue(mealPlan || '');
-          if (cm['living_in_house'] !== undefined) sheet.getRange(i + 1, cm['living_in_house'] + 1).setValue(livingInHouse || '');
-          if (cm['room_number']     !== undefined) sheet.getRange(i + 1, cm['room_number']     + 1).setValue(livingInHouse === 'Yes' ? (roomNumber || '') : '');
-          if (cm['last_updated'] !== undefined)  sheet.getRange(i + 1, cm['last_updated']  + 1).setValue(new Date().toISOString());
-        } else {
-          var nameCol = cm['name'] !== undefined ? cm['name'] : 2;
-          var emCol   = cm['email'] !== undefined ? cm['email'] : 3;
-          var plCol   = cm['pledge_class'] !== undefined ? cm['pledge_class'] : 5;
-          var stCol   = cm['status'] !== undefined ? cm['status'] : 4;
-          sheet.getRange(i + 1, nameCol + 1).setValue(name);
-          sheet.getRange(i + 1, emCol   + 1).setValue(email);
-          sheet.getRange(i + 1, plCol   + 1).setValue(pledgeClass || '');
-          if (status) sheet.getRange(i + 1, stCol + 1).setValue(status);
-        }
-        logInfo('updateMember', memberId + ': ' + name);
-        return JSON.stringify({ success: true });
-      }
+
+    var i = found.rowNum - 1;
+    var bkColW = cm['BK#'] !== undefined ? cm['BK#'] : 1;
+    sheet.getRange(i + 1, bkColW + 1).setValue(bkNumber || '');
+    if (isNewSchema) {
+      // Split name into first/last for new schema
+      var parts = name.trim().split(' ');
+      var first = parts[0] || '';
+      var last  = parts.slice(1).join(' ') || '';
+      if (cm['legal_first'] !== undefined)   sheet.getRange(i + 1, cm['legal_first']   + 1).setValue(first);
+      if (cm['legal_last']  !== undefined)   sheet.getRange(i + 1, cm['legal_last']    + 1).setValue(last);
+      if (cm['personal_email'] !== undefined) sheet.getRange(i + 1, cm['personal_email']+ 1).setValue(email);
+      if (cm['pledge_class'] !== undefined)  sheet.getRange(i + 1, cm['pledge_class']  + 1).setValue(pledgeClass || '');
+      if (status && cm['status'] !== undefined) sheet.getRange(i + 1, cm['status'] + 1).setValue(status);
+      if (cm['meal_plan']       !== undefined) sheet.getRange(i + 1, cm['meal_plan']       + 1).setValue(mealPlan || '');
+      if (cm['living_in_house'] !== undefined) sheet.getRange(i + 1, cm['living_in_house'] + 1).setValue(livingInHouse || '');
+      if (cm['room_number']     !== undefined) sheet.getRange(i + 1, cm['room_number']     + 1).setValue(livingInHouse === 'Yes' ? (roomNumber || '') : '');
+      if (cm['last_updated'] !== undefined)  sheet.getRange(i + 1, cm['last_updated']  + 1).setValue(new Date().toISOString());
+    } else {
+      var nameCol = cm['name'] !== undefined ? cm['name'] : 2;
+      var emCol   = cm['email'] !== undefined ? cm['email'] : 3;
+      var plCol   = cm['pledge_class'] !== undefined ? cm['pledge_class'] : 5;
+      var stCol   = cm['status'] !== undefined ? cm['status'] : 4;
+      sheet.getRange(i + 1, nameCol + 1).setValue(name);
+      sheet.getRange(i + 1, emCol   + 1).setValue(email);
+      sheet.getRange(i + 1, plCol   + 1).setValue(pledgeClass || '');
+      if (status) sheet.getRange(i + 1, stCol + 1).setValue(status);
     }
-    return JSON.stringify({ success: false, error: 'Member not found.' });
+    logInfo('updateMember', memberId + ': ' + name);
+    return JSON.stringify({ success: true });
   } catch (err) {
     logError('updateMember', err);
     return JSON.stringify({ success: false, error: err.toString() });
@@ -1833,6 +1914,7 @@ function ensureTabsExist() {
   // --- Create new tabs ---
   var tabsToCreate = {
     'alumni':                   ALUMNI_HEADERS,
+    'AMs':                      MEMBER_HEADERS,
     'new_member_responses':     NEW_MEMBER_FORM_HEADERS,
     'returning_member_responses': RETURNING_MEMBER_FORM_HEADERS,
     'member_notes':             ['note_id','member_id','note_text','note_type','created_by','created_at']
@@ -2182,9 +2264,14 @@ function runSemesterSync(pin) {
     var log = ['=== SEMESTER SYNC: ' + semester + ' @ ' + new Date().toISOString() + ' ==='];
     var newAdded = 0, returning = 0, incomplete = [], potentialGrads = [], inactivePrev = [], unmatchedReturning = [], duplicateNew = [];
 
-    // ---- STEP 1: Process new member responses ----
+    // ---- STEP 1: Process new member responses (these become AMs, on the 'AMs' sheet) ----
     var nmSheet = ss.getSheetByName('new_member_responses');
     if (nmSheet && nmSheet.getLastRow() > 1) {
+      var amSheet = ss.getSheetByName('AMs');
+      if (!amSheet) { amSheet = ss.insertSheet('AMs'); amSheet.appendRow(MEMBER_HEADERS); amSheet.setFrozenRows(1); }
+      var amData = amSheet.getDataRange().getValues();
+      var amCM   = _buildColMap(amData[0]);
+
       var nmData = nmSheet.getDataRange().getValues();
       var nmCM   = _buildColMap(nmData[0]);
       var seenEmails = {};
@@ -2195,28 +2282,32 @@ function runSemesterSync(pin) {
         if (seenEmails[nmEmail]) { log.push('WARN: Duplicate new-member form: ' + nmEmail); duplicateNew.push(nmEmail); continue; }
         seenEmails[nmEmail] = true;
 
-        // Check if exists
+        // Check if exists — among current brothers OR already-recorded AMs.
         var found = false;
         for (var m = 1; m < memData.length; m++) {
-          var existEmail = _memberEmail(memData[m], memCM).toLowerCase();
-          if (existEmail === nmEmail) { found = true; break; }
+          if (_memberEmail(memData[m], memCM).toLowerCase() === nmEmail) { found = true; break; }
+        }
+        if (!found) {
+          for (var a = 1; a < amData.length; a++) {
+            if (_memberEmail(amData[a], amCM).toLowerCase() === nmEmail) { found = true; break; }
+          }
         }
         if (!found) {
           var newRow = new Array(MEMBER_HEADERS.length).fill('');
           newRow[0]  = 'M' + Utilities.getUuid().replace(/-/g,'').substring(0,8).toUpperCase();
-          newRow[memCM['legal_first']]    = String(nr[nmCM['Legal First Name'] !== undefined ? nmCM['Legal First Name'] : 2] || '');
-          newRow[memCM['preferred_name']] = String(nr[nmCM['Preferred Name']    !== undefined ? nmCM['Preferred Name']   : 3] || '');
-          newRow[memCM['legal_last']]     = String(nr[nmCM['Legal Last Name']   !== undefined ? nmCM['Legal Last Name']  : 4] || '');
-          newRow[memCM['phone']]          = String(nr[nmCM['Phone Number']      !== undefined ? nmCM['Phone Number']     : 5] || '');
-          newRow[memCM['personal_email']] = nmEmail;
-          newRow[memCM['GTID']]           = String(nr[nmCM['GTID']              !== undefined ? nmCM['GTID']             : 7] || '');
-          newRow[memCM['buzzcard']]       = String(nr[nmCM['BuzzCard 6-Digit Code'] !== undefined ? nmCM['BuzzCard 6-Digit Code'] : 8] || '');
-          newRow[memCM['GT_username']]    = String(nr[nmCM['GT Username']       !== undefined ? nmCM['GT Username']      : 9] || '');
-          newRow[memCM['GT_email']]       = String(nr[nmCM['GT Email']          !== undefined ? nmCM['GT Email']         : 10] || '');
-          newRow[memCM['status']]         = 'associate';
-          newRow[memCM['pledge_class']]   = semester;
-          newRow[memCM['form_completed_this_semester']] = true;
-          newRow[memCM['added_date']]     = new Date().toISOString();
+          newRow[amCM['legal_first']]    = String(nr[nmCM['Legal First Name'] !== undefined ? nmCM['Legal First Name'] : 2] || '');
+          newRow[amCM['preferred_name']] = String(nr[nmCM['Preferred Name']    !== undefined ? nmCM['Preferred Name']   : 3] || '');
+          newRow[amCM['legal_last']]     = String(nr[nmCM['Legal Last Name']   !== undefined ? nmCM['Legal Last Name']  : 4] || '');
+          newRow[amCM['phone']]          = String(nr[nmCM['Phone Number']      !== undefined ? nmCM['Phone Number']     : 5] || '');
+          newRow[amCM['personal_email']] = nmEmail;
+          newRow[amCM['GTID']]           = String(nr[nmCM['GTID']              !== undefined ? nmCM['GTID']             : 7] || '');
+          newRow[amCM['buzzcard']]       = String(nr[nmCM['BuzzCard 6-Digit Code'] !== undefined ? nmCM['BuzzCard 6-Digit Code'] : 8] || '');
+          newRow[amCM['GT_username']]    = String(nr[nmCM['GT Username']       !== undefined ? nmCM['GT Username']      : 9] || '');
+          newRow[amCM['GT_email']]       = String(nr[nmCM['GT Email']          !== undefined ? nmCM['GT Email']         : 10] || '');
+          newRow[amCM['status']]         = 'associate';
+          newRow[amCM['pledge_class']]   = semester;
+          newRow[amCM['form_completed_this_semester']] = true;
+          newRow[amCM['added_date']]     = new Date().toISOString();
           // Semester-updated fields
           var semFields = {
             'major': 'Major', 'year': 'Year', 'anticipated_graduation': 'Anticipated Graduation',
@@ -2231,13 +2322,13 @@ function runSemesterSync(pin) {
             'meal_plan': 'Will you be on the meal plan?'
           };
           Object.keys(semFields).forEach(function(col) {
-            if (memCM[col] !== undefined && nmCM[semFields[col]] !== undefined) {
-              newRow[memCM[col]] = String(nr[nmCM[semFields[col]]] || '');
+            if (amCM[col] !== undefined && nmCM[semFields[col]] !== undefined) {
+              newRow[amCM[col]] = String(nr[nmCM[semFields[col]]] || '');
             }
           });
-          memSheet.appendRow(newRow);
+          amSheet.appendRow(newRow);
           newAdded++;
-          log.push('Added new member: ' + nmEmail);
+          log.push('Added new AM: ' + nmEmail);
         }
       }
       // Clear new_member_responses (keep header)
@@ -2337,31 +2428,39 @@ function runSemesterSync(pin) {
     memCM   = _buildColMap(memData[0]);
 
     // ---- STEP 3 & 4 & 5: Flag incomplete, grad check, inactive review ----
+    // Runs over both 'members' (brothers) and 'AMs' — same MEMBER_HEADERS schema,
+    // so memCM's column indices apply to both sheets' rows.
     var fcCol  = memCM['form_completed_this_semester'];
     var stCol  = memCM['status'] !== undefined ? memCM['status'] : 4;
     var agCol  = memCM['anticipated_graduation'];
 
-    for (var n = 1; n < memData.length; n++) {
-      var mRow = memData[n];
-      var mStatus = String(mRow[stCol] || '');
-      if (mStatus === 'alumni') continue;
+    var _scanSyncPopulation = function(rows) {
+      for (var n = 1; n < rows.length; n++) {
+        var mRow = rows[n];
+        if (!mRow.join('').trim()) continue;
+        var mStatus = String(mRow[stCol] || '');
+        if (mStatus === 'alumni') continue;
 
-      // Step 3: incomplete forms
-      if ((mStatus === 'active' || mStatus === 'associate') && fcCol !== undefined && !mRow[fcCol]) {
-        incomplete.push(_displayName(mRow, memCM));
-      }
-      // Step 4: graduation check
-      if ((mStatus === 'active' || mStatus === 'associate') && agCol !== undefined) {
-        var ag = String(mRow[agCol] || '').trim();
-        if (ag && _semesterIsPastOrCurrent(ag, semester)) {
-          potentialGrads.push(_displayName(mRow, memCM) + ' (grad: ' + ag + ')');
+        // Step 3: incomplete forms
+        if ((mStatus === 'active' || mStatus === 'associate') && fcCol !== undefined && !mRow[fcCol]) {
+          incomplete.push(_displayName(mRow, memCM));
+        }
+        // Step 4: graduation check
+        if ((mStatus === 'active' || mStatus === 'associate') && agCol !== undefined) {
+          var ag = String(mRow[agCol] || '').trim();
+          if (ag && _semesterIsPastOrCurrent(ag, semester)) {
+            potentialGrads.push(_displayName(mRow, memCM) + ' (grad: ' + ag + ')');
+          }
+        }
+        // Step 5: inactive members
+        if (mStatus === 'inactive') {
+          inactivePrev.push(_displayName(mRow, memCM));
         }
       }
-      // Step 5: inactive members
-      if (mStatus === 'inactive') {
-        inactivePrev.push(_displayName(mRow, memCM));
-      }
-    }
+    };
+    _scanSyncPopulation(memData);
+    var amSheetForScan = ss.getSheetByName('AMs');
+    if (amSheetForScan) _scanSyncPopulation(amSheetForScan.getDataRange().getValues());
 
     // ---- STEP 7: Log ----
     log.push('Form incomplete: ' + incomplete.length + ' members');
@@ -2429,27 +2528,22 @@ function getGraduationCandidates() {
 
 // ---- Lifecycle Functions -----------------------------------
 
+// Works for both brothers ('members') and AMs ('AMs') — see _findMemberRowAcrossSheets.
 function dissociateMember(memberId, reason, performedBy) {
   try {
     performedBy = performedBy || 'Officer';
-    var ss = getSpreadsheet();
-    var memSheet = ss.getSheetByName('members');
-    var data = memSheet.getDataRange().getValues();
-    var cm   = _buildColMap(data[0]);
-    for (var i = 1; i < data.length; i++) {
-      if (String(data[i][0]) === String(memberId)) {
-        var name = _displayName(data[i], cm);
-        if (cm['status'] !== undefined) memSheet.getRange(i+1, cm['status']+1).setValue('inactive');
-        if (cm['inactive_reason'] !== undefined) memSheet.getRange(i+1, cm['inactive_reason']+1).setValue('removed');
-        if (cm['last_updated'] !== undefined) memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
-        // Clear assignments
-        _removeChoreAssignments(ss, memberId);
-        addMemberNote(memberId, reason || 'Dissociated from chapter.', 'disciplinary', performedBy);
-        _logAudit('dissociateMember', memberId, name, performedBy, reason);
-        return JSON.stringify({ success: true, message: name + ' dissociated.' });
-      }
-    }
-    return JSON.stringify({ success: false, error: 'Member not found.' });
+    var found = _findMemberRowAcrossSheets(memberId);
+    if (!found) return JSON.stringify({ success: false, error: 'Member not found.' });
+    var memSheet = found.sheet, data = found.data, cm = found.cm, i = found.rowNum - 1;
+    var name = _displayName(data[i], cm);
+    if (cm['status'] !== undefined) memSheet.getRange(i+1, cm['status']+1).setValue('inactive');
+    if (cm['inactive_reason'] !== undefined) memSheet.getRange(i+1, cm['inactive_reason']+1).setValue('removed');
+    if (cm['last_updated'] !== undefined) memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
+    // Clear assignments
+    _removeChoreAssignments(getSpreadsheet(), memberId);
+    addMemberNote(memberId, reason || 'Dissociated from chapter.', 'disciplinary', performedBy);
+    _logAudit('dissociateMember', memberId, name, performedBy, reason);
+    return JSON.stringify({ success: true, message: name + ' dissociated.' });
   } catch (err) { logError('dissociateMember', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
 
@@ -2501,59 +2595,34 @@ function reactivateMember(memberId, performedBy) {
   } catch (err) { logError('reactivateMember', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
 
+// Unused by the current UI (the Member Manager's "Initiate (Cross)" action calls
+// crossMember directly) — kept as a thin wrapper so it can't drift out of sync
+// with the AMs-sheet-aware crossing logic again.
 function initiateMember(memberId, bkNumber, performedBy) {
-  try {
-    if (!bkNumber || !/^\d{4}$/.test(String(bkNumber))) return JSON.stringify({ success: false, error: 'BK number must be exactly 4 digits.' });
-    performedBy = performedBy || 'Officer';
-    var memSheet = getSpreadsheet().getSheetByName('members');
-    var data = memSheet.getDataRange().getValues();
-    var cm   = _buildColMap(data[0]);
-    var bkCol = cm['BK#'] !== undefined ? cm['BK#'] : 1;
-    for (var i = 1; i < data.length; i++) {
-      if (String(data[i][bkCol] || '') === String(bkNumber) && String(data[i][0]) !== String(memberId)) {
-        return JSON.stringify({ success: false, error: 'BK ' + bkNumber + ' is already in use.' });
-      }
-    }
-    for (var i = 1; i < data.length; i++) {
-      if (String(data[i][0]) === String(memberId)) {
-        if (String(data[i][cm['status'] !== undefined ? cm['status'] : 4]) !== 'associate') {
-          return JSON.stringify({ success: false, error: 'Member is not an Associate Member.' });
-        }
-        var name = _displayName(data[i], cm);
-        memSheet.getRange(i+1, bkCol+1).setValue(bkNumber);
-        if (cm['status'] !== undefined) memSheet.getRange(i+1, cm['status']+1).setValue('active');
-        if (cm['last_updated'] !== undefined) memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
-        _logAudit('initiateMember', memberId, name, performedBy, 'BK#=' + bkNumber);
-        return JSON.stringify({ success: true, message: name + ' initiated as BK#' + bkNumber + '.' });
-      }
-    }
-    return JSON.stringify({ success: false, error: 'Member not found.' });
-  } catch (err) { logError('initiateMember', err); return JSON.stringify({ success: false, error: err.toString() }); }
+  var result = JSON.parse(crossMember(memberId, bkNumber));
+  if (result.success) _logAudit('initiateMember', memberId, '', performedBy || 'Officer', 'BK#=' + bkNumber);
+  return JSON.stringify(result);
 }
 
+// Works for both brothers ('members') and AMs ('AMs') — see _findMemberRowAcrossSheets.
 function markInactive(memberId, reason, performedBy) {
   try {
     var validReasons = ['co-op','study_abroad','voluntary','other'];
     if (validReasons.indexOf(reason) === -1) reason = 'other';
     performedBy = performedBy || 'Officer';
-    var memSheet = getSpreadsheet().getSheetByName('members');
-    var data = memSheet.getDataRange().getValues();
-    var cm   = _buildColMap(data[0]);
-    for (var i = 1; i < data.length; i++) {
-      if (String(data[i][0]) === String(memberId)) {
-        var name = _displayName(data[i], cm);
-        if (cm['status'] !== undefined)          memSheet.getRange(i+1, cm['status']+1).setValue('inactive');
-        if (cm['inactive_reason'] !== undefined) memSheet.getRange(i+1, cm['inactive_reason']+1).setValue(reason);
-        if (cm['co_op_semester']  !== undefined && reason === 'co-op') {
-          memSheet.getRange(i+1, cm['co_op_semester']+1).setValue(getConfigValue('semester') || '');
-        }
-        if (cm['last_updated'] !== undefined) memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
-        _removeChoreAssignments(getSpreadsheet(), memberId);
-        _logAudit('markInactive', memberId, name, performedBy, 'reason=' + reason);
-        return JSON.stringify({ success: true, message: name + ' marked inactive (' + reason + ').' });
-      }
+    var found = _findMemberRowAcrossSheets(memberId);
+    if (!found) return JSON.stringify({ success: false, error: 'Member not found.' });
+    var memSheet = found.sheet, data = found.data, cm = found.cm, i = found.rowNum - 1;
+    var name = _displayName(data[i], cm);
+    if (cm['status'] !== undefined)          memSheet.getRange(i+1, cm['status']+1).setValue('inactive');
+    if (cm['inactive_reason'] !== undefined) memSheet.getRange(i+1, cm['inactive_reason']+1).setValue(reason);
+    if (cm['co_op_semester']  !== undefined && reason === 'co-op') {
+      memSheet.getRange(i+1, cm['co_op_semester']+1).setValue(getConfigValue('semester') || '');
     }
-    return JSON.stringify({ success: false, error: 'Member not found.' });
+    if (cm['last_updated'] !== undefined) memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
+    _removeChoreAssignments(getSpreadsheet(), memberId);
+    _logAudit('markInactive', memberId, name, performedBy, 'reason=' + reason);
+    return JSON.stringify({ success: true, message: name + ' marked inactive (' + reason + ').' });
   } catch (err) { logError('markInactive', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
 
@@ -3108,4 +3177,5 @@ function getMemberById(memberId) {
     return JSON.stringify({ success: true, member: member });
   } catch (err) { logError('getMemberById', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
+
 
