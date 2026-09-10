@@ -1621,7 +1621,11 @@ function getMemberDirectoryData() {
         mealPlan: m.mealPlan, livingInHouse: m.livingInHouse, roomNumber: m.roomNumber,
         phone: m.phone, anticipatedGraduation: m.anticipatedGraduation, extra: m.extra,
         chore: asgMap[m.memberId] || null,
-        fineCount: fineMap[m.memberId] || 0
+        fineCount: fineMap[m.memberId] || 0,
+        // Tags rows sourced from 'AMs' regardless of status (associate or inactive)
+        // so the front end can keep them off the main Member Manager list the same
+        // way alumni are kept off it — see the AM Manager tab.
+        isAM: true
       };
     });
 
@@ -2565,7 +2569,25 @@ function reactivateMember(memberId, performedBy) {
       }
     }
 
-    // Not found among current members — check whether they're an alumnus
+    // Not found among current brothers — check whether they're an inactive AM;
+    // AMs reactivate in place on the 'AMs' sheet (back to 'associate', not 'active').
+    var amSheet = ss.getSheetByName('AMs');
+    if (amSheet && amSheet.getLastRow() > 1) {
+      var amData = amSheet.getDataRange().getValues();
+      var amCM = _buildColMap(amData[0]);
+      for (var b = 1; b < amData.length; b++) {
+        if (String(amData[b][0]) === String(memberId)) {
+          var amName = _displayName(amData[b], amCM);
+          if (amCM['status'] !== undefined)          amSheet.getRange(b+1, amCM['status']+1).setValue('associate');
+          if (amCM['inactive_reason'] !== undefined) amSheet.getRange(b+1, amCM['inactive_reason']+1).setValue('');
+          if (amCM['last_updated'] !== undefined)    amSheet.getRange(b+1, amCM['last_updated']+1).setValue(new Date().toISOString());
+          _logAudit('reactivateMember', memberId, amName, performedBy, 'restored to associate');
+          return JSON.stringify({ success: true, message: amName + ' reactivated as an AM.' });
+        }
+      }
+    }
+
+    // Not found among AMs either — check whether they're an alumnus
     // and, if so, move their record back from 'alumni' into 'members'.
     var alSheet = ss.getSheetByName('alumni');
     if (alSheet && alSheet.getLastRow() > 1) {
