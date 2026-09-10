@@ -521,10 +521,11 @@
           <span style="font-size:0.8rem;color:var(--muted)"><strong id="ams-count">0</strong> AMs</span>
         </div>
         <div class="card-body" style="overflow-x:auto">
-          <table class="data-table" id="mm-ams-table" style="min-width:750px">
+          <table class="data-table" id="mm-ams-table" style="min-width:820px">
             <thead><tr>
               <th>Status</th>
               <th>Name</th>
+              <th>Points</th>
               <th>Pledge Class</th>
               <th>Phone</th>
               <th>Email</th>
@@ -2376,11 +2377,12 @@ function renderMMAMs(data) {
   var tbody = document.getElementById('mm-ams-tbody');
   tbody.innerHTML = '';
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No AMs found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No AMs found.</td></tr>';
     return;
   }
   data.forEach(function(m) {
     var actions = '<button class="qa-btn" title="View Record" onclick="openProfileModal(\'' + m.memberId + '\')">📄</button> ';
+    actions += '<button class="qa-btn" title="Adjust Points" onclick="openActModal(\'points\',\'' + m.memberId + '\',\'' + esc(m.name) + '\')">⭐</button> ';
     if (m.status === 'associate') {
       actions +=
         '<button class="qa-btn" title="Initiate (Cross)" onclick="openCrossModal(\'' + m.memberId + '\',\'' + esc(m.name) + '\')">🎓</button> ' +
@@ -2393,6 +2395,7 @@ function renderMMAMs(data) {
       '<tr>' +
       '<td>' + _statusBadgeMM(m) + '</td>' +
       '<td><strong>' + esc(m.name) + '</strong></td>' +
+      '<td style="font-weight:700;text-align:center">' + (m.points || 0) + '</td>' +
       '<td style="font-size:0.82rem">' + esc(m.pledgeClass || '—') + '</td>' +
       '<td style="font-size:0.82rem">' + esc(m.phone || '—') + '</td>' +
       '<td style="font-size:0.82rem">' + esc(m.email || '—') + '</td>' +
@@ -2416,7 +2419,11 @@ function filterAMsTab() {
     return (m.name||'').toLowerCase().includes(q) ||
            (m.email||'').toLowerCase().includes(q);
   });
-  filtered.sort(function(a, b) { return (a.name||'').localeCompare(b.name||''); });
+  // Highest points first — whoever leads at end of semester gets first BK number.
+  filtered.sort(function(a, b) {
+    var diff = (b.points || 0) - (a.points || 0);
+    return diff !== 0 ? diff : (a.name||'').localeCompare(b.name||'');
+  });
   document.getElementById('ams-count').textContent = filtered.length;
   renderMMAMs(filtered);
 }
@@ -2552,7 +2559,12 @@ var _actConfigs = {
       { id:'act-reason', label:'Reason *', type:'textarea' }
     ]},
   officer_role:{ title:'Set Officer Role', btnLabel:'Save Role', btnClass:'btn-primary',
-    fields:[{ id:'act-role', label:'Role (leave blank to clear)', type:'text', placeholder:'e.g. HC, Steward' }] }
+    fields:[{ id:'act-role', label:'Role (leave blank to clear)', type:'text', placeholder:'e.g. HC, Steward' }] },
+  points:      { title:'Adjust AM Points', btnLabel:'Save', btnClass:'btn-primary',
+    fields:[
+      { id:'act-points-amount', label:'Points (negative to remove) *', type:'text', placeholder:'e.g. 5 or -3' },
+      { id:'act-reason', label:'Reason *', type:'textarea' }
+    ]}
 };
 
 function openActModal(action, memberId, memberName) {
@@ -2646,6 +2658,13 @@ function executeAction() {
   } else if (p.action === 'officer_role') {
     var role = _gv('act-role');
     google.script.run.withSuccessHandler(done).withFailureHandler(onError).setOfficerRole(mid, role, performer);
+  } else if (p.action === 'points') {
+    var amountStr = _gv('act-points-amount');
+    var amount = parseInt(amountStr, 10);
+    var reason = _gv('act-reason');
+    if (!amountStr || isNaN(amount) || amount === 0) { showToast('Enter a non-zero point amount.'); _actPending = p; document.getElementById('action-modal').classList.add('open'); return; }
+    if (!reason) { showToast('Reason is required.'); _actPending = p; document.getElementById('action-modal').classList.add('open'); return; }
+    google.script.run.withSuccessHandler(done).withFailureHandler(onError).adjustAMPoints(mid, amount, reason, performer);
   }
 }
 

@@ -146,6 +146,8 @@ function _getMembersStructured(sheetName) {
       mealPlan:      cm['meal_plan']      !== undefined ? String(r[cm['meal_plan']]      || '') : '',
       livingInHouse: cm['living_in_house']!== undefined ? String(r[cm['living_in_house']]|| '') : '',
       roomNumber:    cm['room_number']    !== undefined ? String(r[cm['room_number']]    || '') : '',
+      // AM points (only meaningful on the 'AMs' sheet — see adjustAMPoints).
+      points:        cm['points']         !== undefined ? (Number(r[cm['points']]) || 0) : 0,
       extra: extra,
       _rowNum: i + 1,
       _cm: cm
@@ -1622,6 +1624,9 @@ function getMemberDirectoryData() {
         phone: m.phone, anticipatedGraduation: m.anticipatedGraduation, extra: m.extra,
         chore: asgMap[m.memberId] || null,
         fineCount: fineMap[m.memberId] || 0,
+        // Points earned during the AM process — highest at end of semester gets
+        // first pick of BK number. See adjustAMPoints.
+        points: m.points,
         // Tags rows sourced from 'AMs' regardless of status (associate or inactive)
         // so the front end can keep them off the main Member Manager list the same
         // way alumni are kept off it — see the AM Manager tab.
@@ -1933,6 +1938,23 @@ function ensureTabsExist() {
       created.push(tabName);
     }
   });
+
+  // --- AMs tab: add 'points' column if missing (existing installs predate AM points) ---
+  var amSheetForPoints = ss.getSheetByName('AMs');
+  if (amSheetForPoints) {
+    var amHeaders = amSheetForPoints.getRange(1, 1, 1, Math.max(amSheetForPoints.getLastColumn(), 1)).getValues()[0];
+    if (amHeaders.indexOf('points') === -1) {
+      var pointsCol = amHeaders.length + 1;
+      amSheetForPoints.getRange(1, pointsCol).setValue('points');
+      var amLastRow = amSheetForPoints.getLastRow();
+      if (amLastRow > 1) {
+        var zeroRows = [];
+        for (var z = 0; z < amLastRow - 1; z++) zeroRows.push([0]);
+        amSheetForPoints.getRange(2, pointsCol, amLastRow - 1, 1).setValues(zeroRows);
+      }
+      created.push('AMs.points');
+    }
+  }
 
   var msg = 'Tabs verified. Created: ' + (created.length ? created.join(', ') : 'none (all exist)');
   logInfo('ensureTabsExist', msg);
@@ -2775,6 +2797,44 @@ function issueFine(memberId, choreName, reason, performedBy) {
     _logAudit('issueFine', memberId, member.name, performedBy, 'chore=' + choreName + ' reason=' + reason);
     return JSON.stringify({ success: true, fineId: fid });
   } catch (err) { logError('issueFine', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// Adds (or removes, via a negative delta) points for an Associate Member.
+// High Kappa awards points for various things during the AM process; whoever
+// has the most at the end of the semester gets first pick of BK number — see
+// the AM Manager tab, sorted by points descending.
+function adjustAMPoints(memberId, delta, reason, performedBy) {
+  try {
+    performedBy = performedBy || 'Officer';
+    delta = parseInt(delta, 10);
+    if (!delta || isNaN(delta)) return JSON.stringify({ success: false, error: 'Point amount must be a non-zero number.' });
+    if (!reason || !String(reason).trim()) return JSON.stringify({ success: false, error: 'Reason is required.' });
+
+    var ss = getSpreadsheet();
+    var amSheet = ss.getSheetByName('AMs');
+    if (!amSheet) return JSON.stringify({ success: false, error: 'AMs tab not found.' });
+    var data = amSheet.getDataRange().getValues();
+    var cm = _buildColMap(data[0]);
+    if (cm['points'] === undefined) {
+      var pointsCol = data[0].length + 1;
+      amSheet.getRange(1, pointsCol).setValue('points');
+      cm['points'] = pointsCol - 1;
+    }
+
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(memberId)) {
+        var name = _displayName(data[i], cm);
+        var current = Number(data[i][cm['points']]) || 0;
+        var updated = current + delta;
+        amSheet.getRange(i + 1, cm['points'] + 1).setValue(updated);
+        if (cm['last_updated'] !== undefined) amSheet.getRange(i + 1, cm['last_updated'] + 1).setValue(new Date().toISOString());
+        _logAudit('adjustAMPoints', memberId, name, performedBy,
+          (delta > 0 ? '+' : '') + delta + ' points (reason=' + reason + '), new total=' + updated);
+        return JSON.stringify({ success: true, newTotal: updated, message: name + ': ' + (delta > 0 ? '+' : '') + delta + ' points (now ' + updated + ').' });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Associate Member not found.' });
+  } catch (err) { logError('adjustAMPoints', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
 
 // Internal helper: remove all chore assignments for a member
