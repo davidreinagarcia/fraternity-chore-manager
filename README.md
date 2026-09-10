@@ -234,6 +234,9 @@ The notebook needs at least 1 semester to produce risk scores, and 2+ semesters 
 
 All pages live under the single deployment URL. Share the base URL with members — they land on HomeApp which routes everything.
 
+**Live production URL:** https://script.google.com/macros/s/AKfycbwwC_E3KwYB_CG_M6SZiWEwXqXIUK0DK-Kpm8l-Jwr6SouV2yfZIIZafgZC22YahEyCdw/exec
+**Officer Dashboard direct link:** the same URL with `?app=officer` appended.
+
 | URL parameter | Page | Auth |
 |---|---|---|
 | `?app=home` (default) | HomeApp — navigation hub | None |
