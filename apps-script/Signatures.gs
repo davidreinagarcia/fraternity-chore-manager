@@ -7,7 +7,7 @@
 // config key, editable in Admin > Config Editor (seeded by ensureTabsExist).
 // ============================================================
 
-var SIGNATURE_HEADERS = ['sig_id', 'am_member_id', 'am_name', 'brother_name', 'activity', 'photo_url', 'semester', 'timestamp'];
+var SIGNATURE_HEADERS = ['sig_id', 'am_member_id', 'am_name', 'brother_name', 'activity', 'photo_url', 'semester', 'timestamp', 'points_awarded'];
 
 // 'Signatures Pics' lives inside this shared Drive folder (David's pick), not
 // the script's own Drive root — https://drive.google.com/drive/folders/1mTuoYc5Bk2NQhDL33EoiA8zyPAk0y_xx
@@ -51,10 +51,13 @@ function processSignatureSubmission(amMemberId, brotherName, activity, photoBase
     var sigSheet = ss.getSheetByName('signatures');
     if (!sigSheet) { sigSheet = ss.insertSheet('signatures'); sigSheet.appendRow(SIGNATURE_HEADERS); sigSheet.setFrozenRows(1); }
 
-    var sid = 'SIG' + Utilities.getUuid().replace(/-/g, '').substring(0, 8).toUpperCase();
-    sigSheet.appendRow([sid, amMemberId, am.name, brotherName, activity, photoUrl, semester, new Date().toISOString()]);
-
     var points   = Number(getConfigValue('signature_points') || 1);
+    var sid = 'SIG' + Utilities.getUuid().replace(/-/g, '').substring(0, 8).toUpperCase();
+    // points_awarded is stored per-row so a later deletion (see deleteSignature)
+    // reverts the exact amount this signature granted, even if signature_points
+    // has since been reconfigured to a different value.
+    sigSheet.appendRow([sid, amMemberId, am.name, brotherName, activity, photoUrl, semester, new Date().toISOString(), points]);
+
     var ptResult = JSON.parse(adjustAMPoints(amMemberId, points, 'Signature with ' + brotherName + ': ' + activity, 'AM Signature Form'));
 
     logInfo('processSignatureSubmission', sid + ' | ' + am.name + ' + ' + brotherName);
@@ -92,6 +95,59 @@ function _saveSignaturePhotoToDrive(photoBlob, amName, semester) {
   }
 }
 
+// Deletes a signature row (test submissions, fake/troll entries) and reverts
+// the points it awarded via adjustAMPoints — using the row's own points_awarded,
+// not the current signature_points config, so a reconfigured value later can't
+// throw off the reversal. Also trashes the Drive photo so it doesn't linger in
+// the end-of-semester album. If the AM already crossed to brotherhood (off the
+// AMs sheet), adjustAMPoints can't find them and the point reversal is skipped —
+// the row still deletes either way.
+function deleteSignature(sigId, performedBy) {
+  try {
+    performedBy = performedBy || 'Officer';
+    var ss = getSpreadsheet();
+    var sigSheet = ss.getSheetByName('signatures');
+    if (!sigSheet) return JSON.stringify({ success: false, error: 'signatures tab not found.' });
+
+    var data = sigSheet.getDataRange().getValues();
+    var cm = _buildColMap(data[0]);
+
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][cm['sig_id']]) === String(sigId)) {
+        var row         = data[i];
+        var amMemberId  = String(row[cm['am_member_id']]);
+        var amName      = String(row[cm['am_name']] || '');
+        var brotherName = String(row[cm['brother_name']] || '');
+        var photoUrl    = String(row[cm['photo_url']] || '');
+        var pointsAwarded = cm['points_awarded'] !== undefined ? (Number(row[cm['points_awarded']]) || 0) : 0;
+
+        if (pointsAwarded) {
+          adjustAMPoints(amMemberId, -pointsAwarded, 'Signature deleted (was: with ' + brotherName + ')', performedBy);
+        }
+        if (photoUrl) _trashSignaturePhoto(photoUrl);
+
+        sigSheet.deleteRow(i + 1);
+        _logAudit('deleteSignature', amMemberId, amName, performedBy, 'sig=' + sigId + ' points_reverted=' + pointsAwarded);
+        return JSON.stringify({
+          success: true,
+          message: 'Signature deleted' + (pointsAwarded ? ' and ' + pointsAwarded + ' point' + (pointsAwarded === 1 ? '' : 's') + ' reverted.' : '.')
+        });
+      }
+    }
+    return JSON.stringify({ success: false, error: 'Signature not found.' });
+  } catch (err) { logError('deleteSignature', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+function _trashSignaturePhoto(photoUrl) {
+  try {
+    var m = String(photoUrl).match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (!m) return;
+    DriveApp.getFileById(m[1]).setTrashed(true);
+  } catch (err) {
+    logError('_trashSignaturePhoto', err);
+  }
+}
+
 // Officer-facing Signatures Dashboard: every currently-associate AM with their
 // signature count and detail list, sorted by count descending (highest first) —
 // same ranking the AM Manager itself sorts by, since a signature's points feed
@@ -110,6 +166,7 @@ function getSignaturesDashboardData() {
       var amId = String(r[cm['am_member_id']]);
       if (!byMember[amId]) byMember[amId] = [];
       byMember[amId].push({
+        sigId:       String(r[cm['sig_id']]       || ''),
         brotherName: String(r[cm['brother_name']] || ''),
         activity:    String(r[cm['activity']]     || ''),
         photoUrl:    String(r[cm['photo_url']]    || ''),

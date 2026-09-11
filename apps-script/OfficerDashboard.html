@@ -2509,9 +2509,12 @@ function renderSignaturesDashboard(data) {
           return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">' +
             '<div><strong>' + esc(s.brotherName) + '</strong>' +
             '<div style="font-size:0.82rem;color:var(--muted);margin-top:2px">' + esc(s.activity) + '</div></div>' +
+            '<div style="display:flex;align-items:center;gap:10px;white-space:nowrap">' +
             (s.photoUrl
-              ? '<a href="' + esc(s.photoUrl) + '" target="_blank" rel="noopener" style="font-size:0.82rem;white-space:nowrap;color:var(--primary);font-weight:600">View Photo →</a>'
-              : '<span style="font-size:0.82rem;color:var(--muted);white-space:nowrap">No photo</span>') +
+              ? '<a href="' + esc(s.photoUrl) + '" target="_blank" rel="noopener" style="font-size:0.82rem;color:var(--primary);font-weight:600">View Photo →</a>'
+              : '<span style="font-size:0.82rem;color:var(--muted)">No photo</span>') +
+            '<button class="qa-btn" title="Delete signature" onclick="deleteSignatureRow(\'' + esc(s.sigId) + '\')">🗑️</button>' +
+            '</div>' +
             '</div>';
         }).join('')
       : '<div style="padding:10px 0;color:var(--muted);font-size:0.85rem">No signatures yet.</div>';
@@ -2532,6 +2535,18 @@ function toggleSigAM(idx) {
   var isOpen = body.style.display !== 'none';
   body.style.display = isOpen ? 'none' : 'block';
   arrow.textContent = isOpen ? '▸' : '▾';
+}
+
+function deleteSignatureRow(sigId) {
+  if (!confirm('Delete this signature? This also reverts the points it awarded and cannot be undone.')) return;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? r.message : 'Error: ' + r.error);
+      if (r.success) loadSignaturesDashboard();
+    })
+    .withFailureHandler(onError)
+    .deleteSignature(sigId, 'Officer');
 }
 
 function exportMembersCSV() {

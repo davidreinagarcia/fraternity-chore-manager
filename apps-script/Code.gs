@@ -1981,6 +1981,17 @@ function ensureTabsExist() {
     }
   }
 
+  // --- signatures tab: add 'points_awarded' column if missing (existing
+  // installs predate per-row point tracking, needed for deleteSignature) ---
+  var sigSheetForMigration = ss.getSheetByName('signatures');
+  if (sigSheetForMigration) {
+    var sigHeaders = sigSheetForMigration.getRange(1, 1, 1, Math.max(sigSheetForMigration.getLastColumn(), 1)).getValues()[0];
+    if (sigHeaders.indexOf('points_awarded') === -1) {
+      sigSheetForMigration.getRange(1, sigHeaders.length + 1).setValue('points_awarded');
+      created.push('signatures.points_awarded');
+    }
+  }
+
   // --- Config: seed 'signature_points' default if missing, so it shows up
   // in the Config Editor's Key Settings without a manual sheet edit ---
   var configSheet = ss.getSheetByName('config');
