@@ -514,7 +514,10 @@
       <div class="card">
         <div class="card-header">
           <h2>🧑‍🎓 AM Manager</h2>
-          <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-mm')">← Back to Member Manager</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="goToSignaturesTab()">📸 Signatures Dashboard</button>
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-mm')">← Back to Member Manager</button>
+          </div>
         </div>
         <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center">
           <input type="text" id="ams-search" class="inline-input" placeholder="Search name, email..." style="width:260px" oninput="filterAMsTab()">
@@ -533,6 +536,20 @@
             </tr></thead>
             <tbody id="mm-ams-tbody"></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Signatures Dashboard (reached only via the banner button in AM Manager) -->
+    <div id="tab-signatures" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <h2>📸 Signatures Dashboard</h2>
+          <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-ams')">← Back to AM Manager</button>
+        </div>
+        <div class="card-body">
+          <div id="sig-dash-loading" style="text-align:center;color:var(--muted);padding:24px 0">Loading signatures...</div>
+          <div id="sig-dash-list" style="display:none"></div>
         </div>
       </div>
     </div>
@@ -1477,12 +1494,13 @@ function esc(s) {
 // ---- Admin Tab --------------------------------------------
 var adminChores = [];
 var adminConfigData = [];
-var IMPORTANT_KEYS = ['semester', 'week_start', 'officer_emails', 'fine_amount'];
+var IMPORTANT_KEYS = ['semester', 'week_start', 'officer_emails', 'fine_amount', 'signature_points'];
 var CONFIG_LABELS = {
   semester:        { label: 'Semester',        help: 'e.g. "Fall 2026" — tags all records created this term.' },
   week_start:      { label: 'Week Start Day',  help: 'Day the chore week resets (e.g. Monday).' },
   officer_emails:  { label: 'Officer Emails',  help: 'Comma-separated addresses that get fine reports and alerts.' },
-  fine_amount:     { label: 'Fine Amount',     help: 'Dollar amount charged for a missed or incomplete chore.' }
+  fine_amount:     { label: 'Fine Amount',     help: 'Dollar amount charged for a missed or incomplete chore.' },
+  signature_points:{ label: 'Points per Signature', help: 'AM points awarded automatically each time a signature is submitted.' }
 };
 var ADVANCED_CONFIG_HELP = {
   bigquery_project_id: 'Only used if BigQuery sync is turned back on — currently inactive.',
@@ -2455,6 +2473,65 @@ function filterAMsTab() {
   });
   document.getElementById('ams-count').textContent = filtered.length;
   renderMMAMs(filtered);
+}
+
+// ---- Signatures Dashboard -----------------------------------
+function goToSignaturesTab() {
+  showTab('tab-signatures');
+  loadSignaturesDashboard();
+}
+
+function loadSignaturesDashboard() {
+  document.getElementById('sig-dash-loading').style.display = 'block';
+  document.getElementById('sig-dash-list').style.display = 'none';
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      document.getElementById('sig-dash-loading').style.display = 'none';
+      document.getElementById('sig-dash-list').style.display = 'block';
+      if (!r.success) { showToast('Error loading signatures: ' + r.error); return; }
+      renderSignaturesDashboard(r.data);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('sig-dash-loading').textContent = 'Failed to load signatures.';
+      onError(err);
+    })
+    .getSignaturesDashboardData();
+}
+
+function renderSignaturesDashboard(data) {
+  var list = document.getElementById('sig-dash-list');
+  if (!data.length) { list.innerHTML = '<div class="empty-state">No AMs found.</div>'; return; }
+
+  list.innerHTML = data.map(function(am, idx) {
+    var body = am.signatures.length
+      ? am.signatures.map(function(s) {
+          return '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">' +
+            '<div><strong>' + esc(s.brotherName) + '</strong>' +
+            '<div style="font-size:0.82rem;color:var(--muted);margin-top:2px">' + esc(s.activity) + '</div></div>' +
+            (s.photoUrl
+              ? '<a href="' + esc(s.photoUrl) + '" target="_blank" rel="noopener" style="font-size:0.82rem;white-space:nowrap;color:var(--primary);font-weight:600">View Photo →</a>'
+              : '<span style="font-size:0.82rem;color:var(--muted);white-space:nowrap">No photo</span>') +
+            '</div>';
+        }).join('')
+      : '<div style="padding:10px 0;color:var(--muted);font-size:0.85rem">No signatures yet.</div>';
+
+    return '<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden">' +
+      '<div onclick="toggleSigAM(' + idx + ')" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer;background:var(--bg)">' +
+        '<strong>' + esc(am.name) + '</strong>' +
+        '<span style="font-weight:700;color:var(--primary)">' + am.count + ' signature' + (am.count === 1 ? '' : 's') + ' <span id="sig-arrow-' + idx + '">▸</span></span>' +
+      '</div>' +
+      '<div id="sig-body-' + idx + '" style="display:none;padding:4px 16px 8px">' + body + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function toggleSigAM(idx) {
+  var body  = document.getElementById('sig-body-' + idx);
+  var arrow = document.getElementById('sig-arrow-' + idx);
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  arrow.textContent = isOpen ? '▸' : '▾';
 }
 
 function exportMembersCSV() {

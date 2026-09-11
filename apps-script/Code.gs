@@ -332,6 +332,9 @@ function doGet(e) {
         tmpl = HtmlService.createTemplateFromFile('SubmitApp');
         tmpl.choreName = e.parameter.chore ? decodeURIComponent(e.parameter.chore) : '';
         break;
+      case 'signature':
+        tmpl = HtmlService.createTemplateFromFile('SignatureApp');
+        break;
       case 'officer':
         tmpl = HtmlService.createTemplateFromFile('OfficerDashboard');
         break;
@@ -1947,7 +1950,8 @@ function ensureTabsExist() {
     'AMs':                      MEMBER_HEADERS,
     'new_member_responses':     NEW_MEMBER_FORM_HEADERS,
     'returning_member_responses': RETURNING_MEMBER_FORM_HEADERS,
-    'member_notes':             ['note_id','member_id','note_text','note_type','created_by','created_at']
+    'member_notes':             ['note_id','member_id','note_text','note_type','created_by','created_at'],
+    'signatures':                SIGNATURE_HEADERS
   };
 
   var created = [];
@@ -1974,6 +1978,18 @@ function ensureTabsExist() {
         amSheetForPoints.getRange(2, pointsCol, amLastRow - 1, 1).setValues(zeroRows);
       }
       created.push('AMs.points');
+    }
+  }
+
+  // --- Config: seed 'signature_points' default if missing, so it shows up
+  // in the Config Editor's Key Settings without a manual sheet edit ---
+  var configSheet = ss.getSheetByName('config');
+  if (configSheet) {
+    var configData = configSheet.getDataRange().getValues();
+    var hasSigPoints = configData.some(function(row) { return String(row[0]).trim() === 'signature_points'; });
+    if (!hasSigPoints) {
+      configSheet.appendRow(['signature_points', 1]);
+      created.push('config.signature_points');
     }
   }
 
