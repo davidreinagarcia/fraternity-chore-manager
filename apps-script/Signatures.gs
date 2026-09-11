@@ -9,6 +9,10 @@
 
 var SIGNATURE_HEADERS = ['sig_id', 'am_member_id', 'am_name', 'brother_name', 'activity', 'photo_url', 'semester', 'timestamp'];
 
+// 'Signatures Pics' lives inside this shared Drive folder (David's pick), not
+// the script's own Drive root — https://drive.google.com/drive/folders/1mTuoYc5Bk2NQhDL33EoiA8zyPAk0y_xx
+var SIGNATURES_PARENT_FOLDER_ID = '1mTuoYc5Bk2NQhDL33EoiA8zyPAk0y_xx';
+
 // AMs currently eligible to submit a signature (associate status only).
 function getActiveAMsForSignature() {
   try {
@@ -71,7 +75,8 @@ function processSignatureSubmission(amMemberId, brotherName, activity, photoBase
 // full name would share a folder here; rare enough not to special-case.
 function _saveSignaturePhotoToDrive(photoBlob, amName, semester) {
   try {
-    var root = _getOrCreateFolder(DriveApp.getRootFolder(), 'Signatures Pics');
+    var parent = DriveApp.getFolderById(SIGNATURES_PARENT_FOLDER_ID);
+    var root = _getOrCreateFolder(parent, 'Signatures Pics');
     var semF = _getOrCreateFolder(root, semester);
     var amF  = _getOrCreateFolder(semF, amName || 'Unknown AM');
 
