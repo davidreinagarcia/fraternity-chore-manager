@@ -234,8 +234,13 @@ The notebook needs at least 1 semester to produce risk scores, and 2+ semesters 
 
 All pages live under the single deployment URL. Share the base URL with members — they land on HomeApp which routes everything.
 
-**Live link (this is the one to share/reuse):** https://script.google.com/macros/s/AKfycbxwgSXSVWBD1L5ceLyXHvV-BhLa5xTT-J-26IUa_Gyk/exec?app=home
+**Live link (this is the one to share/reuse):** https://script.google.com/macros/s/AKfycbwwC_E3KwYB_CG_M6SZiWEwXqXIUK0DK-Kpm8l-Jwr6SouV2yfZIIZafgZC22YahEyCdw/exec?app=home
 **Officer Dashboard direct link:** same deployment ID, with `?app=officer` instead of `?app=home`.
+
+**Important — two deployments exist, only one can ever be public:**
+- The link above is a real, versioned Web App deployment ("Manage deployments" in the Apps Script UI), configured with Execute as: me / Who has access: Anyone. This is the only kind of deployment Apps Script allows to be truly public with no Google login.
+- There is also a "Test deployment" (`AKfycbxwgSXSVWBD1L5ceLyXHvV-BhLa5xTT-J-26IUa_Gyk`, shows as `@HEAD` in `clasp deployments`) that auto-updates on every `clasp push` with no extra step. It looks tempting to use for that reason, but **Google enforces Google-account login on test deployments unconditionally** — no manifest or deployment setting can make it anonymous. Do not share that link with members.
+- Because the public link is a versioned deployment, `clasp push` alone does NOT update it — you must also run `clasp deploy -i AKfycbwwC_E3KwYB_CG_M6SZiWEwXqXIUK0DK-Kpm8l-Jwr6SouV2yfZIIZafgZC22YahEyCdw -d "description"` after every push that should reach the public link.
 
 | URL parameter | Page | Auth |
 |---|---|---|
