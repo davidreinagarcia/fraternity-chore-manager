@@ -351,7 +351,7 @@ function doGet(e) {
     }
     tmpl.baseUrl = ScriptApp.getService().getUrl();
     return tmpl.evaluate()
-      .setTitle('Frat Chores')
+      .setTitle('BK Lambda Chi')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   } catch (err) {
