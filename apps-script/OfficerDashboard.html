@@ -3151,7 +3151,12 @@ function openActModal(action, memberId, memberName) {
   if (!cfg) return;
   _actPending = { action:action, memberId:memberId, memberName:memberName };
   document.getElementById('act-title').textContent = cfg.title;
-  document.getElementById('act-sub').textContent = memberName;
+  var sub = memberName;
+  if (action === 'dissociate') {
+    var m = mmData.find(function(x) { return x.memberId === memberId; });
+    if (m && m.isAM) sub += ' — ⚠️ this permanently deletes their AM record (attendance + roster row). Cannot be undone.';
+  }
+  document.getElementById('act-sub').textContent = sub;
   var btn = document.getElementById('act-confirm');
   btn.textContent = cfg.btnLabel;
   btn.className = 'btn-primary ' + cfg.btnClass;

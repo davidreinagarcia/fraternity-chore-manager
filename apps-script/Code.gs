@@ -2613,16 +2613,24 @@ function dissociateMember(memberId, reason, performedBy) {
     if (!found) return JSON.stringify({ success: false, error: 'Member not found.' });
     var memSheet = found.sheet, data = found.data, cm = found.cm, i = found.rowNum - 1;
     var name = _displayName(data[i], cm);
+
+    _removeChoreAssignments(getSpreadsheet(), memberId);
+    addMemberNote(memberId, reason || 'Dissociated from chapter.', 'disciplinary', performedBy);
+    _logAudit('dissociateMember', memberId, name, performedBy, reason);
+
+    if (found.sheetName === 'AMs') {
+      // AMs are hard-deleted on dissociation, not just marked inactive —
+      // they vanish from the AM Manager entirely, no reactivate-from-Sheets
+      // needed. The note + audit log above stay as the historical record;
+      // only the roster row and AM-program data (attendance) disappear.
+      _removeAMAttendance(getSpreadsheet(), memberId);
+      memSheet.deleteRow(found.rowNum);
+      return JSON.stringify({ success: true, message: name + ' removed.' });
+    }
+
     if (cm['status'] !== undefined) memSheet.getRange(i+1, cm['status']+1).setValue('inactive');
     if (cm['inactive_reason'] !== undefined) memSheet.getRange(i+1, cm['inactive_reason']+1).setValue('removed');
     if (cm['last_updated'] !== undefined) memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
-    // Clear assignments
-    _removeChoreAssignments(getSpreadsheet(), memberId);
-    // A dissociated AM stops counting toward any event's attendee list —
-    // see AMEvents.gs. Only for AMs; a merely-inactive AM keeps their history.
-    if (found.sheetName === 'AMs') _removeAMAttendance(getSpreadsheet(), memberId);
-    addMemberNote(memberId, reason || 'Dissociated from chapter.', 'disciplinary', performedBy);
-    _logAudit('dissociateMember', memberId, name, performedBy, reason);
     return JSON.stringify({ success: true, message: name + ' dissociated.' });
   } catch (err) { logError('dissociateMember', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
