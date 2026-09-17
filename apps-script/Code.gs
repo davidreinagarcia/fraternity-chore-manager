@@ -350,6 +350,7 @@ function doGet(e) {
         break;
     }
     tmpl.baseUrl = ScriptApp.getService().getUrl();
+    tmpl.todayDate = Utilities.formatDate(new Date(), 'America/New_York', 'yyyy-MM-dd');
     return tmpl.evaluate()
       .setTitle('BK Lambda Chi')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')

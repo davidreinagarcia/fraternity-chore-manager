@@ -542,7 +542,7 @@
             <thead><tr>
               <th>Status</th>
               <th>Name</th>
-              <th title="Attendance points earned / total available among active events">Att. %</th>
+              <th title="Top: % earned among events that have already happened (&quot;to date&quot;). Bottom: % and raw total among ALL active events, past and future — this is what counts toward the 80% threshold.">Att. %</th>
               <th title="Manual bonus points — quiz average, one-off awards, etc.">Bonus</th>
               <th>Pledge Class</th>
               <th>Phone</th>
@@ -2237,6 +2237,9 @@ var mmFilter = 'all';
 var amEventsData = [];
 var amEventsLoaded = false;
 var amEventCategories = ['Kappa', 'Beta', 'Rho', 'Epsilon', 'Theta', 'Phi', 'Semi', 'Misc'];
+// Server-rendered 'yyyy-MM-dd' (America/New_York) — used instead of the
+// viewer's own clock so the calendar and the "to date" % agree for everyone.
+var SERVER_TODAY = '<?= todayDate ?>';
 
 function loadMemberManager() {
   document.getElementById('mm-loading').style.display = 'block';
@@ -2511,25 +2514,40 @@ function filterAlumniTab() {
   renderMMAlumni(filtered);
 }
 
-// Attendance-based total for one AM: earned points among active events this
-// AM attended, out of the total available among all active events. Separate
-// from m.points (manual/bonus — quiz average, one-off awards, signatures).
+// Attendance-based total for one AM, two ways:
+//  - overall: earned / available among ALL active events, whether or not they've
+//    happened yet (this is what hits 80% at semester's end).
+//  - toDate: same, but only counting active events whose date is on or before
+//    SERVER_TODAY — "how are they doing so far" without being dragged down by
+//    events that just haven't happened yet.
+// Separate from m.points (manual/bonus — quiz average, one-off awards, signatures).
 function amEventStatsFor(memberId) {
-  var earned = 0, available = 0;
+  var earned = 0, available = 0, toDateEarned = 0, toDateAvailable = 0;
   amEventsData.forEach(function(ev) {
     if (!ev.active) return;
+    var attended = ev.attendees.indexOf(memberId) !== -1;
     available += ev.points;
-    if (ev.attendees.indexOf(memberId) !== -1) earned += ev.points;
+    if (attended) earned += ev.points;
+    if (ev.date && ev.date <= SERVER_TODAY) {
+      toDateAvailable += ev.points;
+      if (attended) toDateEarned += ev.points;
+    }
   });
-  var pct = available > 0 ? Math.round((earned / available) * 100) : null;
-  return { earned: earned, available: available, pct: pct };
+  return {
+    earned: earned, available: available,
+    pct: available > 0 ? Math.round((earned / available) * 100) : null,
+    toDateEarned: toDateEarned, toDateAvailable: toDateAvailable,
+    toDatePct: toDateAvailable > 0 ? Math.round((toDateEarned / toDateAvailable) * 100) : null
+  };
 }
 
 function _amPctCellHTML(stats) {
-  if (stats.pct === null) return '<span style="color:var(--muted)">—</span>';
-  var color = stats.pct >= 80 ? 'var(--green)' : (stats.pct >= 60 ? 'var(--yellow)' : 'var(--red)');
-  return '<span style="font-weight:700;color:' + color + '">' + stats.pct + '%</span>' +
-    '<div style="font-size:0.7rem;color:var(--muted)">' + stats.earned + '/' + stats.available + '</div>';
+  if (stats.toDatePct === null) return '<span style="color:var(--muted)">—</span>';
+  var color = stats.toDatePct >= 80 ? 'var(--green)' : (stats.toDatePct >= 60 ? 'var(--yellow)' : 'var(--red)');
+  return '<span style="font-weight:700;color:' + color + '">' + stats.toDatePct + '%</span>' +
+    '<span style="font-size:0.7rem;color:var(--muted)"> to date</span>' +
+    '<div style="font-size:0.7rem;color:var(--muted)">' + stats.toDateEarned + '/' + stats.toDateAvailable + ' so far · ' +
+    (stats.pct === null ? '—' : stats.pct + '%') + ' (' + stats.earned + '/' + stats.available + ') overall</div>';
 }
 
 function renderMMAMs(data) {
@@ -2655,6 +2673,8 @@ function renderAMCalendar() {
   if (amCalendar) { amCalendar.destroy(); }
   amCalendar = new FullCalendar.Calendar(el, {
     initialView: 'dayGridMonth',
+    initialDate: SERVER_TODAY,
+    now: SERVER_TODAY, // so "today" (button + highlighted cell) matches the server's date, not the viewer's clock
     height: 'auto',
     headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
     events: fcEvents,
