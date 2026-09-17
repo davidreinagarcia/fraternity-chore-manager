@@ -2618,6 +2618,9 @@ function dissociateMember(memberId, reason, performedBy) {
     if (cm['last_updated'] !== undefined) memSheet.getRange(i+1, cm['last_updated']+1).setValue(new Date().toISOString());
     // Clear assignments
     _removeChoreAssignments(getSpreadsheet(), memberId);
+    // A dissociated AM stops counting toward any event's attendee list —
+    // see AMEvents.gs. Only for AMs; a merely-inactive AM keeps their history.
+    if (found.sheetName === 'AMs') _removeAMAttendance(getSpreadsheet(), memberId);
     addMemberNote(memberId, reason || 'Dissociated from chapter.', 'disciplinary', performedBy);
     _logAudit('dissociateMember', memberId, name, performedBy, reason);
     return JSON.stringify({ success: true, message: name + ' dissociated.' });

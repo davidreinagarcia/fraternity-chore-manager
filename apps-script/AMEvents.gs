@@ -153,3 +153,19 @@ function saveAMEventAttendance(eventId, memberIds, performedBy) {
     return JSON.stringify({ success: true, message: 'Attendance saved for ' + (memberIds || []).length + ' AM(s).' });
   } catch (err) { logError('saveAMEventAttendance', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
+
+// Internal helper: strips every attendance row for one AM, across all
+// events — called from dissociateMember (Code.gs) so a dissociated AM
+// stops counting toward any event's attendee list. Not called for a
+// merely-inactive AM (leave of absence, co-op, etc.), since that's
+// meant to be temporary and their history should stay intact.
+function _removeAMAttendance(ss, memberId) {
+  var atSheet = ss.getSheetByName('am_attendance');
+  if (!atSheet) return;
+  var data = atSheet.getDataRange().getValues();
+  if (!data.length) return;
+  var cm = _buildColMap(data[0]);
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][cm['member_id']]) === String(memberId)) atSheet.deleteRow(i + 1);
+  }
+}
