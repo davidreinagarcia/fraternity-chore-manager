@@ -574,7 +574,11 @@
       <div class="card">
         <div class="card-header">
           <h2>📅 AM Event Points</h2>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <div style="display:flex;gap:4px">
+              <button id="amv-btn-calendar" class="action-btn" onclick="setAMEventsView('calendar')">📅 Calendar</button>
+              <button id="amv-btn-list" class="action-btn" onclick="setAMEventsView('list')">📋 List</button>
+            </div>
             <button class="btn-primary" style="padding:6px 14px;font-size:0.8rem" onclick="openAddEventModal()">+ Add Event</button>
             <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-ams')">← Back to AM Manager</button>
           </div>
@@ -582,6 +586,31 @@
         <div id="am-cal-legend" class="am-cal-legend"></div>
         <div id="am-events-loading" style="text-align:center;color:var(--muted);padding:24px 0">Loading events...</div>
         <div id="am-events-calendar" style="display:none"></div>
+
+        <!-- Compact list view: quick edit/delete/reorder points without hunting through months -->
+        <div id="am-events-list-view" style="display:none">
+          <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+            <input type="text" id="am-list-search" class="inline-input" placeholder="Search title or category..." style="width:240px" oninput="renderAMEventsList()">
+            <label style="display:flex;align-items:center;gap:5px;font-size:0.8rem;color:var(--muted);cursor:pointer">
+              <input type="checkbox" id="am-list-hide-retired" onchange="renderAMEventsList()"> Hide retired
+            </label>
+            <span style="font-size:0.8rem;color:var(--muted);margin-left:auto"><strong id="am-list-count">0</strong> events</span>
+          </div>
+          <div class="card-body" style="overflow-x:auto;padding:12px 16px">
+            <table class="data-table" id="am-events-table" style="min-width:920px">
+              <thead><tr>
+                <th style="width:130px">Date</th>
+                <th style="width:120px">Category</th>
+                <th>Title</th>
+                <th style="width:80px">Points</th>
+                <th style="width:70px">Active</th>
+                <th style="width:110px">Attendees</th>
+                <th style="width:90px">Actions</th>
+              </tr></thead>
+              <tbody id="am-events-tbody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -2632,6 +2661,7 @@ function amCategoryColor(cat) { return AM_EVENT_COLORS[cat] || '#475569'; }
 
 var amCalendar = null;
 var amAttPending = null; // { eventId, title }
+var amEventsView = 'calendar'; // or 'list' — persists for the session once switched
 
 function goToAMEventsTab() {
   showTab('tab-am-events');
@@ -2641,12 +2671,101 @@ function goToAMEventsTab() {
 function loadAMEventsCalendar() {
   document.getElementById('am-events-loading').style.display = 'block';
   document.getElementById('am-events-calendar').style.display = 'none';
+  document.getElementById('am-events-list-view').style.display = 'none';
+  setAMEventsView(amEventsView, /*skipRender*/ true);
   ensureAMEventsLoaded(function() {
     document.getElementById('am-events-loading').style.display = 'none';
-    document.getElementById('am-events-calendar').style.display = 'block';
     renderAMCalLegend();
-    renderAMCalendar();
+    renderCurrentAMEventsView();
   });
+}
+
+// Toggles between the FullCalendar view and the compact list view (same
+// data, already loaded) — for fast bulk edits without paging through months.
+function setAMEventsView(view, skipRender) {
+  amEventsView = view;
+  var isCal = view === 'calendar';
+  ['amv-btn-calendar', 'amv-btn-list'].forEach(function(id, idx) {
+    var btn = document.getElementById(id);
+    var on = (idx === 0) === isCal;
+    btn.style.background = on ? 'var(--primary)' : 'transparent';
+    btn.style.color      = on ? 'var(--gold)'    : 'var(--text)';
+    btn.style.border     = on ? 'none'            : '1px solid var(--border)';
+  });
+  if (!skipRender && amEventsLoaded) renderCurrentAMEventsView();
+}
+
+function renderCurrentAMEventsView() {
+  if (amEventsView === 'list') {
+    document.getElementById('am-events-calendar').style.display = 'none';
+    document.getElementById('am-events-list-view').style.display = 'block';
+    renderAMEventsList();
+  } else {
+    document.getElementById('am-events-list-view').style.display = 'none';
+    document.getElementById('am-events-calendar').style.display = 'block';
+    renderAMCalendar();
+  }
+}
+
+function renderAMEventsList() {
+  var q = (document.getElementById('am-list-search').value || '').toLowerCase();
+  var hideRetired = document.getElementById('am-list-hide-retired').checked;
+  var filtered = amEventsData.filter(function(ev) {
+    if (hideRetired && !ev.active) return false;
+    if (!q) return true;
+    return ev.title.toLowerCase().indexOf(q) !== -1 || ev.category.toLowerCase().indexOf(q) !== -1;
+  });
+  document.getElementById('am-list-count').textContent = filtered.length;
+  var tbody = document.getElementById('am-events-tbody');
+  if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No events found.</td></tr>'; return; }
+  tbody.innerHTML = filtered.map(function(ev) {
+    var catOptions = amEventCategories.map(function(c) {
+      return '<option' + (c === ev.category ? ' selected' : '') + '>' + c + '</option>';
+    }).join('');
+    return '<tr' + (ev.active ? '' : ' style="opacity:0.55"') + '>' +
+      '<td><input type="date" class="inline-input am-row-date" style="width:100%;font-size:0.78rem;padding:4px 6px" value="' + ev.date + '"></td>' +
+      '<td><select class="inline-input am-row-cat" style="width:100%;font-size:0.78rem;padding:4px 6px">' + catOptions + '</select></td>' +
+      '<td><input type="text" class="inline-input am-row-title" style="width:100%;font-size:0.82rem;padding:4px 6px" value="' + esc(ev.title) + '"></td>' +
+      '<td><input type="number" min="0" class="inline-input am-row-points" style="width:100%;text-align:center;padding:4px 6px" value="' + ev.points + '"></td>' +
+      '<td style="text-align:center"><input type="checkbox" class="am-row-active" ' + (ev.active ? 'checked' : '') + '></td>' +
+      '<td style="text-align:center"><button class="qa-btn" title="Mark attendance" onclick="openAttendanceModal(\'' + ev.eventId + '\')">' + ev.attendees.length + ' 👥</button></td>' +
+      '<td style="white-space:nowrap;text-align:right">' +
+        '<button class="qa-btn" title="Save changes" onclick="saveAMEventRow(\'' + ev.eventId + '\', this)">💾</button> ' +
+        '<button class="qa-btn" title="Delete event" onclick="deleteAMEventRow(\'' + ev.eventId + '\',\'' + esc(ev.title) + '\')">🗑️</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function saveAMEventRow(eventId, btn) {
+  var row = btn.closest('tr');
+  var date     = row.querySelector('.am-row-date').value;
+  var category = row.querySelector('.am-row-cat').value;
+  var title    = row.querySelector('.am-row-title').value.trim();
+  var points   = row.querySelector('.am-row-points').value;
+  var active   = row.querySelector('.am-row-active').checked;
+  if (!title) { showToast('Title cannot be empty.'); return; }
+  if (!date)  { showToast('Pick a date.'); return; }
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? 'Saved.' : 'Error: ' + r.error);
+      if (r.success) ensureAMEventsLoaded(renderAMEventsList);
+    })
+    .withFailureHandler(onError)
+    .saveAMEvent(eventId, category, title, date, points, active, 'Officer');
+}
+
+function deleteAMEventRow(eventId, title) {
+  if (!confirm('Delete "' + title + '"? This also removes everyone\'s attendance record for it.')) return;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? r.message : 'Error: ' + r.error);
+      if (r.success) ensureAMEventsLoaded(renderAMEventsList);
+    })
+    .withFailureHandler(onError)
+    .deleteAMEvent(eventId, 'Officer');
 }
 
 function renderAMCalLegend() {
