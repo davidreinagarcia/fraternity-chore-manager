@@ -57,6 +57,19 @@ function getAMPointsData() {
   } catch (err) { logError('getAMPointsData', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
 
+// Parses a 'YYYY-MM-DD' string (from an <input type="date">) into a Date
+// built from local y/m/d components — NOT via `new Date(string)`, which the
+// JS spec parses as UTC midnight. Writing that UTC-midnight instant into a
+// Sheets cell and later reading it back formatted in America/New_York (see
+// _normDate) rolls it back to the previous calendar day. Constructing the
+// Date from components instead uses the script's own timeZone (America/
+// New_York, per appsscript.json) to interpret them, so write and read agree.
+function _parseAMEventDate(s) {
+  var m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return s;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
 // Creates a new event (eventId blank/omitted) or updates an existing one.
 function saveAMEvent(eventId, category, title, eventDate, points, active, performedBy) {
   try {
@@ -67,6 +80,7 @@ function saveAMEvent(eventId, category, title, eventDate, points, active, perfor
     if (!title) return JSON.stringify({ success: false, error: 'Event title is required.' });
     if (!eventDate) return JSON.stringify({ success: false, error: 'Date is required.' });
     if (isNaN(points) || points < 0) return JSON.stringify({ success: false, error: 'Points must be a non-negative number.' });
+    var dateValue = _parseAMEventDate(eventDate);
 
     var ss = getSpreadsheet();
     var sheet = ss.getSheetByName('am_events');
@@ -79,7 +93,7 @@ function saveAMEvent(eventId, category, title, eventDate, points, active, perfor
         if (String(data[i][cm['event_id']]) === String(eventId)) {
           sheet.getRange(i + 1, cm['category'] + 1).setValue(category);
           sheet.getRange(i + 1, cm['title'] + 1).setValue(title);
-          sheet.getRange(i + 1, cm['event_date'] + 1).setValue(eventDate);
+          sheet.getRange(i + 1, cm['event_date'] + 1).setValue(dateValue);
           sheet.getRange(i + 1, cm['points'] + 1).setValue(points);
           sheet.getRange(i + 1, cm['active'] + 1).setValue(!!active);
           _logAudit('saveAMEvent', eventId, title, performedBy || 'Officer', 'updated');
@@ -90,7 +104,7 @@ function saveAMEvent(eventId, category, title, eventDate, points, active, perfor
     }
 
     var newId = 'EV' + Utilities.getUuid().replace(/-/g, '').substring(0, 8).toUpperCase();
-    sheet.appendRow([newId, category, title, eventDate, points, true, new Date().toISOString()]);
+    sheet.appendRow([newId, category, title, dateValue, points, true, new Date().toISOString()]);
     _logAudit('saveAMEvent', newId, title, performedBy || 'Officer', 'created (' + category + ', ' + points + ' pts)');
     return JSON.stringify({ success: true, eventId: newId, message: 'Event added.' });
   } catch (err) { logError('saveAMEvent', err); return JSON.stringify({ success: false, error: err.toString() }); }
