@@ -347,10 +347,23 @@
     display:none; position:fixed; inset:0; background:rgba(0,0,0,0.25); z-index:440;
   }
   #panel-backdrop.open { display:block; }
+
+  /* ---- AM Event Points calendar ---- */
+  .am-cal-legend { display:flex; flex-wrap:wrap; gap:10px; padding:10px 16px; border-bottom:1px solid var(--border); font-size:0.78rem; }
+  .am-cal-legend span { display:flex; align-items:center; gap:5px; }
+  .am-cal-legend i { width:11px; height:11px; border-radius:3px; display:inline-block; }
+  #am-events-calendar { padding:16px; }
+  .am-att-list { max-height:46vh; overflow-y:auto; border:1px solid var(--border); border-radius:8px; }
+  .am-att-row { display:flex; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid var(--border); font-size:0.85rem; }
+  .am-att-row:last-child { border-bottom:none; }
+  .am-att-row input { width:16px; height:16px; cursor:pointer; }
+  .fc-event { cursor:pointer; }
+  .fc-event-retired { opacity:0.45; }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.8/index.global.min.js"></script>
 </head>
 <body>
 
@@ -514,7 +527,8 @@
       <div class="card">
         <div class="card-header">
           <h2>🧑‍🎓 AM Manager</h2>
-          <div style="display:flex;gap:8px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="goToAMEventsTab()">📅 Event Points</button>
             <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="goToSignaturesTab()">📸 Signatures Dashboard</button>
             <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-mm')">← Back to Member Manager</button>
           </div>
@@ -528,7 +542,8 @@
             <thead><tr>
               <th>Status</th>
               <th>Name</th>
-              <th>Points</th>
+              <th title="Attendance points earned / total available among active events">Att. %</th>
+              <th title="Manual bonus points — quiz average, one-off awards, etc.">Bonus</th>
               <th>Pledge Class</th>
               <th>Phone</th>
               <th>Email</th>
@@ -551,6 +566,22 @@
           <div id="sig-dash-loading" style="text-align:center;color:var(--muted);padding:24px 0">Loading signatures...</div>
           <div id="sig-dash-list" style="display:none"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- Tab: AM Event Points (reached only via the banner button in AM Manager) -->
+    <div id="tab-am-events" class="tab-pane">
+      <div class="card">
+        <div class="card-header">
+          <h2>📅 AM Event Points</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-primary" style="padding:6px 14px;font-size:0.8rem" onclick="openAddEventModal()">+ Add Event</button>
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-ams')">← Back to AM Manager</button>
+          </div>
+        </div>
+        <div id="am-cal-legend" class="am-cal-legend"></div>
+        <div id="am-events-loading" style="text-align:center;color:var(--muted);padding:24px 0">Loading events...</div>
+        <div id="am-events-calendar" style="display:none"></div>
       </div>
     </div>
 
@@ -1095,6 +1126,63 @@
     <div class="modal-btns">
       <button class="btn-outline" onclick="closeChangePinModal()">Cancel</button>
       <button class="btn-primary" onclick="confirmChangePin()">Change PIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- AM Event: Add/Edit Modal -->
+<div class="modal-overlay" id="am-event-modal">
+  <div class="modal">
+    <h3 id="am-ev-title">Add Event</h3>
+    <div style="display:flex;flex-direction:column;gap:12px;margin:16px 0">
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Category</label>
+        <select id="am-ev-category" class="inline-input" style="width:100%"></select>
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Event Title</label>
+        <input type="text" id="am-ev-name" class="inline-input" style="width:100%" placeholder="e.g. CU Boulder Tailgate Setup">
+      </div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1">
+          <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Date</label>
+          <input type="date" id="am-ev-date" class="inline-input" style="width:100%">
+        </div>
+        <div style="width:110px">
+          <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Points</label>
+          <input type="number" id="am-ev-points" class="inline-input" style="width:100%" min="0" step="1" value="1">
+        </div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
+        <input type="checkbox" id="am-ev-active" style="width:16px;height:16px" checked> Counts toward the 80% threshold (uncheck to retire without deleting)
+      </label>
+    </div>
+    <div class="modal-btns" style="justify-content:space-between">
+      <button class="btn-outline" id="am-ev-delete-btn" style="display:none;border-color:var(--red);color:var(--red)" onclick="deleteEventFromModal()">Delete Event</button>
+      <div style="display:flex;gap:10px;margin-left:auto">
+        <button class="btn-outline" onclick="closeAMEventModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveEventFromModal()">Save Event</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AM Event: Mark Attendance Modal -->
+<div class="modal-overlay" id="am-attendance-modal">
+  <div class="modal modal-lg">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <h3 id="am-att-title">Mark Attendance</h3>
+      <button class="btn-outline" style="padding:4px 10px;font-size:0.75rem" onclick="editEventFromAttendanceModal()">✏️ Edit Event</button>
+    </div>
+    <p id="am-att-sub" style="font-size:0.85rem;color:var(--muted);margin-bottom:14px"></p>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <input type="text" id="am-att-search" class="inline-input" placeholder="Search AM..." style="width:220px" oninput="filterAttendanceList()">
+      <span style="font-size:0.8rem;color:var(--muted)"><strong id="am-att-checked-count">0</strong> checked</span>
+    </div>
+    <div class="am-att-list" id="am-att-list"></div>
+    <div class="modal-btns" style="margin-top:16px">
+      <button class="btn-outline" onclick="closeAttendanceModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveAttendanceFromModal()">Save Attendance</button>
     </div>
   </div>
 </div>
@@ -2146,6 +2234,9 @@ function confirmFlagFraud() {
 // ============================================================
 var mmData = [];
 var mmFilter = 'all';
+var amEventsData = [];
+var amEventsLoaded = false;
+var amEventCategories = ['Kappa', 'Beta', 'Rho', 'Epsilon', 'Theta', 'Phi', 'Semi', 'Misc'];
 
 function loadMemberManager() {
   document.getElementById('mm-loading').style.display = 'block';
@@ -2420,16 +2511,37 @@ function filterAlumniTab() {
   renderMMAlumni(filtered);
 }
 
+// Attendance-based total for one AM: earned points among active events this
+// AM attended, out of the total available among all active events. Separate
+// from m.points (manual/bonus — quiz average, one-off awards, signatures).
+function amEventStatsFor(memberId) {
+  var earned = 0, available = 0;
+  amEventsData.forEach(function(ev) {
+    if (!ev.active) return;
+    available += ev.points;
+    if (ev.attendees.indexOf(memberId) !== -1) earned += ev.points;
+  });
+  var pct = available > 0 ? Math.round((earned / available) * 100) : null;
+  return { earned: earned, available: available, pct: pct };
+}
+
+function _amPctCellHTML(stats) {
+  if (stats.pct === null) return '<span style="color:var(--muted)">—</span>';
+  var color = stats.pct >= 80 ? 'var(--green)' : (stats.pct >= 60 ? 'var(--yellow)' : 'var(--red)');
+  return '<span style="font-weight:700;color:' + color + '">' + stats.pct + '%</span>' +
+    '<div style="font-size:0.7rem;color:var(--muted)">' + stats.earned + '/' + stats.available + '</div>';
+}
+
 function renderMMAMs(data) {
   var tbody = document.getElementById('mm-ams-tbody');
   tbody.innerHTML = '';
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No AMs found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No AMs found.</td></tr>';
     return;
   }
   data.forEach(function(m) {
     var actions = '<button class="qa-btn" title="View Record" onclick="openProfileModal(\'' + m.memberId + '\')">📄</button> ';
-    actions += '<button class="qa-btn" title="Adjust Points" onclick="openActModal(\'points\',\'' + m.memberId + '\',\'' + esc(m.name) + '\')">⭐</button> ';
+    actions += '<button class="qa-btn" title="Adjust Bonus Points" onclick="openActModal(\'points\',\'' + m.memberId + '\',\'' + esc(m.name) + '\')">⭐</button> ';
     if (m.status === 'associate') {
       actions +=
         '<button class="qa-btn" title="Initiate (Cross)" onclick="openCrossModal(\'' + m.memberId + '\',\'' + esc(m.name) + '\')">🎓</button> ' +
@@ -2438,10 +2550,12 @@ function renderMMAMs(data) {
       actions += '<button class="qa-btn" title="Reactivate" onclick="doReactivate(\'' + m.memberId + '\',\'' + esc(m.name) + '\')">↩️</button> ';
     }
     actions += '<button class="qa-btn" title="Dissociate" onclick="openActModal(\'dissociate\',\'' + m.memberId + '\',\'' + esc(m.name) + '\')">🚫</button>';
+    var stats = amEventStatsFor(m.memberId);
     tbody.insertAdjacentHTML('beforeend',
       '<tr>' +
       '<td>' + _statusBadgeMM(m) + '</td>' +
       '<td><strong>' + esc(m.name) + '</strong></td>' +
+      '<td style="text-align:center">' + _amPctCellHTML(stats) + '</td>' +
       '<td style="font-weight:700;text-align:center">' + (m.points || 0) + '</td>' +
       '<td style="font-size:0.82rem">' + esc(m.pledgeClass || '—') + '</td>' +
       '<td style="font-size:0.82rem">' + esc(m.phone || '—') + '</td>' +
@@ -2455,7 +2569,7 @@ function renderMMAMs(data) {
 function goToAMsTab() {
   showTab('tab-ams');
   document.getElementById('ams-search').value = '';
-  filterAMsTab();
+  ensureAMEventsLoaded(filterAMsTab);
 }
 
 function filterAMsTab() {
@@ -2466,13 +2580,218 @@ function filterAMsTab() {
     return (m.name||'').toLowerCase().includes(q) ||
            (m.email||'').toLowerCase().includes(q);
   });
-  // Highest points first — whoever leads at end of semester gets first BK number.
+  // Highest combined total (attendance points earned + manual bonus) first —
+  // whoever leads at end of semester gets first BK number.
   filtered.sort(function(a, b) {
-    var diff = (b.points || 0) - (a.points || 0);
+    var diff = (amEventStatsFor(b.memberId).earned + (b.points||0)) - (amEventStatsFor(a.memberId).earned + (a.points||0));
     return diff !== 0 ? diff : (a.name||'').localeCompare(b.name||'');
   });
   document.getElementById('ams-count').textContent = filtered.length;
   renderMMAMs(filtered);
+}
+
+// Always refetches — the events list is small and this keeps the AM Manager's
+// Att.% column and the calendar tab from ever showing stale attendance.
+function ensureAMEventsLoaded(cb) {
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (r.success) { amEventsData = r.events; amEventCategories = r.categories || amEventCategories; amEventsLoaded = true; }
+      cb();
+    })
+    .withFailureHandler(function(err) { onError(err); cb(); })
+    .getAMPointsData();
+}
+
+// ============================================================
+// AM EVENT POINTS — calendar, event CRUD, attendance marking
+// ============================================================
+var AM_EVENT_COLORS = {
+  Kappa: '#093D20', Beta: '#2563eb', Rho: '#b45309', Epsilon: '#7c3aed',
+  Theta: '#db2777', Phi: '#0891b2', Semi: '#16a34a', Misc: '#64748b'
+};
+function amCategoryColor(cat) { return AM_EVENT_COLORS[cat] || '#475569'; }
+
+var amCalendar = null;
+var amAttPending = null; // { eventId, title }
+
+function goToAMEventsTab() {
+  showTab('tab-am-events');
+  loadAMEventsCalendar();
+}
+
+function loadAMEventsCalendar() {
+  document.getElementById('am-events-loading').style.display = 'block';
+  document.getElementById('am-events-calendar').style.display = 'none';
+  ensureAMEventsLoaded(function() {
+    document.getElementById('am-events-loading').style.display = 'none';
+    document.getElementById('am-events-calendar').style.display = 'block';
+    renderAMCalLegend();
+    renderAMCalendar();
+  });
+}
+
+function renderAMCalLegend() {
+  var cats = amEventCategories.length ? amEventCategories : Object.keys(AM_EVENT_COLORS);
+  document.getElementById('am-cal-legend').innerHTML = cats.map(function(c) {
+    return '<span><i style="background:' + amCategoryColor(c) + '"></i>' + esc(c) + '</span>';
+  }).join('');
+}
+
+function renderAMCalendar() {
+  var el = document.getElementById('am-events-calendar');
+  var fcEvents = amEventsData.map(function(ev) {
+    return {
+      id: ev.eventId,
+      title: ev.title + ' (' + ev.attendees.length + ')' + (ev.active ? '' : ' [retired]'),
+      start: ev.date,
+      allDay: true,
+      backgroundColor: amCategoryColor(ev.category),
+      borderColor: amCategoryColor(ev.category),
+      textColor: '#fff',
+      classNames: ev.active ? [] : ['fc-event-retired']
+    };
+  });
+  if (amCalendar) { amCalendar.destroy(); }
+  amCalendar = new FullCalendar.Calendar(el, {
+    initialView: 'dayGridMonth',
+    height: 'auto',
+    headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
+    events: fcEvents,
+    dateClick: function(info) { openAddEventModal(info.dateStr); },
+    eventClick: function(info) { openAttendanceModal(info.event.id); }
+  });
+  amCalendar.render();
+}
+
+// ---- Add / Edit event ----
+function openAddEventModal(dateStr) {
+  document.getElementById('am-ev-title').textContent = 'Add Event';
+  document.getElementById('am-ev-category').innerHTML = amEventCategories.map(function(c) { return '<option>' + c + '</option>'; }).join('');
+  document.getElementById('am-ev-name').value = '';
+  document.getElementById('am-ev-date').value = dateStr || '';
+  document.getElementById('am-ev-points').value = 1;
+  document.getElementById('am-ev-active').checked = true;
+  document.getElementById('am-ev-delete-btn').style.display = 'none';
+  amAttPending = null;
+  document.getElementById('am-event-modal').dataset.eventId = '';
+  document.getElementById('am-event-modal').classList.add('open');
+}
+
+function openEditEventModal(eventId) {
+  var ev = amEventsData.filter(function(e) { return e.eventId === eventId; })[0];
+  if (!ev) return;
+  document.getElementById('am-ev-title').textContent = 'Edit Event';
+  document.getElementById('am-ev-category').innerHTML = amEventCategories.map(function(c) {
+    return '<option' + (c === ev.category ? ' selected' : '') + '>' + c + '</option>';
+  }).join('');
+  document.getElementById('am-ev-name').value = ev.title;
+  document.getElementById('am-ev-date').value = ev.date;
+  document.getElementById('am-ev-points').value = ev.points;
+  document.getElementById('am-ev-active').checked = ev.active;
+  document.getElementById('am-ev-delete-btn').style.display = 'inline-block';
+  document.getElementById('am-event-modal').dataset.eventId = eventId;
+  document.getElementById('am-event-modal').classList.add('open');
+}
+
+function closeAMEventModal() {
+  document.getElementById('am-event-modal').classList.remove('open');
+}
+
+function saveEventFromModal() {
+  var eventId = document.getElementById('am-event-modal').dataset.eventId || '';
+  var category = document.getElementById('am-ev-category').value;
+  var title = document.getElementById('am-ev-name').value.trim();
+  var date = document.getElementById('am-ev-date').value;
+  var points = document.getElementById('am-ev-points').value;
+  var active = document.getElementById('am-ev-active').checked;
+  if (!title) { showToast('Enter an event title.'); return; }
+  if (!date) { showToast('Pick a date.'); return; }
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? r.message : 'Error: ' + r.error);
+      if (r.success) { closeAMEventModal(); loadAMEventsCalendar(); }
+    })
+    .withFailureHandler(onError)
+    .saveAMEvent(eventId, category, title, date, points, active, 'Officer');
+}
+
+function deleteEventFromModal() {
+  var eventId = document.getElementById('am-event-modal').dataset.eventId || '';
+  if (!eventId) return;
+  if (!confirm('Delete this event? This also removes everyone\'s attendance record for it.')) return;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? r.message : 'Error: ' + r.error);
+      if (r.success) { closeAMEventModal(); loadAMEventsCalendar(); }
+    })
+    .withFailureHandler(onError)
+    .deleteAMEvent(eventId, 'Officer');
+}
+
+// ---- Mark attendance ----
+function openAttendanceModal(eventId) {
+  var ev = amEventsData.filter(function(e) { return e.eventId === eventId; })[0];
+  if (!ev) return;
+  amAttPending = { eventId: eventId };
+  document.getElementById('am-att-title').textContent = ev.title;
+  document.getElementById('am-att-sub').textContent =
+    ev.category + ' · ' + ev.date + ' · ' + ev.points + ' pt' + (ev.points === 1 ? '' : 's') +
+    (ev.active ? '' : ' · retired (not counted toward %)');
+  document.getElementById('am-att-search').value = '';
+
+  var ams = mmData.filter(function(m) { return m.isAM && (m.status === 'associate' || m.status === 'inactive'); });
+  ams.sort(function(a, b) { return (a.name||'').localeCompare(b.name||''); });
+  var list = document.getElementById('am-att-list');
+  list.innerHTML = ams.map(function(m) {
+    var checked = ev.attendees.indexOf(m.memberId) !== -1 ? 'checked' : '';
+    return '<label class="am-att-row" data-name="' + esc((m.name||'').toLowerCase()) + '">' +
+      '<input type="checkbox" data-mid="' + m.memberId + '" ' + checked + ' onchange="updateAttCheckedCount()">' +
+      '<span>' + esc(m.name) + (m.status === 'inactive' ? ' <span style="color:var(--muted);font-size:0.75rem">(inactive)</span>' : '') + '</span>' +
+      '</label>';
+  }).join('');
+  document.getElementById('am-event-modal').classList.remove('open');
+  document.getElementById('am-attendance-modal').classList.add('open');
+  updateAttCheckedCount();
+}
+
+function editEventFromAttendanceModal() {
+  if (!amAttPending) return;
+  var eventId = amAttPending.eventId;
+  closeAttendanceModal();
+  openEditEventModal(eventId);
+}
+
+function filterAttendanceList() {
+  var q = (document.getElementById('am-att-search').value || '').toLowerCase();
+  document.querySelectorAll('#am-att-list .am-att-row').forEach(function(row) {
+    row.style.display = row.dataset.name.indexOf(q) !== -1 ? 'flex' : 'none';
+  });
+}
+
+function updateAttCheckedCount() {
+  var n = document.querySelectorAll('#am-att-list input[type=checkbox]:checked').length;
+  document.getElementById('am-att-checked-count').textContent = n;
+}
+
+function closeAttendanceModal() {
+  document.getElementById('am-attendance-modal').classList.remove('open');
+  amAttPending = null;
+}
+
+function saveAttendanceFromModal() {
+  if (!amAttPending) return;
+  var memberIds = Array.from(document.querySelectorAll('#am-att-list input[type=checkbox]:checked')).map(function(cb) { return cb.dataset.mid; });
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? r.message : 'Error: ' + r.error);
+      if (r.success) { closeAttendanceModal(); loadAMEventsCalendar(); }
+    })
+    .withFailureHandler(onError)
+    .saveAMEventAttendance(amAttPending.eventId, memberIds, 'Officer');
 }
 
 // ---- Signatures Dashboard -----------------------------------

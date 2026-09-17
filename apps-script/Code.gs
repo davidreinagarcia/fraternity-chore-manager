@@ -1951,7 +1951,9 @@ function ensureTabsExist() {
     'new_member_responses':     NEW_MEMBER_FORM_HEADERS,
     'returning_member_responses': RETURNING_MEMBER_FORM_HEADERS,
     'member_notes':             ['note_id','member_id','note_text','note_type','created_by','created_at'],
-    'signatures':                SIGNATURE_HEADERS
+    'signatures':                SIGNATURE_HEADERS,
+    'am_events':                 AM_EVENT_HEADERS,
+    'am_attendance':             AM_ATTENDANCE_HEADERS
   };
 
   var created = [];
