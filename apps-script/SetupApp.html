@@ -379,9 +379,48 @@
     </div>
   </div>
 
-  <!-- Step 6: Review & Init -->
+  <!-- Step 6: Migration (optional) -->
   <div class="step-panel" id="step-6">
-    <div class="step-title">Step 6 — Review & Initialize</div>
+    <div class="step-title">Step 6 — Import Existing Roster <span style="font-size:0.75rem;font-weight:500;color:var(--muted)">(optional)</span></div>
+    <div class="step-subtitle">If you already have members in a Google Sheet, paste its URL below. The system will read your columns and let you map them to the right fields. You can skip this and add members manually later.</div>
+
+    <div class="card">
+      <div class="card-title">Source Spreadsheet</div>
+      <div class="field">
+        <label>Google Sheets URL or ID</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="mig-url" placeholder="https://docs.google.com/spreadsheets/d/..." style="flex:1">
+          <button class="btn-outline" onclick="loadMigSheets()" id="mig-load-btn" style="white-space:nowrap">Load Sheets</button>
+        </div>
+        <div class="hint">The spreadsheet must be accessible by the Google account running this script.</div>
+      </div>
+      <div id="mig-sheet-wrap" style="display:none">
+        <div class="field">
+          <label>Which sheet contains the member roster?</label>
+          <select id="mig-sheet-select" onchange="loadMigHeaders()">
+            <option value="">— Select a sheet —</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="mig-mapper-card" style="display:none">
+      <div class="card">
+        <div class="card-title">Column Mapping</div>
+        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px">Map each of your source columns to a system field. Columns you don't want to import can be set to "Ignore".</p>
+        <div id="mig-mapper-rows"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:16px">
+        <button class="btn-primary" id="mig-import-btn" onclick="doMigration()">Import Roster</button>
+        <button class="btn-outline" onclick="resetMigration()">Reset</button>
+      </div>
+      <div id="mig-result" style="display:none;padding:12px 16px;border-radius:8px;font-size:0.85rem"></div>
+    </div>
+  </div>
+
+  <!-- Step 7: Review & Init -->
+  <div class="step-panel" id="step-7">
+    <div class="step-title">Step 7 — Review & Initialize</div>
     <div class="step-subtitle">Check everything looks correct, then click Initialize to create all required tabs and save your config.</div>
 
     <div class="card">
@@ -417,10 +456,13 @@
     </div>
   </div>
 
-  <!-- Nav buttons (steps 1–5) -->
+  <!-- Nav buttons (steps 1–6) -->
   <div class="nav-btns" id="main-nav">
     <button class="btn-outline" id="btn-back" onclick="prevStep()" style="visibility:hidden">← Back</button>
-    <button class="btn-primary" id="btn-next" onclick="nextStep()">Next →</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn-outline" id="btn-skip" onclick="nextStep()" style="display:none">Skip →</button>
+      <button class="btn-primary" id="btn-next" onclick="nextStep()">Next →</button>
+    </div>
   </div>
 
 </div><!-- .container -->
@@ -438,8 +480,150 @@ var STEPS = [
   { id: 'step-3', label: 'Modules' },
   { id: 'step-4', label: 'Options' },
   { id: 'step-5', label: 'Operational' },
-  { id: 'step-6', label: 'Review' }
+  { id: 'step-6', label: 'Migration' },
+  { id: 'step-7', label: 'Review' }
 ];
+
+// ---- Migration (step 6) ------------------------------------
+var migSheetData = null;
+
+function loadMigSheets() {
+  var url = document.getElementById('mig-url').value.trim();
+  if (!url) { alert('Paste a Google Sheets URL first.'); return; }
+  var btn = document.getElementById('mig-load-btn');
+  btn.disabled = true; btn.textContent = 'Loading...';
+  google.script.run
+    .withSuccessHandler(function(json) {
+      btn.disabled = false; btn.textContent = 'Load Sheets';
+      var r = JSON.parse(json);
+      if (!r.success) { alert('Error: ' + r.error); return; }
+      migSheetData = r.sheets;
+      var sel = document.getElementById('mig-sheet-select');
+      sel.innerHTML = '<option value="">— Select a sheet —</option>';
+      r.sheets.forEach(function(s) {
+        var opt = document.createElement('option');
+        opt.value = s.name;
+        opt.textContent = s.name + ' (' + s.rowCount + ' rows)';
+        sel.appendChild(opt);
+      });
+      document.getElementById('mig-sheet-wrap').style.display = '';
+      document.getElementById('mig-mapper-card').style.display = 'none';
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false; btn.textContent = 'Load Sheets';
+      alert('Error: ' + err.message);
+    })
+    .readExternalSheetHeaders(url);
+}
+
+var MIG_TARGET_FIELDS = [
+  { value: 'legal_first',   label: 'First Name' },
+  { value: 'legal_last',    label: 'Last Name' },
+  { value: 'preferred_name',label: 'Preferred Name' },
+  { value: 'personal_email',label: 'Personal Email' },
+  { value: 'GT_email',      label: 'GT Email' },
+  { value: 'phone',         label: 'Phone' },
+  { value: 'BK#',           label: 'Member ID (BK#)' },
+  { value: 'pledge_class',  label: 'Pledge Class' },
+  { value: 'status',        label: 'Status' },
+  { value: 'officer_role',  label: 'Officer Role' },
+  { value: 'major',         label: 'Major' },
+  { value: 'year',          label: 'Year' },
+  { value: 'hometown',      label: 'Hometown' },
+  { value: 'birthday',      label: 'Birthday' },
+  { value: 'meal_plan',     label: 'Meal Plan' },
+  { value: 'living_in_house', label: 'Living in House' },
+  { value: 'room_number',   label: 'Room Number' },
+  { value: 'GTID',          label: 'GTID' },
+  { value: 'custom',        label: 'Custom field (keep as-is)' },
+  { value: 'ignore',        label: 'Ignore' }
+];
+
+function loadMigHeaders() {
+  var sheetName = document.getElementById('mig-sheet-select').value;
+  if (!sheetName || !migSheetData) return;
+  var sheet = migSheetData.find(function(s) { return s.name === sheetName; });
+  if (!sheet) return;
+
+  var rows = document.getElementById('mig-mapper-rows');
+  rows.innerHTML = '';
+  var optionsHtml = MIG_TARGET_FIELDS.map(function(f) {
+    return '<option value="' + f.value + '">' + f.label + '</option>';
+  }).join('');
+
+  var autoMap = {
+    'name': 'legal_first', 'full name': 'legal_first', 'first name': 'legal_first',
+    'last name': 'legal_last', 'preferred name': 'preferred_name',
+    'email': 'personal_email', 'personal email': 'personal_email', 'gt email': 'GT_email',
+    'phone': 'phone', 'bk#': 'BK#', 'bk number': 'BK#', 'bid order': 'BK#',
+    'pledge class': 'pledge_class', 'status': 'status', 'major': 'major',
+    'year': 'year', 'hometown': 'hometown', 'birthday': 'birthday',
+    'meal plan': 'meal_plan', 'living in house': 'living_in_house',
+    'officer role': 'officer_role', 'gtid': 'GTID', 'room': 'room_number',
+    'room number': 'room_number'
+  };
+
+  sheet.headers.forEach(function(h) {
+    var guess = autoMap[h.toLowerCase()] || 'ignore';
+    var div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)';
+    div.innerHTML =
+      '<div style="flex:0 0 180px;font-size:0.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + h + '">' + h + '</div>' +
+      '<div style="color:var(--muted);font-size:1rem">→</div>' +
+      '<select style="flex:1" data-source="' + h + '">' + optionsHtml + '</select>';
+    rows.appendChild(div);
+    div.querySelector('select').value = guess;
+  });
+
+  document.getElementById('mig-mapper-card').style.display = '';
+}
+
+function doMigration() {
+  var url = document.getElementById('mig-url').value.trim();
+  var sheetName = document.getElementById('mig-sheet-select').value;
+  if (!url || !sheetName) { alert('Please select a sheet first.'); return; }
+
+  var selects = document.querySelectorAll('#mig-mapper-rows select');
+  var mapping = [];
+  selects.forEach(function(sel) {
+    var targetField = sel.value;
+    if (targetField === 'custom') targetField = 'custom:' + sel.getAttribute('data-source');
+    mapping.push({ sourceCol: sel.getAttribute('data-source'), targetField: targetField });
+  });
+
+  var btn = document.getElementById('mig-import-btn');
+  btn.disabled = true; btn.textContent = 'Importing...';
+  var result = document.getElementById('mig-result');
+  result.style.display = 'none';
+
+  google.script.run
+    .withSuccessHandler(function(json) {
+      btn.disabled = false; btn.textContent = 'Import Roster';
+      var r = JSON.parse(json);
+      result.style.display = '';
+      if (r.success) {
+        result.style.background = '#f0fdf4'; result.style.border = '1px solid #bbf7d0'; result.style.color = '#166534';
+        result.textContent = '✅ Imported ' + r.added + ' members. ' + (r.skipped ? r.skipped + ' rows skipped (no name or email).' : '');
+      } else {
+        result.style.background = '#fef2f2'; result.style.border = '1px solid #fecaca'; result.style.color = '#991b1b';
+        result.textContent = '❌ Error: ' + r.error;
+      }
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false; btn.textContent = 'Import Roster';
+      result.style.display = '';
+      result.style.background = '#fef2f2'; result.style.border = '1px solid #fecaca'; result.style.color = '#991b1b';
+      result.textContent = '❌ Error: ' + err.message;
+    })
+    .importFromExternalSheet(url, sheetName, JSON.stringify(mapping));
+}
+
+function resetMigration() {
+  document.getElementById('mig-url').value = '';
+  document.getElementById('mig-sheet-wrap').style.display = 'none';
+  document.getElementById('mig-mapper-card').style.display = 'none';
+  migSheetData = null;
+}
 
 var VOCAB_FIELDS = [
   { key: 'label_chore',        label: 'Chore',              def: 'Chore' },
@@ -598,9 +782,13 @@ function showStep(n) {
   STEPS.forEach(function(s, i) {
     document.getElementById(s.id).classList.toggle('active', i + 1 === n);
   });
+  var isLast = n === STEPS.length;
+  var isMig  = n === 6;
   document.getElementById('btn-back').style.visibility = n > 1 ? 'visible' : 'hidden';
-  document.getElementById('btn-next').style.display = n === STEPS.length ? 'none' : '';
-  document.getElementById('main-nav').style.display = n === STEPS.length ? 'none' : '';
+  document.getElementById('btn-next').style.display = isLast ? 'none' : '';
+  document.getElementById('btn-skip').style.display = isMig ? '' : 'none';
+  document.getElementById('btn-next').textContent = isMig ? 'Continue to Review →' : 'Next →';
+  document.getElementById('main-nav').style.display = isLast ? 'none' : '';
   currentStep = n;
   buildProgress();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -613,6 +801,8 @@ function nextStep() {
     showStep(currentStep + 1);
   }
 }
+
+function skipMigration() { nextStep(); }
 
 function prevStep() {
   if (currentStep > 1) showStep(currentStep - 1);
@@ -629,6 +819,7 @@ function validateStep(n) {
     if (!sem) { alert('Semester is required.'); return false; }
     if (!ws || !/^\d{4}-\d{2}-\d{2}$/.test(ws)) { alert('Week start must be in YYYY-MM-DD format.'); return false; }
   }
+  // Step 6 (migration) is always optional — user can skip or click next after importing
   return true;
 }
 

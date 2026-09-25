@@ -1639,10 +1639,43 @@ var adminConfigData = [];
 var IMPORTANT_KEYS = ['semester', 'week_start', 'officer_emails', 'fine_amount', 'signature_points'];
 var CONFIG_LABELS = {
   semester:        { label: 'Semester',        help: 'e.g. "Fall 2026" — tags all records created this term.' },
-  week_start:      { label: 'Week Start Day',  help: 'Day the chore week resets (e.g. Monday).' },
+  week_start:      { label: 'Week Start',      help: 'First Monday of the semester (YYYY-MM-DD).' },
   officer_emails:  { label: 'Officer Emails',  help: 'Comma-separated addresses that get fine reports and alerts.' },
-  fine_amount:     { label: 'Fine Amount',     help: 'Dollar amount charged for a missed or incomplete chore.' },
+  fine_amount:     { label: 'Fine Amount ($)', help: 'Dollar amount charged for a missed or incomplete chore.' },
   signature_points:{ label: 'Points per Signature', help: 'AM points awarded automatically each time a signature is submitted.' }
+};
+var CHAPTER_IDENTITY_KEYS = ['chapter_name', 'primary_color', 'accent_color', 'logo_url'];
+var CHAPTER_IDENTITY_LABELS = {
+  chapter_name:  { label: 'Chapter Name',    help: 'Shown in page titles and email headers.' },
+  primary_color: { label: 'Primary Color',   help: 'Hex color for headers/topbar. Reload page after saving.' },
+  accent_color:  { label: 'Accent Color',    help: 'Hex color for highlights/badges. Reload page after saving.' },
+  logo_url:      { label: 'Logo URL',        help: 'Public image URL shown in page headers. Leave blank for no logo.' }
+};
+var VOCAB_KEYS = ['label_chore','label_fine','label_am_group','label_am_officer','label_am_points',
+                  'label_pledge_class','label_member_id','label_suspension','label_probation','label_semester'];
+var VOCAB_KEY_LABELS = {
+  label_chore:        { label: 'Chore',               help: 'What a task is called. Default: "Chore".' },
+  label_fine:         { label: 'Fine',                help: 'What a penalty is called. Default: "Fine".' },
+  label_am_group:     { label: 'Associate Group',     help: 'What pledges/associates are called. Default: "Associate Members".' },
+  label_am_officer:   { label: 'AM Officer Title',    help: 'Officer responsible for associates. Default: "High Kappa".' },
+  label_am_points:    { label: 'AM Points Label',     help: 'What points are called. Default: "Points".' },
+  label_pledge_class: { label: 'Pledge Class',        help: 'Cohort/intake name. Default: "Pledge Class".' },
+  label_member_id:    { label: 'Member ID / Badge',   help: 'Member number column header. Default: "BK#".' },
+  label_suspension:   { label: 'Suspension',          help: 'Default: "Suspension".' },
+  label_probation:    { label: 'Probation',           help: 'Default: "Probation".' },
+  label_semester:     { label: 'Semester Term',       help: 'What a term is called. Default: "Semester".' }
+};
+var MODULE_KEYS = ['module_housing','module_meal_plan','module_associates','module_signatures',
+                   'module_university_fields','module_academic_suspension','module_bigquery','module_officer_roles'];
+var MODULE_KEY_LABELS = {
+  module_housing:             { label: 'Housing',             help: 'Room number, living-in-house fields.' },
+  module_meal_plan:           { label: 'Meal Plan',           help: 'Meal plan tracking on member profiles.' },
+  module_associates:          { label: 'Associate Members',   help: 'AM system: tracking, events, points, crossing.' },
+  module_signatures:          { label: 'Signatures',          help: 'AMs log activities with brothers for points.' },
+  module_university_fields:   { label: 'University Fields',   help: 'GTID, BuzzCard, GT username.' },
+  module_academic_suspension: { label: 'Academic Suspension', help: 'Separate academic suspension flag.' },
+  module_bigquery:            { label: 'BigQuery Analytics',  help: 'Sync data to Google BigQuery.' },
+  module_officer_roles:       { label: 'Officer Roles',       help: 'Track officer role on member roster.' }
 };
 var ADVANCED_CONFIG_HELP = {
   bigquery_project_id: 'Only used if BigQuery sync is turned back on — currently inactive.',
@@ -1990,6 +2023,10 @@ function renderConfigEditor() {
     return;
   }
 
+  // Build a map of all current config values from the sheet
+  var configMap = {};
+  adminConfigData.forEach(function(item) { configMap[item.key] = item.value; });
+
   var configRowHtml = function(item, idx, friendlyLabel, help) {
     return '<div class="config-row">' +
       '<div class="config-key">' +
@@ -2001,25 +2038,131 @@ function renderConfigEditor() {
       '</div>';
   };
 
+  // Key Settings (existing operational keys)
   var keyRows = '';
-  var advancedRows = '';
   adminConfigData.forEach(function(item, idx) {
     if (IMPORTANT_KEYS.indexOf(item.key) !== -1) {
       var meta = CONFIG_LABELS[item.key];
       keyRows += configRowHtml(item, idx, meta && meta.label, meta && meta.help);
-    } else {
+    }
+  });
+
+  // Chapter Identity section (virtual rows for keys that may not be in sheet yet)
+  var identityRows = '';
+  CHAPTER_IDENTITY_KEYS.forEach(function(k) {
+    var curVal = configMap[k] !== undefined ? String(configMap[k]) : '';
+    var meta = CHAPTER_IDENTITY_LABELS[k];
+    var uid = 'identity-' + k;
+    identityRows +=
+      '<div class="config-row">' +
+      '<div class="config-key">' +
+      '<div class="config-key-name">' + meta.label + '</div>' +
+      '<div class="config-help">' + esc(meta.help) + '</div>' +
+      '</div>' +
+      '<input type="text" class="config-val-input" id="' + uid + '" value="' + esc(curVal) + '" placeholder="' + esc(curVal || meta.label) + '">' +
+      '<button class="action-btn btn-verify" onclick="saveDirectConfig(\'' + k + '\',\'' + uid + '\')">Save</button>' +
+      '</div>';
+  });
+
+  // Vocabulary section
+  var vocabRows = '';
+  VOCAB_KEYS.forEach(function(k) {
+    var curVal = configMap[k] !== undefined ? String(configMap[k]) : '';
+    var meta = VOCAB_KEY_LABELS[k];
+    var uid = 'vocab-' + k;
+    vocabRows +=
+      '<div class="config-row">' +
+      '<div class="config-key">' +
+      '<div class="config-key-name">' + meta.label + '</div>' +
+      '<div class="config-help">' + esc(meta.help) + '</div>' +
+      '</div>' +
+      '<input type="text" class="config-val-input" id="' + uid + '" value="' + esc(curVal) + '" placeholder="' + esc(meta.help.split('"')[1] || '') + '">' +
+      '<button class="action-btn btn-verify" onclick="saveDirectConfig(\'' + k + '\',\'' + uid + '\')">Save</button>' +
+      '</div>';
+  });
+
+  // Modules section (toggle switches)
+  var moduleRows = '';
+  MODULE_KEYS.forEach(function(k) {
+    var rawVal = configMap[k];
+    var isOn = rawVal === undefined
+      ? (k !== 'module_bigquery' && k !== 'module_university_fields')  // match MODULE_DEFAULTS
+      : (String(rawVal).toLowerCase() === 'true' || rawVal === '1');
+    var meta = MODULE_KEY_LABELS[k];
+    var uid = 'mod-' + k;
+    moduleRows +=
+      '<div class="config-row" style="align-items:flex-start;gap:8px">' +
+      '<div class="config-key" style="flex:1">' +
+      '<div class="config-key-name">' + meta.label + '</div>' +
+      '<div class="config-help">' + esc(meta.help) + '</div>' +
+      '</div>' +
+      '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0;padding-top:2px">' +
+        '<input type="checkbox" id="' + uid + '"' + (isOn ? ' checked' : '') +
+          ' onchange="saveModuleToggle(\'' + k + '\',this)">' +
+        '<span style="font-size:0.8rem;color:var(--muted)">' + (isOn ? 'ON' : 'OFF') + '</span>' +
+      '</label>' +
+      '</div>';
+  });
+
+  // Advanced (everything else)
+  var advancedRows = '';
+  var specialKeys = IMPORTANT_KEYS.concat(CHAPTER_IDENTITY_KEYS, VOCAB_KEYS, MODULE_KEYS);
+  adminConfigData.forEach(function(item, idx) {
+    if (specialKeys.indexOf(item.key) === -1) {
       advancedRows += configRowHtml(item, idx, null, ADVANCED_CONFIG_HELP[item.key]);
     }
   });
 
-  var html = '<div class="config-group-label">Key Settings</div>' + keyRows;
+  var html =
+    '<div class="config-group-label">Key Settings</div>' + keyRows +
+    '<div class="config-group-label" style="margin-top:18px">Chapter Identity</div>' +
+    '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:8px">Changes to colors/name take effect on next page reload.</div>' +
+    identityRows +
+    '<div class="config-group-label" style="margin-top:18px">Vocabulary</div>' +
+    '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:8px">Rename system concepts to match your chapter\'s terminology. Reload to see changes.</div>' +
+    vocabRows +
+    '<div class="config-group-label" style="margin-top:18px">Modules</div>' +
+    '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:8px">Toggle system features on/off. Changes take effect on next page reload.</div>' +
+    moduleRows;
+
   if (advancedRows) {
-    html += '<div class="config-advanced-toggle" onclick="toggleAdvancedConfig()">' +
+    html += '<div class="config-advanced-toggle" onclick="toggleAdvancedConfig()" style="margin-top:18px">' +
       '<span id="config-advanced-toggle-icon">▶</span> Advanced settings' +
       '</div>' +
       '<div id="config-advanced-body" style="display:none">' + advancedRows + '</div>';
   }
   container.innerHTML = html;
+}
+
+// Save a config key by its ID (for identity/vocab fields not indexed in adminConfigData)
+function saveDirectConfig(key, inputId) {
+  var val = document.getElementById(inputId).value;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? 'Saved: ' + key : 'Error: ' + r.error);
+    })
+    .withFailureHandler(onError)
+    .saveConfig(key, val);
+}
+
+// Save a module toggle (boolean → 'true'/'false' string)
+function saveModuleToggle(key, checkbox) {
+  var val = checkbox.checked ? 'true' : 'false';
+  var label = checkbox.parentElement.querySelector('span');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (r.success) {
+        label.textContent = checkbox.checked ? 'ON' : 'OFF';
+        showToast('Module ' + key + ' set to ' + val + '. Reload to apply.');
+      } else {
+        showToast('Error: ' + r.error);
+        checkbox.checked = !checkbox.checked;
+      }
+    })
+    .withFailureHandler(onError)
+    .saveConfig(key, val);
 }
 
 function toggleAdvancedConfig() {

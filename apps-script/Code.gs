@@ -1565,6 +1565,126 @@ function initChapter(setupJson) {
   }
 }
 
+// ---- Migration from external Sheets (setup wizard step 6) -
+//
+// readExternalSheetHeaders(spreadsheetUrl): opens a foreign spreadsheet
+// by URL/ID and returns all its sheet names + first-row headers.
+// Used by the setup wizard migration mapper.
+function readExternalSheetHeaders(spreadsheetUrl) {
+  try {
+    var id = _extractSpreadsheetId(spreadsheetUrl);
+    var ss = SpreadsheetApp.openById(id);
+    var sheets = ss.getSheets();
+    var result = sheets.map(function(sh) {
+      var headers = [];
+      if (sh.getLastRow() > 0) {
+        headers = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0]
+          .map(function(h) { return String(h).trim(); })
+          .filter(function(h) { return h; });
+      }
+      return { name: sh.getName(), headers: headers, rowCount: Math.max(sh.getLastRow() - 1, 0) };
+    });
+    return JSON.stringify({ success: true, sheets: result });
+  } catch (err) {
+    logError('readExternalSheetHeaders', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// importFromExternalSheet(spreadsheetUrl, sheetName, mappingJson):
+// Reads data from the specified sheet and imports it into the local 'members' tab.
+// mappingJson is an array of { sourceCol: 'Full Name', targetField: 'legal_first' } etc.
+// targetField === 'ignore' skips the column; 'custom:Label' creates a custom field.
+function importFromExternalSheet(spreadsheetUrl, sheetName, mappingJson) {
+  try {
+    var id = _extractSpreadsheetId(spreadsheetUrl);
+    var srcSS = SpreadsheetApp.openById(id);
+    var srcSheet = srcSS.getSheetByName(sheetName);
+    if (!srcSheet) return JSON.stringify({ success: false, error: 'Sheet "' + sheetName + '" not found.' });
+
+    var mapping = JSON.parse(mappingJson);
+    var srcData = srcSheet.getDataRange().getValues();
+    if (srcData.length < 2) return JSON.stringify({ success: false, error: 'Source sheet is empty.' });
+
+    var srcHeaders = srcData[0].map(function(h) { return String(h).trim(); });
+    var srcCM = _buildColMap(srcHeaders);
+
+    var ss = getSpreadsheet();
+    var destSheet = ss.getSheetByName('members');
+    if (!destSheet) {
+      destSheet = ss.insertSheet('members');
+      destSheet.appendRow(MEMBER_HEADERS);
+      destSheet.setFrozenRows(1);
+    }
+    var destCM = _buildColMap(destSheet.getRange(1, 1, 1, Math.max(destSheet.getLastColumn(), 1)).getValues()[0]);
+
+    // Build a map from sourceCol → targetField
+    var colToField = {};
+    mapping.forEach(function(m) {
+      if (m.targetField && m.targetField !== 'ignore') colToField[m.sourceCol] = m.targetField;
+    });
+
+    // MEMBER_HEADERS field → column index
+    var mhIdx = {};
+    MEMBER_HEADERS.forEach(function(h, i) { mhIdx[h] = i; });
+
+    var added = 0, skipped = 0;
+    var emailIdx = srcCM['email'] !== undefined ? srcCM['email'] :
+                   srcCM['personal_email'] !== undefined ? srcCM['personal_email'] : -1;
+
+    for (var i = 1; i < srcData.length; i++) {
+      var row = srcData[i];
+      if (!row.join('').trim()) continue;
+
+      var newRow = new Array(MEMBER_HEADERS.length).fill('');
+      newRow[0] = 'M' + Utilities.getUuid().replace(/-/g,'').substring(0,8).toUpperCase();
+
+      var hasName = false, hasEmail = false;
+      mapping.forEach(function(m) {
+        if (!m.targetField || m.targetField === 'ignore') return;
+        var srcColIdx = srcCM[m.sourceCol];
+        if (srcColIdx === undefined) return;
+        var val = String(row[srcColIdx] || '').trim();
+        if (!val) return;
+
+        if (m.targetField.indexOf('custom:') === 0) {
+          // Custom fields can't go into MEMBER_HEADERS — skip for now (future: separate handling)
+          return;
+        }
+        var destIdx = mhIdx[m.targetField];
+        if (destIdx !== undefined) {
+          newRow[destIdx] = val;
+          if (m.targetField === 'legal_first' || m.targetField === 'preferred_name') hasName = true;
+          if (m.targetField === 'personal_email' || m.targetField === 'GT_email') hasEmail = true;
+        }
+      });
+
+      // Default status to 'active' if not mapped
+      if (!newRow[mhIdx['status']]) newRow[mhIdx['status']] = 'active';
+      newRow[mhIdx['added_date']] = new Date().toISOString();
+
+      if (!hasName && !hasEmail) { skipped++; continue; }
+      destSheet.appendRow(newRow);
+      added++;
+    }
+
+    logInfo('importFromExternalSheet', 'Imported ' + added + ' members from ' + spreadsheetUrl + ' (' + skipped + ' skipped)');
+    return JSON.stringify({ success: true, added: added, skipped: skipped });
+  } catch (err) {
+    logError('importFromExternalSheet', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
+// Extract a Spreadsheet ID from a URL or plain ID.
+function _extractSpreadsheetId(urlOrId) {
+  var m = String(urlOrId).match(/\/d\/([a-zA-Z0-9_-]{20,})/);
+  if (m) return m[1];
+  // If no URL pattern, assume it's already a plain ID
+  if (/^[a-zA-Z0-9_-]{20,}$/.test(String(urlOrId).trim())) return String(urlOrId).trim();
+  throw new Error('Could not extract spreadsheet ID from: ' + urlOrId);
+}
+
 // ---- Semester Tools: CSV text import -----------------------
 
 // Accepts raw CSV text (not a Drive file ID) pasted directly from the UI.
