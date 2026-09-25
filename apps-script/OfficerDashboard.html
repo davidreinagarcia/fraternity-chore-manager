@@ -1262,6 +1262,8 @@ var CHAPTER_CONFIG = <?!= cfgJson ?>;
   if (!m.module_meal_plan)  rules.push('.col-meal { display:none!important }');
   if (!m.module_associates) rules.push('.mod-associates { display:none!important }');
   if (!m.module_signatures) rules.push('.mod-signatures { display:none!important }');
+  if (!m.module_officer_roles)        rules.push('.mod-officer { display:none!important }');
+  if (!m.module_academic_suspension)  rules.push('.mod-acad-susp { display:none!important }');
   if (!m.module_bigquery) {
     rules.push('.mod-bigquery { display:none!important }');
   } else {
@@ -3262,6 +3264,10 @@ function openCtxMenu(evt, memberId) {
     ];
   }
 
+  if (!CHAPTER_CONFIG.modules.module_officer_roles) {
+    items = items.filter(function(it) { return it.label !== 'Set Officer Role'; });
+  }
+
   items.forEach(function(item) {
     var btn = document.createElement('button');
     btn.className = 'ctx-item' + (item.danger ? ' danger' : '');
@@ -3296,9 +3302,8 @@ var _actConfigs = {
   suspend:     { title:'Place Suspension', btnLabel:'Place Suspension', btnClass:'btn-danger',
     fields:[
       { id:'act-reason',   label:'Reason *', type:'textarea' },
-      { id:'act-end-date', label:'Suspension End Date', type:'date' },
-      { id:'act-academic', label:'Academic Suspension', type:'checkbox' }
-    ]},
+      { id:'act-end-date', label:'Suspension End Date', type:'date' }
+    ].concat(CHAPTER_CONFIG.modules.module_academic_suspension ? [{ id:'act-academic', label:'Academic Suspension', type:'checkbox' }] : []) },
   lift_susp:   { title:'Lift Suspension', btnLabel:'Lift Suspension', btnClass:'btn-primary', fields:[] },
   probation:   { title:'Place Probation', btnLabel:'Place Probation', btnClass:'btn-primary',
     fields:[
@@ -3642,9 +3647,11 @@ function renderProfile(r) {
       (p.suspension ? pf('Suspension Reason', p.suspensionReason) : '') +
       (p.probation  ? pf('Probation Type', p.probationType) : '') +
     '</div></div>' +
-    '<div class="profile-section"><h4>Officer Info</h4><div class="profile-grid">' +
-      pf('Officer Role', p.officerRole) +
-    '</div></div>' +
+    (CHAPTER_CONFIG.modules.module_officer_roles ?
+      '<div class="profile-section"><h4>Officer Info</h4><div class="profile-grid">' +
+        pf('Officer Role', p.officerRole) +
+      '</div></div>'
+    : '') +
     '<div class="profile-section"><h4>Fines This Semester</h4>' + finesHtml + '</div>' +
     '<div class="profile-section"><h4>Notes</h4>' + notesHtml + '</div>';
 
