@@ -261,7 +261,7 @@
       <div class="card-title">Chapter Info</div>
       <div class="field">
         <label>Chapter / Organization Name *</label>
-        <input type="text" id="s1-chapter-name" placeholder="e.g. Lambda Chi Alpha — Zeta Zeta" value="Lambda Chi Alpha">
+        <input type="text" id="s1-chapter-name" placeholder="e.g. Phi Kappa Sigma — Alpha Chapter" value="" autocorrect="off">
       </div>
       <div class="field-row">
         <div class="field">
@@ -632,8 +632,9 @@ var VOCAB_FIELDS = [
   { key: 'label_am_officer',   label: 'AM Officer Title',   def: 'High Kappa' },
   { key: 'label_am_points',    label: 'AM Points Label',    def: 'Points' },
   { key: 'label_pledge_class', label: 'Pledge Class',       def: 'Pledge Class' },
-  { key: 'label_member_id',    label: 'Member ID / Badge',  def: 'BK#' },
-  { key: 'label_suspension',   label: 'Suspension',         def: 'Suspension' },
+  { key: 'label_member_id',       label: 'Member ID / Badge',  def: 'BK#' },
+  { key: 'label_university_email',label: 'University Email',   def: 'University Email' },
+  { key: 'label_suspension',      label: 'Suspension',         def: 'Suspension' },
   { key: 'label_probation',    label: 'Probation',          def: 'Probation' },
   { key: 'label_semester',     label: 'Semester Term',      def: 'Semester' }
 ];
@@ -643,7 +644,7 @@ var MODULE_FIELDS = [
   { key: 'module_meal_plan',           label: 'Meal Plan',            desc: 'Meal plan tracking on member profiles.', def: true },
   { key: 'module_associates',          label: 'Associate Members',    desc: 'AM system: tracking, events, points, crossing.', def: true },
   { key: 'module_signatures',          label: 'Signatures',           desc: 'AMs log activities with brothers for points.', def: true },
-  { key: 'module_university_fields',   label: 'University Fields',    desc: 'GTID, BuzzCard, GT username — Georgia Tech specific.', def: false },
+  { key: 'module_university_fields',   label: 'University Fields',    desc: 'University ID, campus card, and university username fields on member profiles.', def: false },
   { key: 'module_academic_suspension', label: 'Academic Suspension',  desc: 'Separate academic suspension flag on member.', def: true },
   { key: 'module_officer_roles',       label: 'Officer Roles',        desc: 'Track officer role on member roster.', def: true }
 ];

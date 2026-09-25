@@ -1404,6 +1404,7 @@ var LABEL_DEFAULTS = {
   label_am_points:    'Points',
   label_pledge_class: 'Pledge Class',
   label_member_id:    'BK#',
+  label_university_email: 'University Email',
   label_suspension:   'Suspension',
   label_probation:    'Probation',
   label_semester:     'Semester'

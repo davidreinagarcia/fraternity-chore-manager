@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Signature Submission — <?= cfg.chapter.chapter_name ?></title>
 <style>
   :root {
@@ -226,29 +226,48 @@ window.addEventListener('load', function() {
   document.getElementById('activity-input').addEventListener('input', checkSubmitReady);
 });
 
+function compressImage(file, onDone) {
+  var maxDim = 1200;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      var scale = Math.min(1, maxDim / Math.max(w, h));
+      w = Math.round(w * scale); h = Math.round(h * scale);
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(function(blob) { onDone(blob || file); }, 'image/jpeg', 0.82);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function handlePhoto(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  if (file.size > 10 * 1024 * 1024) {
-    alert('Photo too large (max 10MB). Please compress or take a new photo.');
+  if (file.size > 20 * 1024 * 1024) {
+    alert('Photo too large (max 20MB). Please choose a smaller file.');
     return;
   }
 
-  selectedFile = file;
-
-  const reader = new FileReader();
-  reader.onload = function(e) {
-    document.getElementById('preview-img').src = e.target.result;
-    document.getElementById('preview-wrap').style.display = 'block';
-    document.getElementById('photo-area').classList.add('has-photo');
-    document.getElementById('photo-area').querySelector('p').textContent = 'Photo selected';
-
-    const kb = Math.round(file.size / 1024);
-    document.getElementById('photo-meta').textContent = file.name + ' (' + kb + ' KB)';
-  };
-  reader.readAsDataURL(file);
-  checkSubmitReady();
+  compressImage(file, function(compressed) {
+    selectedFile = compressed;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('preview-img').src = e.target.result;
+      document.getElementById('preview-wrap').style.display = 'block';
+      document.getElementById('photo-area').classList.add('has-photo');
+      document.getElementById('photo-area').querySelector('p').textContent = 'Photo selected';
+      const kb = Math.round(compressed.size / 1024);
+      document.getElementById('photo-meta').textContent = file.name + ' — ' + kb + ' KB';
+    };
+    reader.readAsDataURL(compressed);
+    checkSubmitReady();
+  });
 }
 
 function checkSubmitReady() {

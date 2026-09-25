@@ -359,6 +359,13 @@
   .am-att-row input { width:16px; height:16px; cursor:pointer; }
   .fc-event { cursor:pointer; }
   .fc-event-retired { opacity:0.45; }
+  @media (max-width: 768px) {
+    .container { padding: 12px 10px; }
+    .tab-btn { min-width: 0; padding: 8px 10px; font-size: 0.75rem; flex: none; }
+    #mm-search, #alumni-search { width: 100% !important; }
+    .th-bk, .th-form, .col-housing, .col-meal { display: none !important; }
+    .card-header { flex-wrap: wrap; gap: 8px; }
+  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -485,7 +492,7 @@
           </div>
         </div>
         <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-          <input type="text" id="mm-search" class="inline-input" placeholder="Search name, email, BK#..." style="width:260px" oninput="filterMM()">
+          <input type="text" id="mm-search" class="inline-input" placeholder="Search name, email..." style="width:260px" oninput="filterMM()">
           <div style="display:flex;gap:4px;flex-wrap:wrap">
             <button id="mmf-all"      class="action-btn" onclick="setMMFilter('all')"      style="background:var(--primary);color:var(--gold);border:none">All <span id="mm-cnt-all"></span></button>
             <button id="mmf-active"   class="action-btn" onclick="setMMFilter('active')"   style="background:transparent;color:var(--green);border:1px solid #bbf7d0">Active <span id="mm-cnt-active"></span></button>
@@ -508,14 +515,14 @@
           <div id="mm-loading" style="text-align:center;padding:30px;color:var(--muted)">Loading members...</div>
           <table class="data-table" id="mm-table" style="display:none;min-width:900px">
             <thead><tr>
-              <th onclick="sortTable('mm-table',0)"><?= cfg.labels.label_member_id ?></th>
+              <th class="th-bk" onclick="sortTable('mm-table',0)"><?= cfg.labels.label_member_id ?></th>
               <th onclick="sortTable('mm-table',1)">Name</th>
               <th onclick="sortTable('mm-table',2)">Status</th>
               <th class="col-housing"><?= cfg.modules.module_housing ? 'Housing' : '' ?></th>
               <th class="col-meal"><?= cfg.modules.module_meal_plan ? 'Meal' : '' ?></th>
               <th onclick="sortTable('mm-table',5)"><?= cfg.labels.label_chore ?></th>
               <th onclick="sortTable('mm-table',6)"><?= cfg.labels.label_fine ?>s</th>
-              <th>Form</th>
+              <th class="th-form">Form</th>
               <th>Actions</th>
             </tr></thead>
             <tbody id="mm-tbody"></tbody>
@@ -624,13 +631,13 @@
           <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-mm')">← Back to Member Manager</button>
         </div>
         <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-          <input type="text" id="alumni-search" class="inline-input" placeholder="Search name, email, BK#..." style="width:260px" oninput="filterAlumniTab()">
+          <input type="text" id="alumni-search" class="inline-input" placeholder="Search name, email..." style="width:260px" oninput="filterAlumniTab()">
           <span style="font-size:0.8rem;color:var(--muted)"><strong id="alumni-count">0</strong> alumni</span>
         </div>
         <div class="card-body" style="overflow-x:auto">
           <table class="data-table" id="mm-alumni-table" style="min-width:700px">
             <thead><tr>
-              <th>BK#</th>
+              <th class="th-bk"><?= cfg.labels.label_member_id ?></th>
               <th>Name</th>
               <th>Phone</th>
               <th>Email</th>
@@ -959,27 +966,27 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div>
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Legal First Name *</label>
-        <input type="text" id="add-legal-first" class="inline-input" style="width:100%" placeholder="Jonathan">
+        <input type="text" id="add-legal-first" class="inline-input" style="width:100%" placeholder="Jonathan" autocorrect="off" autocapitalize="words">
       </div>
       <div>
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Legal Last Name *</label>
-        <input type="text" id="add-legal-last" class="inline-input" style="width:100%" placeholder="Smith">
+        <input type="text" id="add-legal-last" class="inline-input" style="width:100%" placeholder="Smith" autocorrect="off" autocapitalize="words">
       </div>
       <div>
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Preferred Name</label>
-        <input type="text" id="add-preferred" class="inline-input" style="width:100%" placeholder="Jon">
+        <input type="text" id="add-preferred" class="inline-input" style="width:100%" placeholder="Jon" autocorrect="off" autocapitalize="words">
       </div>
       <div>
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Personal Email *</label>
         <input type="email" id="add-personal-email" class="inline-input" style="width:100%" placeholder="jon@gmail.com">
       </div>
       <div>
-        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">GT Email</label>
-        <input type="email" id="add-gt-email" class="inline-input" style="width:100%" placeholder="jsmith@gatech.edu">
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px"><?= cfg.labels.label_university_email ?></label>
+        <input type="email" id="add-gt-email" class="inline-input" style="width:100%" placeholder="member@university.edu">
       </div>
       <div>
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Phone</label>
-        <input type="text" id="add-phone" class="inline-input" style="width:100%" placeholder="404-555-1234">
+        <input type="text" id="add-phone" class="inline-input" style="width:100%" placeholder="555-1234" autocorrect="off">
       </div>
       <div>
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">BK Number <span id="add-bk-req" style="color:var(--red);display:none">*</span></label>
@@ -1641,7 +1648,8 @@ var CHAPTER_IDENTITY_LABELS = {
   logo_url:      { label: 'Logo URL',        help: 'Public image URL shown in page headers. Leave blank for no logo.' }
 };
 var VOCAB_KEYS = ['label_chore','label_fine','label_am_group','label_am_officer','label_am_points',
-                  'label_pledge_class','label_member_id','label_suspension','label_probation','label_semester'];
+                  'label_pledge_class','label_member_id','label_university_email',
+                  'label_suspension','label_probation','label_semester'];
 var VOCAB_KEY_LABELS = {
   label_chore:        { label: 'Chore',               help: 'What a task is called. Default: "Chore".' },
   label_fine:         { label: 'Fine',                help: 'What a penalty is called. Default: "Fine".' },
@@ -1649,8 +1657,9 @@ var VOCAB_KEY_LABELS = {
   label_am_officer:   { label: 'AM Officer Title',    help: 'Officer responsible for associates. Default: "High Kappa".' },
   label_am_points:    { label: 'AM Points Label',     help: 'What points are called. Default: "Points".' },
   label_pledge_class: { label: 'Pledge Class',        help: 'Cohort/intake name. Default: "Pledge Class".' },
-  label_member_id:    { label: 'Member ID / Badge',   help: 'Member number column header. Default: "BK#".' },
-  label_suspension:   { label: 'Suspension',          help: 'Default: "Suspension".' },
+  label_member_id:       { label: 'Member ID / Badge',   help: 'Member number column header. Default: "BK#".' },
+  label_university_email:{ label: 'University Email',    help: 'Org-issued email field label. Default: "University Email".' },
+  label_suspension:      { label: 'Suspension',          help: 'Default: "Suspension".' },
   label_probation:    { label: 'Probation',           help: 'Default: "Probation".' },
   label_semester:     { label: 'Semester Term',       help: 'What a term is called. Default: "Semester".' }
 };
@@ -1661,7 +1670,7 @@ var MODULE_KEY_LABELS = {
   module_meal_plan:           { label: 'Meal Plan',           help: 'Meal plan tracking on member profiles.' },
   module_associates:          { label: 'Associate Members',   help: 'AM system: tracking, events, points, crossing.' },
   module_signatures:          { label: 'Signatures',          help: 'AMs log activities with brothers for points.' },
-  module_university_fields:   { label: 'University Fields',   help: 'GTID, BuzzCard, GT username.' },
+  module_university_fields:   { label: 'University Fields',   help: 'University ID, campus card, university username fields.' },
   module_academic_suspension: { label: 'Academic Suspension', help: 'Separate academic suspension flag.' },
   module_officer_roles:       { label: 'Officer Roles',       help: 'Track officer role on member roster.' }
 };
@@ -2199,7 +2208,7 @@ function previewCSV() {
   var hasBk = rows.some(function(r) { return r[3] && /^\d{4}$/.test(r[3].trim()); });
   var html = '<div style="font-size:0.8rem;font-weight:700;margin-bottom:8px">' + rows.length + ' member(s) found:</div>' +
     '<table class="data-table" style="font-size:0.78rem"><thead><tr><th>Name</th><th>Email</th><th>Pledge Class</th>' +
-    (hasBk ? '<th>BK#</th>' : '') + '</tr></thead><tbody>';
+    (hasBk ? '<th>' + esc(CHAPTER_CONFIG.labels.label_member_id) + '</th>' : '') + '</tr></thead><tbody>';
   shown.forEach(function(r) {
     html += '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td>' + esc(r[2] || '—') + '</td>' +
       (hasBk ? '<td>' + esc(r[3] || '—') + '</td>' : '') + '</tr>';
@@ -2606,14 +2615,14 @@ function renderMMTable(data) {
 
     tbody.insertAdjacentHTML('beforeend',
       '<tr' + rowStyle + '>' +
-      '<td>' + bkCell + '</td>' +
+      '<td class="th-bk">' + bkCell + '</td>' +
       '<td>' + nameCell + '</td>' +
       '<td>' + _statusBadgeMM(m) + '</td>' +
       '<td class="col-housing" style="font-size:0.82rem;white-space:nowrap">' + housingCell + '</td>' +
       '<td class="col-meal" style="font-size:0.82rem">' + mealCell + '</td>' +
       '<td style="font-size:0.82rem">' + choreCell + '</td>' +
       '<td>' + fineCell + '</td>' +
-      '<td style="text-align:center">' + _formBadge(m) + '</td>' +
+      '<td class="th-form" style="text-align:center">' + _formBadge(m) + '</td>' +
       '<td style="white-space:nowrap">' + quickAct + '</td>' +
       '</tr>' +
       '<tr id="mm-expand-' + m.memberId + '" style="display:none;background:var(--bg-alt,#f7f7f5)">' +
@@ -2640,7 +2649,7 @@ function _mmExpandHtml(m) {
     ['Phone', m.phone], ['Major', ex.major], ['Year', ex.year]
   ];
   if (showUni) {
-    fields.push(['GTID', ex.GTID], ['BuzzCard', ex.buzzcard], ['GT Username', ex.GT_username]);
+    fields.push(['University ID', ex.GTID], ['Campus Card', ex.buzzcard], ['Campus Username', ex.GT_username]);
   }
   fields.push(
     ['Hometown', ex.hometown], ['Birthday', ex.birthday], ['Shirt Size', ex.shirt_size],
@@ -3180,9 +3189,10 @@ function exportMembersCSV() {
 
 function exportFullCSV() {
   if (!mmData.length) { showToast('No member data loaded.'); return; }
-  var header = ['BK#','Name','Status','Email','GT Email','Phone','Officer Role',
+  var lbl = CHAPTER_CONFIG.labels;
+  var header = [lbl.label_member_id,'Name','Status','Email',lbl.label_university_email,'Phone','Officer Role',
     'Living in House','Room Number','Meal Plan',
-    'GTID','BuzzCard','GT Username','Major','Year','Anticipated Graduation',
+    'University ID','Campus Card','Campus Username','Major','Year','Anticipated Graduation',
     'Hometown','Birthday','Shirt Size','Dietary Restrictions','Allergies','Car on Campus',
     'Emergency Contact Name','Emergency Contact Phone',
     'Campus Orgs','Leadership Positions','Which Positions','Service Orgs','Anything Else',
@@ -3614,7 +3624,7 @@ function renderProfile(r) {
       pf('Legal Name', (p.legalFirst||'') + ' ' + (p.legalLast||'')) +
       pf('Preferred Name', p.preferredName) +
       pf('Personal Email', p.email) +
-      pf('GT Email', p.gtEmail) +
+      pf(CHAPTER_CONFIG.labels.label_university_email, p.gtEmail) +
       pf('Phone', p.phone) +
       pf('BK Number', p.bkNumber) +
       pf('Anticipated Grad', p.anticipatedGraduation) +
@@ -3704,7 +3714,7 @@ function openGradReview() {
         list.innerHTML = '<div style="text-align:center;padding:24px;color:var(--green)">No graduation candidates at this time.</div>';
         return;
       }
-      list.innerHTML = '<table class="data-table"><thead><tr><th>BK#</th><th>Name</th><th>Anticipated Grad</th></tr></thead><tbody>' +
+      list.innerHTML = '<table class="data-table"><thead><tr><th>' + esc(CHAPTER_CONFIG.labels.label_member_id) + '</th><th>Name</th><th>Anticipated Grad</th></tr></thead><tbody>' +
         r.data.map(function(c) {
           return '<tr><td style="font-family:monospace;color:var(--gold)">' + esc(c.bkNumber||'—') + '</td>' +
             '<td><strong>' + esc(c.name) + '</strong></td>' +
