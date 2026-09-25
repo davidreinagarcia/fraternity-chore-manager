@@ -1368,6 +1368,105 @@ function saveConfig(key, value) {
   }
 }
 
+// ---- Chapter Config (multi-chapter product layer) ----------
+//
+// getChapterConfig() is the foundation of the distributed-product
+// customization system. It reads labels, module flags, and option
+// lists from the config sheet, falling back to Lambda Chi defaults
+// for any key not yet present. Existing deployments get no behavior
+// change — all defaults match the current Lambda Chi setup.
+//
+// Downstream uses (not yet wired):
+//   - applyVocabulary(cfg) in each HTML page (Layer 1)
+//   - module flag checks before rendering optional UI sections (Layer 2)
+//   - setup wizard initChapter() to seed a fresh chapter (Layer 4)
+
+var LABEL_DEFAULTS = {
+  label_chore:        'Chore',
+  label_fine:         'Fine',
+  label_am_group:     'Associate Members',
+  label_am_officer:   'High Kappa',
+  label_am_points:    'Points',
+  label_pledge_class: 'Pledge Class',
+  label_member_id:    'BK#',
+  label_suspension:   'Suspension',
+  label_probation:    'Probation',
+  label_semester:     'Semester'
+};
+
+// All currently-shipped features default ON; module_bigquery defaults OFF
+// because BigQuery sync is intentionally hidden for now.
+var MODULE_DEFAULTS = {
+  module_housing:             true,
+  module_meal_plan:           true,
+  module_associates:          true,
+  module_signatures:          true,
+  module_university_fields:   true,
+  module_academic_suspension: true,
+  module_bigquery:            false,
+  module_officer_roles:       true
+};
+
+var OPTIONS_DEFAULTS = {
+  meal_plan_options:     'Full,Half',
+  officer_role_options:  '',
+  am_activity_types:     '',
+  member_status_options: 'active,inactive,alumni,associate'
+};
+
+// Returns a structured config object: { chapter, labels, modules, options }.
+// Safe to call server-side; use getChapterConfigJson() from the frontend.
+function getChapterConfig() {
+  try {
+    var raw = {};
+    var sheet = getSpreadsheet().getSheetByName('config');
+    if (sheet) {
+      var data = sheet.getDataRange().getValues();
+      for (var i = 1; i < data.length; i++) {
+        var k = String(data[i][0]).trim();
+        if (k) raw[k] = data[i][1];
+      }
+    }
+
+    var labels = {};
+    Object.keys(LABEL_DEFAULTS).forEach(function(k) {
+      labels[k] = raw[k] !== undefined ? String(raw[k]) : LABEL_DEFAULTS[k];
+    });
+
+    var modules = {};
+    Object.keys(MODULE_DEFAULTS).forEach(function(k) {
+      if (raw[k] !== undefined) {
+        var v = String(raw[k]).toLowerCase();
+        modules[k] = v === 'true' || v === '1' || v === 'yes';
+      } else {
+        modules[k] = MODULE_DEFAULTS[k];
+      }
+    });
+
+    var options = {};
+    Object.keys(OPTIONS_DEFAULTS).forEach(function(k) {
+      options[k] = raw[k] !== undefined ? String(raw[k]) : OPTIONS_DEFAULTS[k];
+    });
+
+    var chapter = {
+      chapter_name:  raw['chapter_name']  !== undefined ? String(raw['chapter_name'])  : 'Lambda Chi Alpha',
+      primary_color: raw['primary_color'] !== undefined ? String(raw['primary_color']) : '#093D20',
+      accent_color:  raw['accent_color']  !== undefined ? String(raw['accent_color'])  : '#FFB71D',
+      logo_url:      raw['logo_url']      !== undefined ? String(raw['logo_url'])       : ''
+    };
+
+    return { chapter: chapter, labels: labels, modules: modules, options: options };
+  } catch (e) {
+    logError('getChapterConfig', e);
+    return { chapter: {}, labels: LABEL_DEFAULTS, modules: MODULE_DEFAULTS, options: OPTIONS_DEFAULTS };
+  }
+}
+
+// Frontend-callable wrapper (google.script.run).
+function getChapterConfigJson() {
+  return JSON.stringify(getChapterConfig());
+}
+
 // ---- Semester Tools: CSV text import -----------------------
 
 // Accepts raw CSV text (not a Drive file ID) pasted directly from the UI.
