@@ -294,6 +294,15 @@ function onOpen() {
       .addItem('Migrate From Old Roster (Run Once)', 'migrateFromRosterSheet')
       .addItem('Relink Google Forms (Run Once)', 'relinkForms')
       .addItem('Check Duplicate Members', 'checkDuplicateMembersMenu'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('Custom Forms')
+      .addItem('Create/Recreate Member Forms', 'createCustomFormsMenu')
+      .addItem('Open New Member Form Collection', 'openNewMemberFormMenu')
+      .addItem('Close New Member Form Collection', 'closeNewMemberFormMenu')
+      .addItem('Open Returning Member Form Collection', 'openReturningMemberFormMenu')
+      .addItem('Close Returning Member Form Collection', 'closeReturningMemberFormMenu')
+      .addItem('Deduplicate Form Responses', 'deduplicateFormResponsesMenu')
+      .addItem('Send Reminders (Returning Form)', 'sendReturningFormRemindersMenu'))
     .addToUi();
 }
 
@@ -360,6 +369,9 @@ function doGet(e) {
         break;
       case 'setup':
         tmpl = HtmlService.createTemplateFromFile('SetupApp');
+        break;
+      case 'forms':
+        tmpl = HtmlService.createTemplateFromFile('OfficerDashboard');
         break;
       case 'member':
       default:
@@ -2340,7 +2352,8 @@ function ensureTabsExist() {
     'member_notes':             ['note_id','member_id','note_text','note_type','created_by','created_at'],
     'signatures':                SIGNATURE_HEADERS,
     'am_events':                 AM_EVENT_HEADERS,
-    'am_attendance':             AM_ATTENDANCE_HEADERS
+    'am_attendance':             AM_ATTENDANCE_HEADERS,
+    'form_responses_pending_review': PENDING_REVIEW_HEADERS
   };
 
   var created = [];
@@ -2400,6 +2413,84 @@ function ensureTabsExist() {
   logInfo('ensureTabsExist', msg);
   if (ui) ui.alert('Setup Complete', msg, ui.ButtonSet.OK);
   return JSON.stringify({ success: true, message: msg });
+}
+
+// ---- Custom Forms menu wrappers ----------------------------
+// These are called from the spreadsheet menu (no PIN — access is
+// controlled by who has edit access to the spreadsheet itself).
+
+function createCustomFormsMenu() {
+  var ui = SpreadsheetApp.getUi();
+  var result = ui.alert(
+    'Create Member Forms',
+    'This will create (or recreate) the New Member and Returning Member Google Forms ' +
+    'and link them to this spreadsheet. Old form links will stop working.\n\nContinue?',
+    ui.ButtonSet.YES_NO
+  );
+  if (result !== ui.Button.YES) return;
+  var pin = ui.prompt('Enter officer PIN:').getResponseText();
+  var res = JSON.parse(createCustomForms(pin));
+  if (res.success) {
+    ui.alert('Forms created!\n\nNew Member: ' + res.newMemberForm.url +
+             '\nReturning: ' + res.returningMemberForm.url);
+  } else {
+    ui.alert('Error: ' + res.error);
+  }
+}
+
+function openNewMemberFormMenu() {
+  var pin = SpreadsheetApp.getUi().prompt('Enter officer PIN:').getResponseText();
+  var res = JSON.parse(setFormCollectionWindow('new', true, pin));
+  var ui = SpreadsheetApp.getUi();
+  res.success ? ui.alert('New member form collection: OPEN')
+              : ui.alert('Error: ' + res.error);
+}
+
+function closeNewMemberFormMenu() {
+  var pin = SpreadsheetApp.getUi().prompt('Enter officer PIN:').getResponseText();
+  var res = JSON.parse(setFormCollectionWindow('new', false, pin));
+  var ui = SpreadsheetApp.getUi();
+  res.success ? ui.alert('New member form collection: CLOSED')
+              : ui.alert('Error: ' + res.error);
+}
+
+function openReturningMemberFormMenu() {
+  var pin = SpreadsheetApp.getUi().prompt('Enter officer PIN:').getResponseText();
+  var res = JSON.parse(setFormCollectionWindow('returning', true, pin));
+  var ui = SpreadsheetApp.getUi();
+  res.success ? ui.alert('Returning member form collection: OPEN')
+              : ui.alert('Error: ' + res.error);
+}
+
+function closeReturningMemberFormMenu() {
+  var pin = SpreadsheetApp.getUi().prompt('Enter officer PIN:').getResponseText();
+  var res = JSON.parse(setFormCollectionWindow('returning', false, pin));
+  var ui = SpreadsheetApp.getUi();
+  res.success ? ui.alert('Returning member form collection: CLOSED')
+              : ui.alert('Error: ' + res.error);
+}
+
+function deduplicateFormResponsesMenu() {
+  var pin = SpreadsheetApp.getUi().prompt('Enter officer PIN:').getResponseText();
+  var res = JSON.parse(deduplicateFormResponses(pin));
+  var ui = SpreadsheetApp.getUi();
+  if (res.success) {
+    ui.alert('Deduplication complete.\n\nNew member duplicates removed: ' + res.newMemberDupsRemoved +
+             '\nReturning member duplicates removed: ' + res.returningMemberDupsRemoved);
+  } else {
+    ui.alert('Error: ' + res.error);
+  }
+}
+
+function sendReturningFormRemindersMenu() {
+  var ui = SpreadsheetApp.getUi();
+  var pin = ui.prompt('Enter officer PIN:').getResponseText();
+  var res = JSON.parse(sendFormReminders('returning', pin));
+  if (res.success) {
+    ui.alert('Reminders sent: ' + res.sent + '\nSkipped (no email): ' + res.skipped);
+  } else {
+    ui.alert('Error: ' + res.error);
+  }
 }
 
 // ---- One-Time Migration from Old Roster --------------------
@@ -2729,6 +2820,20 @@ function runSemesterSync(pin) {
 
     var log = ['=== SEMESTER SYNC: ' + semester + ' @ ' + new Date().toISOString() + ' ==='];
     var newAdded = 0, returning = 0, incomplete = [], potentialGrads = [], inactivePrev = [], unmatchedReturning = [], duplicateNew = [];
+    var statusChangedInactive = [], statusChangedActive = [], lateSubmissions = [];
+
+    // ---- PRE-STEP: Deduplicate form response sheets ----
+    // Keeps the most recent submission per email (NM form) or BK# (RM form),
+    // so that officers who resubmit to correct themselves are handled correctly.
+    try {
+      var dedupResult = JSON.parse(deduplicateFormResponses(null));
+      if (dedupResult.newMemberDupsRemoved || dedupResult.returningMemberDupsRemoved) {
+        log.push('Dedup: removed ' + (dedupResult.newMemberDupsRemoved || 0) +
+          ' NM + ' + (dedupResult.returningMemberDupsRemoved || 0) + ' RM duplicates');
+      }
+    } catch (dedupErr) {
+      log.push('WARN: dedup step failed — ' + dedupErr);
+    }
 
     // ---- STEP 1: Process new member responses (these become AMs, on the 'AMs' sheet) ----
     var nmSheet = ss.getSheetByName('new_member_responses');
@@ -2740,13 +2845,21 @@ function runSemesterSync(pin) {
 
       var nmData = nmSheet.getDataRange().getValues();
       var nmCM   = _buildColMap(nmData[0]);
+      // NOTE: dedup already ran before this loop, so seenEmails tracking here
+      // is just a safety net for any edge case that slips through.
       var seenEmails = {};
+      var nmWindowClosed = _cfIsLateSubmission(null, 'new');
       for (var i = 1; i < nmData.length; i++) {
         var nr = nmData[i];
         var nmEmail = String(nr[nmCM['Personal Email'] !== undefined ? nmCM['Personal Email'] : 6] || '').trim().toLowerCase();
         if (!nmEmail) continue;
-        if (seenEmails[nmEmail]) { log.push('WARN: Duplicate new-member form: ' + nmEmail); duplicateNew.push(nmEmail); continue; }
+        if (seenEmails[nmEmail]) { log.push('WARN: Duplicate new-member form (post-dedup): ' + nmEmail); duplicateNew.push(nmEmail); continue; }
         seenEmails[nmEmail] = true;
+        // Flag late submissions (informational only — we still process them)
+        if (nmWindowClosed) {
+          lateSubmissions.push('NM: ' + nmEmail);
+          log.push('INFO: Late new-member submission: ' + nmEmail);
+        }
 
         // Check if exists — among current brothers OR already-recorded AMs.
         var found = false;
@@ -2811,11 +2924,17 @@ function runSemesterSync(pin) {
     if (rmSheet && rmSheet.getLastRow() > 1) {
       var rmData = rmSheet.getDataRange().getValues();
       var rmCM   = _buildColMap(rmData[0]);
+      var rmWindowClosed = _cfIsLateSubmission(null, 'returning');
       for (var j = 1; j < rmData.length; j++) {
         var rr = rmData[j];
         var rrBK    = String(rr[rmCM['BK #'] !== undefined ? rmCM['BK #'] : 1] || '').trim();
         var rrFirst = String(rr[rmCM['Legal First Name'] !== undefined ? rmCM['Legal First Name'] : 2] || '').trim().toLowerCase();
         var rrLast  = String(rr[rmCM['Legal Last Name']  !== undefined ? rmCM['Legal Last Name']  : 3] || '').trim().toLowerCase();
+        // Flag late submissions (informational only — still process)
+        if (rmWindowClosed) {
+          lateSubmissions.push('RM: ' + (rrBK || rrFirst + ' ' + rrLast));
+          log.push('INFO: Late returning-member submission: BK#' + rrBK + ' (' + rrFirst + ' ' + rrLast + ')');
+        }
 
         // Match by BK# only — it's the stable, unique key. Fall back to a
         // full-name match (first + last, not just first) ONLY when no BK#
@@ -2833,6 +2952,7 @@ function runSemesterSync(pin) {
             var msg1 = 'No member matches BK#' + rrBK + ' (' + rrFirst + ' ' + rrLast + ')';
             log.push('WARN: ' + msg1);
             unmatchedReturning.push(msg1);
+            _cfQueuePendingReview(ss, 'returning', rr, rmCM);
             continue;
           }
         } else if (rrFirst || rrLast) {
@@ -2849,11 +2969,13 @@ function runSemesterSync(pin) {
             var msg2 = 'No BK# submitted, ' + nameMatches.length + ' name matches for ' + rrFirst + ' ' + rrLast + ' — needs manual review.';
             log.push('WARN: ' + msg2);
             unmatchedReturning.push(msg2);
+            _cfQueuePendingReview(ss, 'returning', rr, rmCM);
             continue;
           }
         } else {
           log.push('WARN: Returning form row with no BK# and no name — skipped.');
           unmatchedReturning.push('Row with no BK# and no name submitted');
+          _cfQueuePendingReview(ss, 'returning', rr, rmCM);
           continue;
         }
 
@@ -2883,10 +3005,32 @@ function runSemesterSync(pin) {
         if (memCM['last_updated'] !== undefined) {
           memSheet.getRange(matchRow + 1, memCM['last_updated'] + 1).setValue(new Date().toISOString());
         }
+
+        // ---- Status change from form ----
+        // Apply status declared in 'Status this semester' if present.
+        // 'Graduated' → adds to potentialGrads for officer review (not auto-graduated).
+        // 'Inactive*' → marks inactive + removes chore assignments.
+        // 'Active'    → marks active (chore assignment happens at draft night).
+        var statusChange = _cfApplyStatusFromForm(rr, rmCM, matchRow, memData, memSheet, memCM, ss);
+        if (statusChange === 'inactive') {
+          statusChangedInactive.push(_displayName(memData[matchRow], memCM));
+          log.push('STATUS → inactive: ' + _displayName(memData[matchRow], memCM));
+        } else if (statusChange === 'active') {
+          statusChangedActive.push(_displayName(memData[matchRow], memCM));
+          log.push('STATUS → active: ' + _displayName(memData[matchRow], memCM));
+        } else if (statusChange === 'grad_candidate') {
+          var gradName = _displayName(memData[matchRow], memCM);
+          if (potentialGrads.indexOf(gradName + ' (self-reported: graduated)') === -1) {
+            potentialGrads.push(gradName + ' (self-reported: graduated)');
+          }
+          log.push('STATUS → grad candidate (self-reported): ' + gradName);
+        }
+
         returning++;
       }
       if (rmSheet.getLastRow() > 1) rmSheet.deleteRows(2, rmSheet.getLastRow() - 1);
-      log.push('Returning member responses processed. Updated: ' + returning);
+      log.push('Returning member responses processed. Updated: ' + returning +
+        ' | Inactive: ' + statusChangedInactive.length + ' | Active: ' + statusChangedActive.length);
     }
 
     // Reload again
@@ -2939,6 +3083,8 @@ function runSemesterSync(pin) {
       incompleteCount: incomplete.length, incompleteMembers: incomplete,
       potentialGrads: potentialGrads, inactiveMembers: inactivePrev,
       unmatchedReturning: unmatchedReturning, duplicateNew: duplicateNew,
+      statusChangedInactive: statusChangedInactive, statusChangedActive: statusChangedActive,
+      lateSubmissions: lateSubmissions,
       log: log
     };
 
@@ -2949,7 +3095,10 @@ function runSemesterSync(pin) {
         'New members added: ' + newAdded + '\n' +
         'Returning members updated: ' + returning + '\n' +
         'Forms not submitted: ' + incomplete.length + (incomplete.length ? '\n  → ' + incomplete.slice(0,5).join(', ') + (incomplete.length > 5 ? '...' : '') : '') + '\n\n' +
-        (unmatchedReturning.length ? '❗ Unmatched returning forms (' + unmatchedReturning.length + ') — needs manual review:\n  ' + unmatchedReturning.slice(0,5).join('\n  ') + '\n\n' : '') +
+        (statusChangedInactive.length ? '🔴 Marked inactive (from form): ' + statusChangedInactive.join(', ') + '\n\n' : '') +
+        (statusChangedActive.length ? '🟢 Reactivated (from form): ' + statusChangedActive.join(', ') + '\n\n' : '') +
+        (unmatchedReturning.length ? '❗ Unmatched returning forms (' + unmatchedReturning.length + ') — queued for review:\n  ' + unmatchedReturning.slice(0,5).join('\n  ') + '\n\n' : '') +
+        (lateSubmissions.length ? '⏰ Late submissions (' + lateSubmissions.length + ') — processed anyway.\n\n' : '') +
         (potentialGrads.length ? '⚠️ Potential graduates (' + potentialGrads.length + '):\n  ' + potentialGrads.slice(0,5).join('\n  ') + '\n\n' : '') +
         (inactivePrev.length ? '📋 Inactive last semester (' + inactivePrev.length + '):\n  ' + inactivePrev.slice(0,5).join('\n  ') : '');
       ui.alert('Semester Sync', summaryMsg, ui.ButtonSet.OK);

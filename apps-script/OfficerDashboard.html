@@ -778,6 +778,84 @@
         </div>
       </div>
 
+      <!-- 3b. Custom Forms Manager -->
+      <div class="admin-section">
+        <div class="admin-section-header" onclick="toggleAdminSection('admin-forms');formsManagerOnExpand()">
+          <h2>Custom Forms Manager</h2>
+          <span class="admin-section-toggle" id="admin-forms-toggle">▼</span>
+        </div>
+        <div class="admin-section-body" id="admin-forms-body" style="display:none">
+
+          <!-- Collection window controls -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:20px">
+            <div style="background:var(--green-bg);border-radius:8px;padding:16px;border:1px solid #bbf7d0">
+              <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px;color:var(--green)">Create / Recreate Forms</div>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Programmatically creates both Google Forms and links them to this spreadsheet. Old form links will stop working.</p>
+              <button class="btn-primary" onclick="openCreateFormsModal()">Create Member Forms</button>
+            </div>
+            <div id="forms-url-card" style="background:#f8fafc;border-radius:8px;padding:16px">
+              <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Form Links</div>
+              <div id="forms-url-content" style="font-size:0.8rem;color:var(--muted)">Loading…</div>
+            </div>
+          </div>
+
+          <!-- Collection window toggles -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:20px">
+            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+              <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">New Member Form Window</div>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Open when accepting new pledges/AMs. Late submissions are still processed but flagged.</p>
+              <div style="display:flex;gap:8px">
+                <button class="btn-primary" onclick="setFormWindow('new',true)" style="flex:1">Open</button>
+                <button class="btn-outline" onclick="setFormWindow('new',false)" style="flex:1">Close</button>
+              </div>
+              <div id="nm-window-status" style="font-size:0.75rem;margin-top:8px;color:var(--muted)"></div>
+            </div>
+            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+              <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Returning Member Form Window</div>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Open at the start of each semester for existing members to update their info.</p>
+              <div style="display:flex;gap:8px">
+                <button class="btn-primary" onclick="setFormWindow('returning',true)" style="flex:1">Open</button>
+                <button class="btn-outline" onclick="setFormWindow('returning',false)" style="flex:1">Close</button>
+              </div>
+              <div id="rm-window-status" style="font-size:0.75rem;margin-top:8px;color:var(--muted)"></div>
+            </div>
+          </div>
+
+          <!-- Response tracking -->
+          <div style="background:#f8fafc;border-radius:8px;padding:16px;margin-bottom:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="font-size:0.9rem;font-weight:700">Response Tracking</div>
+              <button class="btn-outline" onclick="loadFormStatus()" style="font-size:0.78rem;padding:5px 12px">Refresh</button>
+            </div>
+            <div id="form-status-content" style="font-size:0.85rem;color:var(--muted)">Click Refresh to load.</div>
+          </div>
+
+          <!-- Pending review entries -->
+          <div style="background:var(--yellow-bg);border-radius:8px;padding:16px;border:1px solid #fde68a;margin-bottom:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div style="font-size:0.9rem;font-weight:700;color:var(--yellow)">Pending Review Queue</div>
+              <button class="btn-outline" onclick="loadPendingReview()" style="font-size:0.78rem;padding:5px 12px">Load</button>
+            </div>
+            <p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px">Unmatched returning-member form responses that need manual resolution before they can be applied.</p>
+            <div id="pending-review-content" style="font-size:0.85rem">Click Load to see entries.</div>
+          </div>
+
+          <!-- Actions row -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn-outline" onclick="runDedup()" style="font-size:0.82rem">Deduplicate Form Responses</button>
+            <button class="btn-outline" onclick="loadNonResponders()" style="font-size:0.82rem">Show Non-Responders</button>
+            <button class="btn-primary" onclick="openSendRemindersModal()" style="font-size:0.82rem">Send Reminders</button>
+          </div>
+
+          <!-- Non-responders list (hidden until loaded) -->
+          <div id="non-responders-section" style="display:none;margin-top:16px">
+            <div style="font-size:0.85rem;font-weight:700;margin-bottom:8px">Non-Responders (Returning Form)</div>
+            <div id="non-responders-list" style="font-size:0.82rem;color:var(--muted)"></div>
+          </div>
+
+        </div>
+      </div>
+
       <!-- 4. Officer Handoff -->
       <div class="admin-section">
         <div class="admin-section-header" onclick="toggleAdminSection('admin-handoff')">
@@ -1165,6 +1243,37 @@
     <div id="sem-sync-results-body" style="max-height:60vh;overflow-y:auto"></div>
     <div class="modal-btns" style="margin-top:14px">
       <button class="btn-primary" onclick="closeSemesterSyncResults()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Forms Modal -->
+<div class="modal-overlay" id="create-forms-modal">
+  <div class="modal" style="width:480px;max-width:96vw">
+    <h3>Create Member Forms</h3>
+    <p style="font-size:0.83rem;color:var(--muted);margin-bottom:14px;line-height:1.5">
+      This creates two Google Forms (New Member intake + Returning Member semester update) and links
+      them to this spreadsheet. Any existing form links will stop working — share the new URLs with members.
+    </p>
+    <div id="create-forms-result" style="display:none;padding:10px;border-radius:6px;margin-bottom:12px;font-size:0.82rem"></div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="document.getElementById('create-forms-modal').style.display='none'">Cancel</button>
+      <button class="btn-primary" id="create-forms-btn" onclick="doCreateForms()">Create Forms</button>
+    </div>
+  </div>
+</div>
+
+<!-- Send Reminders Modal -->
+<div class="modal-overlay" id="send-reminders-modal">
+  <div class="modal">
+    <h3>Send Form Reminders</h3>
+    <p style="font-size:0.83rem;color:var(--muted);margin-bottom:14px;line-height:1.5">
+      Emails active members who have not yet submitted the returning-member form with a reminder and the form link.
+    </p>
+    <div id="send-reminders-result" style="display:none;padding:10px;border-radius:6px;margin-bottom:12px;font-size:0.82rem"></div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="document.getElementById('send-reminders-modal').style.display='none'">Cancel</button>
+      <button class="btn-primary" id="send-reminders-btn" onclick="doSendReminders()">Send Reminders</button>
     </div>
   </div>
 </div>
@@ -3842,10 +3951,13 @@ function showSemesterSyncResults(r) {
       '<div style="background:#eff6ff;border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#2563eb">' + (r.returningUpdated||0) + '</div><div style="font-size:0.72rem;color:var(--muted)">RETURNING UPDATED</div></div>' +
       '<div style="background:#fffbeb;border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#a16207">' + (r.incompleteCount||0) + '</div><div style="font-size:0.72rem;color:var(--muted)">FORM NOT SUBMITTED</div></div>' +
     '</div>' +
-    _syncListBlock('❗ Unmatched returning forms', r.unmatchedReturning, '#b91c1c', 'Nobody was updated for these — match manually via Edit or have them resubmit with the right BK#.') +
+    _syncListBlock('❗ Unmatched returning forms', r.unmatchedReturning, '#b91c1c', 'Queued in Pending Review — match manually or have them resubmit with the correct BK#.') +
+    _syncListBlock('🔴 Marked inactive (from form)', r.statusChangedInactive, '#b91c1c', 'Their chore assignments were removed. Reassign at next draft night if they return.') +
+    _syncListBlock('🟢 Reactivated (from form)', r.statusChangedActive, 'var(--green)', 'Assign chores at draft night.') +
     _syncListBlock('⚠️ Potential graduates', r.potentialGrads, '#a16207', 'Review in Member Manager and graduate manually — nothing was changed automatically.') +
     _syncListBlock('📋 Inactive last semester', r.inactiveMembers, 'var(--muted)', 'Still marked inactive — reactivate manually if they\'re back.') +
-    _syncListBlock('⚠️ Duplicate new-member submissions', r.duplicateNew, '#a16207', 'Same email submitted the new-member form more than once — only the first was used.') +
+    _syncListBlock('⚠️ Post-dedup duplicates (same email)', r.duplicateNew, '#a16207', 'Same email submitted more than once even after deduplication — investigate manually.') +
+    _syncListBlock('⏰ Late submissions', r.lateSubmissions, '#a16207', 'Submitted after the collection window closed — processed anyway, flagged for info only.') +
     _syncListBlock('Forms not submitted', r.incompleteMembers, 'var(--muted)', '');
   document.getElementById('sem-sync-results-body').innerHTML = html || '<div style="color:var(--muted);text-align:center;padding:20px">Nothing to review — all forms matched cleanly.</div>';
   document.getElementById('sem-sync-results-modal').classList.add('open');
@@ -3967,6 +4079,262 @@ function confirmChangePin() {
 
 // Wire loadAdminMembers → loadMemberManager for legacy callers
 function loadAdminMembers() { loadMemberManager(); }
+
+// ============================================================
+// Custom Forms Manager
+// ============================================================
+
+var correctPin = null; // reuse the already-authenticated PIN
+
+function openCreateFormsModal() {
+  document.getElementById('create-forms-result').style.display = 'none';
+  document.getElementById('create-forms-modal').style.display = 'flex';
+}
+
+function doCreateForms() {
+  var btn = document.getElementById('create-forms-btn');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  var pin = correctPin;
+  google.script.run
+    .withSuccessHandler(function(raw) {
+      var r = JSON.parse(raw);
+      var el = document.getElementById('create-forms-result');
+      el.style.display = 'block';
+      if (r.success) {
+        el.style.background = 'var(--green-bg)';
+        el.innerHTML =
+          '<strong>Forms created!</strong><br>' +
+          'New Member: <a href="' + r.newMemberForm.url + '" target="_blank">Open form</a><br>' +
+          'Returning Member: <a href="' + r.returningMemberForm.url + '" target="_blank">Open form</a>';
+        loadFormUrlCard();
+      } else {
+        el.style.background = 'var(--red-bg)';
+        el.textContent = 'Error: ' + r.error;
+      }
+      btn.disabled = false; btn.textContent = 'Create Forms';
+    })
+    .withFailureHandler(function(e) {
+      showToast('Error: ' + e.message);
+      btn.disabled = false; btn.textContent = 'Create Forms';
+    })
+    .createCustomForms(pin);
+}
+
+function loadFormUrlCard() {
+  google.script.run
+    .withSuccessHandler(function(raw) {
+      var r = JSON.parse(raw);
+      var el = document.getElementById('forms-url-content');
+      if (!r.success) { el.textContent = 'Error loading URLs.'; return; }
+      var html = '';
+      if (r.newMemberFormUrl) {
+        html += '<div style="margin-bottom:8px">' +
+          '<span style="font-weight:700">New Member:</span> ' +
+          '<a href="' + r.newMemberFormUrl + '" target="_blank" style="word-break:break-all">Link</a>' +
+          ' <span style="margin-left:8px;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;' +
+          (r.newMemberFormOpen ? 'background:#dcfce7;color:#16a34a' : 'background:#fee2e2;color:#dc2626') + '">' +
+          (r.newMemberFormOpen ? 'OPEN' : 'CLOSED') + '</span></div>';
+      }
+      if (r.returningMemberFormUrl) {
+        html += '<div>' +
+          '<span style="font-weight:700">Returning:</span> ' +
+          '<a href="' + r.returningMemberFormUrl + '" target="_blank" style="word-break:break-all">Link</a>' +
+          ' <span style="margin-left:8px;padding:2px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;' +
+          (r.returningMemberFormOpen ? 'background:#dcfce7;color:#16a34a' : 'background:#fee2e2;color:#dc2626') + '">' +
+          (r.returningMemberFormOpen ? 'OPEN' : 'CLOSED') + '</span></div>';
+      }
+      el.innerHTML = html || '<em>No forms created yet.</em>';
+    })
+    .withFailureHandler(function() {
+      document.getElementById('forms-url-content').textContent = 'Could not load.';
+    })
+    .getCustomFormUrls();
+}
+
+function setFormWindow(formType, isOpen) {
+  var pin = correctPin;
+  google.script.run
+    .withSuccessHandler(function(raw) {
+      var r = JSON.parse(raw);
+      var statusEl = document.getElementById(formType === 'new' ? 'nm-window-status' : 'rm-window-status');
+      if (r.success) {
+        statusEl.textContent = 'Collection window: ' + (isOpen ? 'OPEN' : 'CLOSED');
+        statusEl.style.color = isOpen ? 'var(--green)' : 'var(--red)';
+        showToast((formType === 'new' ? 'New member' : 'Returning member') + ' form: ' + (isOpen ? 'OPEN' : 'CLOSED'));
+        loadFormUrlCard();
+      } else {
+        showToast('Error: ' + r.error);
+      }
+    })
+    .withFailureHandler(onError)
+    .setFormCollectionWindow(formType, isOpen, pin);
+}
+
+function loadFormStatus() {
+  var el = document.getElementById('form-status-content');
+  el.textContent = 'Loading…';
+  google.script.run
+    .withSuccessHandler(function(raw) {
+      var r = JSON.parse(raw);
+      if (!r.success) { el.textContent = 'Error: ' + r.error; return; }
+      var rm = r.returningForm;
+      var nm = r.newMemberForm;
+      var html =
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">' +
+        '<div>' +
+        '<div style="font-weight:700;margin-bottom:8px">Returning Member Form</div>' +
+        '<div style="margin-bottom:4px">Completion: <strong>' + rm.completionPct + '%</strong> (' + rm.respondedCount + ' / ' + rm.total + ')</div>' +
+        '<div style="margin-bottom:4px">Pending: <span style="color:var(--red);font-weight:700">' + rm.pendingCount + '</span></div>' +
+        '<div>Window: <span style="font-weight:700;color:' + (rm.windowOpen ? 'var(--green)' : 'var(--red)') + '">' + (rm.windowOpen ? 'OPEN' : 'CLOSED') + '</span></div>' +
+        '</div>' +
+        '<div>' +
+        '<div style="font-weight:700;margin-bottom:8px">New Member Form</div>' +
+        '<div style="margin-bottom:4px">Responses received: <strong>' + nm.responseCount + '</strong></div>' +
+        '<div style="margin-bottom:4px">Processed as AMs: <strong>' + nm.processedAsAMs + '</strong></div>' +
+        '<div style="margin-bottom:4px">Pending processing: <span style="color:var(--yellow);font-weight:700">' + nm.pendingProcessing + '</span></div>' +
+        '<div>Window: <span style="font-weight:700;color:' + (nm.windowOpen ? 'var(--green)' : 'var(--red)') + '">' + (nm.windowOpen ? 'OPEN' : 'CLOSED') + '</span></div>' +
+        '</div>' +
+        '</div>';
+      if (r.pendingReviewCount > 0) {
+        html += '<div style="margin-top:12px;padding:8px 12px;background:var(--yellow-bg);border-radius:6px;font-size:0.82rem;border:1px solid #fde68a">' +
+          '⚠️ <strong>' + r.pendingReviewCount + '</strong> unmatched returning-member response(s) need manual review.' +
+          '</div>';
+      }
+      el.innerHTML = html;
+    })
+    .withFailureHandler(function(e) {
+      el.textContent = 'Error: ' + e.message;
+    })
+    .getFormResponseStatus();
+}
+
+function loadNonResponders() {
+  var section = document.getElementById('non-responders-section');
+  var list    = document.getElementById('non-responders-list');
+  section.style.display = 'none';
+  list.textContent = 'Loading…';
+  google.script.run
+    .withSuccessHandler(function(raw) {
+      var r = JSON.parse(raw);
+      if (!r.success) { list.textContent = 'Error: ' + r.error; section.style.display = 'block'; return; }
+      if (!r.nonResponders || !r.nonResponders.length) {
+        list.innerHTML = '<span style="color:var(--green)">All active members have submitted.</span>';
+      } else {
+        var rows = r.nonResponders.map(function(m) {
+          return '<tr><td style="padding:4px 10px">' + (m.name || '—') + '</td>' +
+            '<td style="padding:4px 10px;color:var(--muted)">' + (m.email || 'no email') + '</td>' +
+            '<td style="padding:4px 10px;color:var(--muted)">' + (m.status || '') + '</td></tr>';
+        }).join('');
+        list.innerHTML = '<p style="margin-bottom:8px;color:var(--muted)">' + r.count + ' member(s) pending:</p>' +
+          '<table style="border-collapse:collapse;font-size:0.82rem;width:100%">' +
+          '<tr style="border-bottom:1px solid var(--border)"><th style="padding:4px 10px;text-align:left">Name</th><th style="padding:4px 10px;text-align:left">Email</th><th style="padding:4px 10px;text-align:left">Status</th></tr>' +
+          rows + '</table>';
+      }
+      section.style.display = 'block';
+    })
+    .withFailureHandler(function(e) {
+      list.textContent = 'Error: ' + e.message;
+      section.style.display = 'block';
+    })
+    .getFormNonRespondersJson('returning');
+}
+
+function runDedup() {
+  var pin = correctPin;
+  google.script.run
+    .withSuccessHandler(function(raw) {
+      var r = JSON.parse(raw);
+      if (r.success) {
+        showToast('Dedup done. Removed: ' + r.newMemberDupsRemoved + ' NM + ' + r.returningMemberDupsRemoved + ' RM duplicates.');
+      } else {
+        showToast('Error: ' + r.error);
+      }
+    })
+    .withFailureHandler(onError)
+    .deduplicateFormResponses(pin);
+}
+
+function loadPendingReview() {
+  var el = document.getElementById('pending-review-content');
+  el.textContent = 'Loading…';
+  var pin = correctPin;
+  google.script.run
+    .withSuccessHandler(function(raw) {
+      var r = JSON.parse(raw);
+      if (!r.success) { el.textContent = 'Error: ' + r.error; return; }
+      if (!r.entries || !r.entries.length) {
+        el.innerHTML = '<span style="color:var(--green);font-size:0.82rem">No unresolved entries.</span>';
+        return;
+      }
+      var rows = r.entries.map(function(e) {
+        return '<tr style="border-bottom:1px solid var(--border)">' +
+          '<td style="padding:6px 10px;font-size:0.8rem">' + (e.legalFirst + ' ' + e.legalLast).trim() + '</td>' +
+          '<td style="padding:6px 10px;font-size:0.8rem;color:var(--muted)">' + (e.bkNumber || 'no BK#') + '</td>' +
+          '<td style="padding:6px 10px;font-size:0.8rem;color:var(--muted)">' + (e.statusRequested || '') + '</td>' +
+          '<td style="padding:6px 10px;font-size:0.8rem;color:var(--muted)">' + (e.submittedAt || '').substring(0,16) + '</td>' +
+          '<td style="padding:6px 10px"><button class="btn-outline" style="padding:3px 10px;font-size:0.75rem" onclick="doResolvePending(\'' + e.reviewId + '\')">Resolve</button></td>' +
+          '</tr>';
+      }).join('');
+      el.innerHTML =
+        '<table style="border-collapse:collapse;width:100%">' +
+        '<tr style="border-bottom:1px solid var(--border)"><th style="padding:6px 10px;text-align:left;font-size:0.75rem">Name</th><th style="padding:6px 10px;text-align:left;font-size:0.75rem">BK#</th><th style="padding:6px 10px;text-align:left;font-size:0.75rem">Status req.</th><th style="padding:6px 10px;text-align:left;font-size:0.75rem">Submitted</th><th></th></tr>' +
+        rows + '</table>';
+    })
+    .withFailureHandler(onError)
+    .getPendingReviewEntries(pin);
+}
+
+function doResolvePending(reviewId) {
+  var pin = correctPin;
+  google.script.run
+    .withSuccessHandler(function(raw) {
+      var r = JSON.parse(raw);
+      if (r.success) { showToast('Entry resolved.'); loadPendingReview(); }
+      else showToast('Error: ' + r.error);
+    })
+    .withFailureHandler(onError)
+    .resolvePendingReview(reviewId, 'Officer', pin);
+}
+
+function openSendRemindersModal() {
+  document.getElementById('send-reminders-result').style.display = 'none';
+  document.getElementById('send-reminders-modal').style.display = 'flex';
+}
+
+function doSendReminders() {
+  var btn = document.getElementById('send-reminders-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  var pin = correctPin;
+  google.script.run
+    .withSuccessHandler(function(raw) {
+      var r = JSON.parse(raw);
+      var el = document.getElementById('send-reminders-result');
+      el.style.display = 'block';
+      if (r.success) {
+        el.style.background = 'var(--green-bg)';
+        el.textContent = 'Sent: ' + r.sent + ' | Skipped (no email): ' + r.skipped;
+      } else {
+        el.style.background = 'var(--red-bg)';
+        el.textContent = 'Error: ' + r.error;
+      }
+      btn.disabled = false; btn.textContent = 'Send Reminders';
+    })
+    .withFailureHandler(function(e) {
+      showToast('Error: ' + e.message);
+      btn.disabled = false; btn.textContent = 'Send Reminders';
+    })
+    .sendFormReminders('returning', pin);
+}
+
+// Load form URLs lazily on first expand of the forms manager section.
+var _formsManagerInitialized = false;
+function formsManagerOnExpand() {
+  if (!_formsManagerInitialized) {
+    _formsManagerInitialized = true;
+    loadFormUrlCard();
+  }
+}
+
 </script>
 </body>
 </html>
