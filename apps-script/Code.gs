@@ -67,6 +67,12 @@ function logError(fnName, err, level) {
 
 function logInfo(fnName, msg) { logError(fnName, msg, 'INFO'); }
 
+// Allows HTML templates to include other HTML files (e.g. SharedScripts.html).
+// Usage in .html: <?!= include('SharedScripts') ?>
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
 // ---- Column-map helpers (support both old + new member schema) ----
 
 // Build name→index map from a header row.
@@ -344,6 +350,9 @@ function doGet(e) {
       case 'home':
         tmpl = HtmlService.createTemplateFromFile('HomeApp');
         break;
+      case 'setup':
+        tmpl = HtmlService.createTemplateFromFile('SetupApp');
+        break;
       case 'member':
       default:
         tmpl = HtmlService.createTemplateFromFile('MemberView');
@@ -351,8 +360,12 @@ function doGet(e) {
     }
     tmpl.baseUrl = ScriptApp.getService().getUrl();
     tmpl.todayDate = Utilities.formatDate(new Date(), 'America/New_York', 'yyyy-MM-dd');
+    var cfg_ = getChapterConfig();
+    tmpl.cfg = cfg_;
+    tmpl.cfgJson = JSON.stringify(cfg_);
+    var title_ = (cfg_.chapter.chapter_name || 'BK Lambda Chi') + ' — ' + (cfg_.labels.label_chore || 'Chore') + ' System';
     return tmpl.evaluate()
-      .setTitle('BK Lambda Chi')
+      .setTitle(title_)
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   } catch (err) {
@@ -1465,6 +1478,91 @@ function getChapterConfig() {
 // Frontend-callable wrapper (google.script.run).
 function getChapterConfigJson() {
   return JSON.stringify(getChapterConfig());
+}
+
+// Seeded by the setup wizard (?app=setup). Writes all chapter config keys
+// to the config sheet, creates required tabs, and sets up the trigger.
+// Returns { success, message, warnings[] }.
+function initChapter(setupJson) {
+  try {
+    var setup = JSON.parse(setupJson);
+    var ss = getSpreadsheet();
+    var configSheet = ss.getSheetByName('config');
+    if (!configSheet) {
+      configSheet = ss.insertSheet('config');
+      configSheet.appendRow(['key', 'value']);
+      configSheet.setFrozenRows(1);
+    }
+
+    // Build a map of all keys to write
+    var toWrite = {};
+
+    // Identity
+    if (setup.chapter_name)   toWrite['chapter_name']   = setup.chapter_name;
+    if (setup.primary_color)  toWrite['primary_color']  = setup.primary_color;
+    if (setup.accent_color)   toWrite['accent_color']   = setup.accent_color;
+    if (setup.logo_url)       toWrite['logo_url']       = setup.logo_url;
+
+    // Vocabulary labels
+    var labelKeys = Object.keys(LABEL_DEFAULTS);
+    labelKeys.forEach(function(k) { if (setup[k]) toWrite[k] = setup[k]; });
+
+    // Module flags
+    var moduleKeys = Object.keys(MODULE_DEFAULTS);
+    moduleKeys.forEach(function(k) {
+      if (setup[k] !== undefined) toWrite[k] = setup[k] ? 'true' : 'false';
+    });
+
+    // Option lists
+    var optKeys = Object.keys(OPTIONS_DEFAULTS);
+    optKeys.forEach(function(k) { if (setup[k] !== undefined) toWrite[k] = setup[k]; });
+
+    // Operational
+    if (setup.semester)         toWrite['semester']         = setup.semester;
+    if (setup.week_start)       toWrite['week_start']       = setup.week_start;
+    if (setup.officer_emails)   toWrite['officer_emails']   = setup.officer_emails;
+    if (setup.fine_amount)      toWrite['fine_amount']      = setup.fine_amount;
+    if (setup.officer_pin)      toWrite['officer_pin']      = setup.officer_pin;
+    if (setup.signature_points) toWrite['signature_points'] = setup.signature_points;
+
+    // Write all keys (upsert)
+    Object.keys(toWrite).forEach(function(k) { setConfigValue(k, toWrite[k]); });
+
+    // Seed chore list if provided
+    if (setup.chores && setup.chores.length) {
+      var choreData = { chores: setup.chores };
+      var files = DriveApp.getFilesByName('chore_ratios.json');
+      if (files.hasNext()) {
+        files.next().setContent(JSON.stringify(choreData, null, 2));
+      } else {
+        DriveApp.createFile('chore_ratios.json', JSON.stringify(choreData, null, 2), 'application/json');
+      }
+    }
+
+    // Create all required tabs
+    ensureTabsExist();
+
+    var warnings = [];
+    // Warn if no trigger exists
+    var hasTrigger = ScriptApp.getProjectTriggers().some(function(t) {
+      return t.getHandlerFunction() === 'runMondayReset';
+    });
+    if (!hasTrigger) {
+      try {
+        ScriptApp.newTrigger('runMondayReset')
+          .timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(6)
+          .inTimezone('America/New_York').create();
+      } catch (_) {
+        warnings.push('Could not create Monday trigger automatically — do it manually from Setup menu.');
+      }
+    }
+
+    logInfo('initChapter', 'Chapter initialized: ' + (setup.chapter_name || '?'));
+    return JSON.stringify({ success: true, message: 'Chapter initialized successfully!', warnings: warnings });
+  } catch (err) {
+    logError('initChapter', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
 }
 
 // ---- Semester Tools: CSV text import -----------------------

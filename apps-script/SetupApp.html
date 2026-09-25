@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter Setup — Chore Management System</title>
+<style>
+  :root {
+    --primary: #1a3a4a;
+    --gold: #f5a623;
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --border: #dde3ea;
+    --text: #1a202c;
+    --muted: #64748b;
+    --green: #16a34a;
+    --red: #dc2626;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.05);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* Topbar */
+  .topbar {
+    background: var(--primary);
+    color: white;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 3px solid var(--gold);
+  }
+  .topbar h1 { font-size: 1.1rem; font-weight: 800; color: var(--gold); }
+  .topbar p  { font-size: 0.75rem; color: rgba(255,255,255,0.6); }
+
+  /* Progress bar */
+  .progress-wrap {
+    background: white;
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    overflow-x: auto;
+  }
+  .step-dot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    cursor: default;
+  }
+  .step-dot .dot {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--border);
+    color: var(--muted);
+    font-weight: 700;
+    font-size: 0.8rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .step-dot.active .dot  { background: var(--primary); color: white; }
+  .step-dot.done .dot    { background: var(--green); color: white; }
+  .step-dot .label { font-size: 0.75rem; font-weight: 600; color: var(--muted); white-space: nowrap; }
+  .step-dot.active .label { color: var(--primary); }
+  .step-dot.done .label   { color: var(--green); }
+  .step-connector { flex: 1; height: 2px; background: var(--border); min-width: 12px; max-width: 40px; flex-shrink: 0; }
+
+  /* Main layout */
+  .container { max-width: 700px; margin: 0 auto; padding: 32px 20px 60px; }
+
+  .step-panel { display: none; }
+  .step-panel.active { display: block; }
+
+  .step-title { font-size: 1.3rem; font-weight: 800; margin-bottom: 4px; }
+  .step-subtitle { font-size: 0.85rem; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { font-size: 0.75rem; font-weight: 700; display: block; margin-bottom: 5px; }
+  .field .hint { font-size: 0.72rem; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+  input[type=text], input[type=email], input[type=number], input[type=color], textarea, select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    background: white;
+    color: var(--text);
+    transition: border-color 0.15s;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); }
+  input[type=color] { height: 38px; padding: 2px 4px; cursor: pointer; }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 500px) { .field-row { grid-template-columns: 1fr; } }
+
+  /* Vocab grid */
+  .vocab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .vocab-item label { color: var(--text); }
+  .vocab-item .default { font-size: 0.68rem; color: var(--muted); }
+
+  /* Module toggles */
+  .modules-grid { display: flex; flex-direction: column; gap: 10px; }
+  .module-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: #fafafa;
+    gap: 12px;
+  }
+  .module-row .mod-info { flex: 1; min-width: 0; }
+  .module-row .mod-name { font-weight: 700; font-size: 0.88rem; }
+  .module-row .mod-desc { font-size: 0.74rem; color: var(--muted); line-height: 1.4; margin-top: 2px; }
+  .toggle {
+    position: relative; width: 40px; height: 22px; flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle .slider {
+    position: absolute; inset: 0;
+    background: var(--border); border-radius: 22px;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .toggle .slider:before {
+    content: ''; position: absolute;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: white; top: 3px; left: 3px;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle input:checked + .slider { background: var(--green); }
+  .toggle input:checked + .slider:before { transform: translateX(18px); }
+
+  /* Chore list editor */
+  .chore-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .chore-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border: 1px solid var(--border);
+    border-radius: 8px; background: white;
+  }
+  .chore-item input[type=text] { flex: 1; border: none; padding: 0; font-size: 0.88rem; background: transparent; }
+  .chore-item input[type=number] { width: 64px; font-size: 0.88rem; }
+  .chore-item .remove-btn {
+    background: none; border: none; color: var(--red); cursor: pointer;
+    font-size: 1.1rem; padding: 0 4px; line-height: 1;
+  }
+  .chore-item label { font-size: 0.68rem; color: var(--muted); white-space: nowrap; margin-bottom: 0; }
+  .add-chore-btn {
+    background: none; border: 1px dashed var(--border); border-radius: 8px;
+    color: var(--muted); cursor: pointer; padding: 8px; font-size: 0.83rem;
+    width: 100%; transition: border-color 0.15s, color 0.15s;
+  }
+  .add-chore-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* Nav buttons */
+  .nav-btns {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 24px;
+  }
+  .btn-primary {
+    background: var(--primary); color: white;
+    border: none; border-radius: 8px;
+    padding: 11px 24px; font-size: 0.9rem; font-weight: 700;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-outline {
+    background: white; color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 20px; font-size: 0.88rem; font-weight: 600;
+    cursor: pointer; transition: border-color 0.15s;
+  }
+  .btn-outline:hover { border-color: var(--primary); }
+
+  /* Color preview */
+  .color-preview {
+    height: 40px; border-radius: 8px; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.78rem; font-weight: 700; margin-top: 6px;
+    transition: background 0.15s;
+  }
+
+  /* Summary / finish */
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 480px) { .summary-grid { grid-template-columns: 1fr; } }
+  .summary-item { padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: #fafafa; }
+  .summary-item .sk { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); }
+  .summary-item .sv { font-size: 0.9rem; font-weight: 700; margin-top: 2px; }
+
+  .checklist { list-style: none; padding: 0; }
+  .checklist li { padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; display: flex; align-items: center; gap: 8px; }
+  .checklist li:last-child { border-bottom: none; }
+  .checklist .ck { font-size: 1rem; }
+
+  .success-box {
+    background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius);
+    padding: 24px; text-align: center; margin-top: 16px;
+  }
+  .success-box h2 { color: var(--green); margin-bottom: 8px; }
+  .success-box p { color: var(--muted); font-size: 0.88rem; line-height: 1.6; }
+  .error-box {
+    background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;
+    padding: 14px 16px; margin-top: 12px; font-size: 0.85rem; color: var(--red);
+    display: none;
+  }
+
+  .warn-box {
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+    padding: 10px 14px; font-size: 0.82rem; color: #92400e; margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <h1>⚙️ Chapter Setup Wizard</h1>
+    <p>Chore Management System — one-time configuration</p>
+  </div>
+</div>
+
+<!-- Progress -->
+<div class="progress-wrap" id="progress-wrap"></div>
+
+<div class="container">
+
+  <!-- Step 1: Identity -->
+  <div class="step-panel active" id="step-1">
+    <div class="step-title">Step 1 — Chapter Identity</div>
+    <div class="step-subtitle">Tell the system about your chapter. This appears in headers, emails, and page titles.</div>
+
+    <div class="card">
+      <div class="card-title">Chapter Info</div>
+      <div class="field">
+        <label>Chapter / Organization Name *</label>
+        <input type="text" id="s1-chapter-name" placeholder="e.g. Lambda Chi Alpha — Zeta Zeta" value="Lambda Chi Alpha">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Primary Color</label>
+          <input type="color" id="s1-primary-color" value="#093D20">
+          <div id="s1-primary-preview" class="color-preview" style="background:#093D20;color:#FFB71D">Header / Topbar</div>
+        </div>
+        <div class="field">
+          <label>Accent Color</label>
+          <input type="color" id="s1-accent-color" value="#FFB71D">
+          <div id="s1-accent-preview" class="color-preview" style="background:#FFB71D;color:#093D20">Highlights / Badges</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Logo URL <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <input type="text" id="s1-logo-url" placeholder="https://...">
+        <div class="hint">Paste a public image URL. Shown in page headers. Leave blank to show no logo.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Vocabulary -->
+  <div class="step-panel" id="step-2">
+    <div class="step-title">Step 2 — Vocabulary</div>
+    <div class="step-subtitle">Adapt the system's terminology to your chapter. Leave any field blank to keep the default.</div>
+
+    <div class="card">
+      <div class="card-title">Labels (leave blank to use default)</div>
+      <div class="vocab-grid" id="vocab-grid"></div>
+    </div>
+  </div>
+
+  <!-- Step 3: Modules -->
+  <div class="step-panel" id="step-3">
+    <div class="step-title">Step 3 — Features</div>
+    <div class="step-subtitle">Enable or disable system modules. Disabled modules hide their columns, fields, and tabs completely.</div>
+
+    <div class="card">
+      <div class="card-title">Module Toggles</div>
+      <div class="modules-grid" id="modules-grid"></div>
+    </div>
+  </div>
+
+  <!-- Step 4: Options -->
+  <div class="step-panel" id="step-4">
+    <div class="step-title">Step 4 — Option Lists</div>
+    <div class="step-subtitle">Define the choices available in dropdowns. Comma-separated values.</div>
+
+    <div class="card">
+      <div class="card-title">Dropdown Options</div>
+
+      <div class="field" id="opt-meal-wrap">
+        <label>Meal Plan Options</label>
+        <input type="text" id="opt-meal" value="Full,Half">
+        <div class="hint">Shown in member edit form. Example: <code>Full,Half,None</code></div>
+      </div>
+      <div class="field">
+        <label>Officer Role Options</label>
+        <input type="text" id="opt-officer-roles" placeholder="President, VP, Treasurer, ...">
+        <div class="hint">Leave blank to use a free-text field instead of a dropdown.</div>
+      </div>
+      <div class="field" id="opt-am-activity-wrap">
+        <label>AM Activity Types <span style="font-weight:400;color:var(--muted)">(for signatures)</span></label>
+        <input type="text" id="opt-am-activities" placeholder="Study session, Brotherhood event, ...">
+        <div class="hint">Leave blank for a free-text field.</div>
+      </div>
+      <div class="field">
+        <label>Member Status Options</label>
+        <input type="text" id="opt-statuses" value="active,inactive,alumni,associate">
+        <div class="hint">Statuses officers can set on a member. <code>active</code> and <code>inactive</code> are required.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 5: Operational -->
+  <div class="step-panel" id="step-5">
+    <div class="step-title">Step 5 — Operational Settings</div>
+    <div class="step-subtitle">These are the settings you'll update each semester. Fine amount and PIN can be changed later from the Officer Dashboard.</div>
+
+    <div class="card">
+      <div class="card-title">Semester Config</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Current Semester *</label>
+          <input type="text" id="s5-semester" placeholder="e.g. Fall 2026">
+        </div>
+        <div class="field">
+          <label>First Monday of Semester *</label>
+          <input type="text" id="s5-week-start" placeholder="YYYY-MM-DD">
+          <div class="hint">The Monday that starts the first chore week.</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Officer Email(s) <span style="font-weight:400;color:var(--muted)">(comma-separated)</span></label>
+        <input type="email" id="s5-emails" placeholder="officer@chapter.edu, ...">
+        <div class="hint">Fine summary emails are sent here every Monday.</div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Fine Amount ($)</label>
+          <input type="number" id="s5-fine" value="5" min="0" step="1">
+        </div>
+        <div class="field">
+          <label>Officer PIN</label>
+          <input type="text" id="s5-pin" value="1234" maxlength="8" placeholder="4–8 digits">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Chore List</div>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px">Add the chores and how many members each requires. You can always edit this from the Officer Dashboard later.</p>
+      <div class="chore-list" id="chore-list"></div>
+      <button class="add-chore-btn" onclick="addChoreRow()">+ Add Chore</button>
+    </div>
+  </div>
+
+  <!-- Step 6: Review & Init -->
+  <div class="step-panel" id="step-6">
+    <div class="step-title">Step 6 — Review & Initialize</div>
+    <div class="step-subtitle">Check everything looks correct, then click Initialize to create all required tabs and save your config.</div>
+
+    <div class="card">
+      <div class="card-title">Summary</div>
+      <div class="summary-grid" id="summary-grid"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">What will happen</div>
+      <ul class="checklist">
+        <li><span class="ck">✅</span> All config values saved to the config sheet</li>
+        <li><span class="ck">✅</span> Required tabs created (members, fines, submissions, etc.)</li>
+        <li><span class="ck">✅</span> Chore list saved to Drive (chore_ratios.json)</li>
+        <li><span class="ck">✅</span> Monday 6am reset trigger created automatically</li>
+        <li><span class="ck">ℹ️</span> You'll need to generate QR codes separately after setup</li>
+      </ul>
+    </div>
+
+    <div class="nav-btns">
+      <button class="btn-outline" onclick="prevStep()">← Back</button>
+      <button class="btn-primary" id="init-btn" onclick="doInit()">🚀 Initialize Chapter</button>
+    </div>
+    <div class="error-box" id="init-error"></div>
+
+    <div class="success-box" id="success-box" style="display:none">
+      <h2>🎉 Chapter Initialized!</h2>
+      <p id="success-msg"></p>
+      <div id="success-warnings" style="margin-top:12px"></div>
+      <div style="margin-top:20px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center">
+        <a id="link-dashboard" href="?app=officer" target="_blank" class="btn-primary" style="text-decoration:none">Open Officer Dashboard →</a>
+        <a id="link-home" href="?app=home" target="_blank" class="btn-outline" style="text-decoration:none">Open Home Page →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nav buttons (steps 1–5) -->
+  <div class="nav-btns" id="main-nav">
+    <button class="btn-outline" id="btn-back" onclick="prevStep()" style="visibility:hidden">← Back</button>
+    <button class="btn-primary" id="btn-next" onclick="nextStep()">Next →</button>
+  </div>
+
+</div><!-- .container -->
+
+<script>
+// ============================================================
+// Setup Wizard JS
+// ============================================================
+
+var BASE_URL = '<?= baseUrl ?>';
+
+var STEPS = [
+  { id: 'step-1', label: 'Identity' },
+  { id: 'step-2', label: 'Vocabulary' },
+  { id: 'step-3', label: 'Modules' },
+  { id: 'step-4', label: 'Options' },
+  { id: 'step-5', label: 'Operational' },
+  { id: 'step-6', label: 'Review' }
+];
+
+var VOCAB_FIELDS = [
+  { key: 'label_chore',        label: 'Chore',              def: 'Chore' },
+  { key: 'label_fine',         label: 'Fine',               def: 'Fine' },
+  { key: 'label_am_group',     label: 'Associate Group',    def: 'Associate Members' },
+  { key: 'label_am_officer',   label: 'AM Officer Title',   def: 'High Kappa' },
+  { key: 'label_am_points',    label: 'AM Points Label',    def: 'Points' },
+  { key: 'label_pledge_class', label: 'Pledge Class',       def: 'Pledge Class' },
+  { key: 'label_member_id',    label: 'Member ID / Badge',  def: 'BK#' },
+  { key: 'label_suspension',   label: 'Suspension',         def: 'Suspension' },
+  { key: 'label_probation',    label: 'Probation',          def: 'Probation' },
+  { key: 'label_semester',     label: 'Semester Term',      def: 'Semester' }
+];
+
+var MODULE_FIELDS = [
+  { key: 'module_housing',             label: 'Housing',              desc: 'Room number, living-in-house fields on member profiles.', def: true },
+  { key: 'module_meal_plan',           label: 'Meal Plan',            desc: 'Meal plan tracking on member profiles.', def: true },
+  { key: 'module_associates',          label: 'Associate Members',    desc: 'AM system: tracking, events, points, crossing.', def: true },
+  { key: 'module_signatures',          label: 'Signatures',           desc: 'AMs log activities with brothers for points.', def: true },
+  { key: 'module_university_fields',   label: 'University Fields',    desc: 'GTID, BuzzCard, GT username — Georgia Tech specific.', def: false },
+  { key: 'module_academic_suspension', label: 'Academic Suspension',  desc: 'Separate academic suspension flag on member.', def: true },
+  { key: 'module_bigquery',            label: 'BigQuery Analytics',   desc: 'Sync chore/fine data to Google BigQuery for analysis.', def: false },
+  { key: 'module_officer_roles',       label: 'Officer Roles',        desc: 'Track officer role on member roster.', def: true }
+];
+
+var currentStep = 1;
+
+// ---- Build progress bar ----
+function buildProgress() {
+  var wrap = document.getElementById('progress-wrap');
+  wrap.innerHTML = '';
+  STEPS.forEach(function(s, i) {
+    var dot = document.createElement('div');
+    dot.className = 'step-dot' + (i + 1 === currentStep ? ' active' : (i + 1 < currentStep ? ' done' : ''));
+    dot.innerHTML = '<div class="dot">' + (i + 1 < currentStep ? '✓' : (i + 1)) + '</div>' +
+                    '<div class="label">' + s.label + '</div>';
+    wrap.appendChild(dot);
+    if (i < STEPS.length - 1) {
+      var conn = document.createElement('div');
+      conn.className = 'step-connector';
+      wrap.appendChild(conn);
+    }
+  });
+}
+
+// ---- Build vocab grid ----
+function buildVocabGrid() {
+  var grid = document.getElementById('vocab-grid');
+  grid.innerHTML = '';
+  VOCAB_FIELDS.forEach(function(f) {
+    var div = document.createElement('div');
+    div.className = 'vocab-item field';
+    div.innerHTML =
+      '<label>' + f.label + '</label>' +
+      '<input type="text" id="vocab-' + f.key + '" placeholder="' + f.def + '">' +
+      '<div class="default">Default: ' + f.def + '</div>';
+    grid.appendChild(div);
+  });
+}
+
+// ---- Build modules grid ----
+function buildModulesGrid() {
+  var grid = document.getElementById('modules-grid');
+  grid.innerHTML = '';
+  MODULE_FIELDS.forEach(function(f) {
+    var row = document.createElement('div');
+    row.className = 'module-row';
+    row.innerHTML =
+      '<div class="mod-info">' +
+        '<div class="mod-name">' + f.label + '</div>' +
+        '<div class="mod-desc">' + f.desc + '</div>' +
+      '</div>' +
+      '<label class="toggle">' +
+        '<input type="checkbox" id="mod-' + f.key + '"' + (f.def ? ' checked' : '') + '>' +
+        '<span class="slider"></span>' +
+      '</label>';
+    grid.appendChild(row);
+  });
+
+  // Hide meal plan option row if meal plan module is off
+  document.getElementById('mod-module_meal_plan').addEventListener('change', function() {
+    document.getElementById('opt-meal-wrap').style.display = this.checked ? '' : 'none';
+  });
+  document.getElementById('mod-module_associates').addEventListener('change', function() {
+    document.getElementById('opt-am-activity-wrap').style.display = this.checked ? '' : 'none';
+    var modSig = document.getElementById('mod-module_signatures');
+    if (!this.checked) { modSig.checked = false; modSig.disabled = true; }
+    else { modSig.disabled = false; }
+  });
+}
+
+// ---- Chore rows ----
+var choreRows = [];
+function addChoreRow(name, count) {
+  var id = Date.now() + Math.random();
+  choreRows.push(id);
+  var list = document.getElementById('chore-list');
+  var div = document.createElement('div');
+  div.className = 'chore-item';
+  div.id = 'chore-row-' + id;
+  div.innerHTML =
+    '<input type="text" placeholder="Chore name, e.g. Kitchen Cleanup" value="' + (name || '') + '" style="flex:1">' +
+    '<label>People:</label>' +
+    '<input type="number" value="' + (count || 2) + '" min="1" max="50" style="width:64px">' +
+    '<button class="remove-btn" onclick="removeChoreRow(' + id + ')" title="Remove">×</button>';
+  list.appendChild(div);
+}
+function removeChoreRow(id) {
+  var row = document.getElementById('chore-row-' + id);
+  if (row) row.remove();
+  choreRows = choreRows.filter(function(r) { return r !== id; });
+}
+function getChores() {
+  var list = document.getElementById('chore-list');
+  var items = list.querySelectorAll('.chore-item');
+  var result = [];
+  items.forEach(function(item) {
+    var inputs = item.querySelectorAll('input');
+    var name = inputs[0].value.trim();
+    var count = parseInt(inputs[1].value) || 1;
+    if (name) result.push({ name: name, people: count });
+  });
+  return result;
+}
+
+// Seed default chore list
+function seedDefaultChores() {
+  var defaults = [
+    { name: 'Kitchen Cleanup', people: 3 },
+    { name: 'Living Room/Chapter Room Cleanup', people: 2 },
+    { name: 'Bathrooms', people: 2 },
+    { name: 'Chapter Setup/Cleanup', people: 3 },
+    { name: 'Monday Dinner Cleanup', people: 2 },
+    { name: 'Trash', people: 2 }
+  ];
+  defaults.forEach(function(c) { addChoreRow(c.name, c.people); });
+}
+
+// ---- Color live preview ----
+function initColorPreviews() {
+  document.getElementById('s1-primary-color').addEventListener('input', function() {
+    var v = this.value;
+    document.getElementById('s1-primary-preview').style.background = v;
+    document.getElementById('s1-primary-preview').style.color = document.getElementById('s1-accent-color').value;
+  });
+  document.getElementById('s1-accent-color').addEventListener('input', function() {
+    var v = this.value;
+    document.getElementById('s1-accent-preview').style.background = v;
+    document.getElementById('s1-accent-preview').style.color = document.getElementById('s1-primary-color').value;
+    document.getElementById('s1-primary-preview').style.color = v;
+  });
+}
+
+// ---- Navigation ----
+function showStep(n) {
+  STEPS.forEach(function(s, i) {
+    document.getElementById(s.id).classList.toggle('active', i + 1 === n);
+  });
+  document.getElementById('btn-back').style.visibility = n > 1 ? 'visible' : 'hidden';
+  document.getElementById('btn-next').style.display = n === STEPS.length ? 'none' : '';
+  document.getElementById('main-nav').style.display = n === STEPS.length ? 'none' : '';
+  currentStep = n;
+  buildProgress();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function nextStep() {
+  if (!validateStep(currentStep)) return;
+  if (currentStep < STEPS.length) {
+    if (currentStep + 1 === STEPS.length) buildSummary();
+    showStep(currentStep + 1);
+  }
+}
+
+function prevStep() {
+  if (currentStep > 1) showStep(currentStep - 1);
+}
+
+function validateStep(n) {
+  if (n === 1) {
+    var name = document.getElementById('s1-chapter-name').value.trim();
+    if (!name) { alert('Chapter name is required.'); return false; }
+  }
+  if (n === 5) {
+    var sem = document.getElementById('s5-semester').value.trim();
+    var ws  = document.getElementById('s5-week-start').value.trim();
+    if (!sem) { alert('Semester is required.'); return false; }
+    if (!ws || !/^\d{4}-\d{2}-\d{2}$/.test(ws)) { alert('Week start must be in YYYY-MM-DD format.'); return false; }
+  }
+  return true;
+}
+
+// ---- Build summary ----
+function buildSummary() {
+  var items = [
+    ['Chapter Name', document.getElementById('s1-chapter-name').value],
+    ['Primary Color', document.getElementById('s1-primary-color').value],
+    ['Accent Color', document.getElementById('s1-accent-color').value],
+    ['Chore Label', (document.getElementById('vocab-label_chore').value || 'Chore')],
+    ['Fine Label', (document.getElementById('vocab-label_fine').value || 'Fine')],
+    ['Semester', document.getElementById('s5-semester').value],
+    ['Week Start', document.getElementById('s5-week-start').value],
+    ['Fine Amount', '$' + document.getElementById('s5-fine').value],
+    ['Chores', getChores().length + ' configured']
+  ];
+  var grid = document.getElementById('summary-grid');
+  grid.innerHTML = items.map(function(it) {
+    return '<div class="summary-item"><div class="sk">' + it[0] + '</div><div class="sv">' + it[1] + '</div></div>';
+  }).join('');
+}
+
+// ---- Collect all setup data ----
+function collectSetup() {
+  var setup = {
+    chapter_name:  document.getElementById('s1-chapter-name').value.trim(),
+    primary_color: document.getElementById('s1-primary-color').value,
+    accent_color:  document.getElementById('s1-accent-color').value,
+    logo_url:      document.getElementById('s1-logo-url').value.trim(),
+    semester:      document.getElementById('s5-semester').value.trim(),
+    week_start:    document.getElementById('s5-week-start').value.trim(),
+    officer_emails: document.getElementById('s5-emails').value.trim(),
+    fine_amount:   document.getElementById('s5-fine').value,
+    officer_pin:   document.getElementById('s5-pin').value.trim(),
+    meal_plan_options:    document.getElementById('opt-meal').value.trim(),
+    officer_role_options: document.getElementById('opt-officer-roles').value.trim(),
+    am_activity_types:    document.getElementById('opt-am-activities').value.trim(),
+    member_status_options: document.getElementById('opt-statuses').value.trim(),
+    chores: getChores()
+  };
+
+  // Vocabulary
+  VOCAB_FIELDS.forEach(function(f) {
+    var v = document.getElementById('vocab-' + f.key).value.trim();
+    setup[f.key] = v || f.def;
+  });
+
+  // Module flags
+  MODULE_FIELDS.forEach(function(f) {
+    var el = document.getElementById('mod-' + f.key);
+    setup[f.key] = el ? el.checked : f.def;
+  });
+
+  return setup;
+}
+
+// ---- Initialize ----
+function doInit() {
+  var btn = document.getElementById('init-btn');
+  var errBox = document.getElementById('init-error');
+  errBox.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = '⏳ Initializing...';
+
+  var setup = collectSetup();
+
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var res = JSON.parse(json);
+      btn.disabled = false;
+      if (res.success) {
+        btn.style.display = 'none';
+        document.getElementById('success-box').style.display = '';
+        document.getElementById('success-msg').textContent = res.message ||
+          'All tabs created, config saved. You can now open the Officer Dashboard.';
+        if (res.warnings && res.warnings.length) {
+          document.getElementById('success-warnings').innerHTML =
+            res.warnings.map(function(w) { return '<div class="warn-box">' + w + '</div>'; }).join('');
+        }
+        document.getElementById('link-dashboard').href = BASE_URL + '?app=officer';
+        document.getElementById('link-home').href = BASE_URL + '?app=home';
+      } else {
+        btn.textContent = '🚀 Initialize Chapter';
+        errBox.style.display = '';
+        errBox.textContent = 'Error: ' + (res.error || 'Unknown error');
+      }
+    })
+    .withFailureHandler(function(err) {
+      btn.disabled = false;
+      btn.textContent = '🚀 Initialize Chapter';
+      errBox.style.display = '';
+      errBox.textContent = 'Error: ' + err.message;
+    })
+    .initChapter(JSON.stringify(setup));
+}
+
+// ---- Init on load ----
+buildProgress();
+buildVocabGrid();
+buildModulesGrid();
+seedDefaultChores();
+initColorPreviews();
+</script>
+</body>
+</html>

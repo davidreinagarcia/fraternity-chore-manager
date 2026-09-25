@@ -6,9 +6,9 @@
 <title>Officer Dashboard</title>
 <style>
   :root {
-    --primary: #093D20;
-    --primary-light: #0f5c2e;
-    --gold: #FFB71D;
+    --primary: <?= cfg.chapter.primary_color ?>;
+    --primary-light: <?= cfg.chapter.primary_color ?>;
+    --gold: <?= cfg.chapter.accent_color ?>;
     --bg: #f0f4f1;
     --card: #ffffff;
     --border: #dde8de;
@@ -401,10 +401,10 @@
   <div class="container">
     <!-- Summary stats -->
     <div class="stats-row" id="stats-row">
-      <div class="stat-card"><div class="label">Total Chores</div><div class="value" id="stat-total-chores">—</div></div>
+      <div class="stat-card"><div class="label">Total <?= cfg.labels.label_chore ?>s</div><div class="value" id="stat-total-chores">—</div></div>
       <div class="stat-card"><div class="label">Submitted</div><div class="value" id="stat-submitted">—</div></div>
       <div class="stat-card"><div class="label">Flagged</div><div class="value" id="stat-flagged" style="color:var(--yellow)">—</div></div>
-      <div class="stat-card"><div class="label">Pending Fines</div><div class="value" id="stat-pending-fines" style="color:var(--red)">—</div></div>
+      <div class="stat-card"><div class="label">Pending <?= cfg.labels.label_fine ?>s</div><div class="value" id="stat-pending-fines" style="color:var(--red)">—</div></div>
     </div>
 
     <!-- Tabs -->
@@ -430,7 +430,7 @@
           <table class="data-table" id="status-table">
             <thead>
               <tr>
-                <th onclick="sortTable('status-table',0)">Chore</th>
+                <th onclick="sortTable('status-table',0)"><?= cfg.labels.label_chore ?></th>
                 <th onclick="sortTable('status-table',1)">Assigned Members</th>
                 <th onclick="sortTable('status-table',2)">Submitted</th>
                 <th onclick="sortTable('status-table',3)">Auto Status</th>
@@ -450,15 +450,15 @@
     <div id="tab-fines" class="tab-pane">
       <div class="card">
         <div class="card-header">
-          <h2>Fine Preview (would be issued on Monday reset)</h2>
-          <button class="btn-danger" onclick="confirmMondayReset()">Send Fine List Now</button>
+          <h2><?= cfg.labels.label_fine ?> Preview (would be issued on Monday reset)</h2>
+          <button class="btn-danger" onclick="confirmMondayReset()">Send <?= cfg.labels.label_fine ?> List Now</button>
         </div>
         <div class="card-body" style="overflow-x:auto">
           <table class="data-table" id="fine-preview-table">
             <thead>
               <tr>
                 <th>Member</th>
-                <th>Chore</th>
+                <th><?= cfg.labels.label_chore ?></th>
                 <th>Week</th>
                 <th>Reason</th>
               </tr>
@@ -495,8 +495,8 @@
         </div>
         <div id="mm-stats" style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:10px"></div>
         <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
-          <button class="mm-am-banner" onclick="goToAMsTab()">
-            🧑‍🎓 AM Manager <span id="mm-cnt-am"></span> →
+          <button class="mm-am-banner mod-associates" onclick="goToAMsTab()">
+            🧑‍🎓 <?= cfg.labels.label_am_group ?> Manager <span id="mm-cnt-am"></span> →
           </button>
           <button class="mm-alumni-banner" onclick="goToAlumniTab()">
             🎓 View Alumni <span id="mm-cnt-alumni"></span> →
@@ -506,13 +506,13 @@
           <div id="mm-loading" style="text-align:center;padding:30px;color:var(--muted)">Loading members...</div>
           <table class="data-table" id="mm-table" style="display:none;min-width:900px">
             <thead><tr>
-              <th onclick="sortTable('mm-table',0)">BK#</th>
+              <th onclick="sortTable('mm-table',0)"><?= cfg.labels.label_member_id ?></th>
               <th onclick="sortTable('mm-table',1)">Name</th>
               <th onclick="sortTable('mm-table',2)">Status</th>
-              <th>Housing</th>
-              <th>Meal</th>
-              <th onclick="sortTable('mm-table',5)">Chore</th>
-              <th onclick="sortTable('mm-table',6)">Fines</th>
+              <th class="col-housing"><?= cfg.modules.module_housing ? 'Housing' : '' ?></th>
+              <th class="col-meal"><?= cfg.modules.module_meal_plan ? 'Meal' : '' ?></th>
+              <th onclick="sortTable('mm-table',5)"><?= cfg.labels.label_chore ?></th>
+              <th onclick="sortTable('mm-table',6)"><?= cfg.labels.label_fine ?>s</th>
               <th>Form</th>
               <th>Actions</th>
             </tr></thead>
@@ -526,10 +526,10 @@
     <div id="tab-ams" class="tab-pane">
       <div class="card">
         <div class="card-header">
-          <h2>🧑‍🎓 AM Manager</h2>
+          <h2>🧑‍🎓 <?= cfg.labels.label_am_group ?> Manager</h2>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="goToAMEventsTab()">📅 Event Points</button>
-            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="goToSignaturesTab()">📸 Signatures Dashboard</button>
+            <button class="btn-outline mod-signatures" style="padding:6px 12px;font-size:0.8rem" onclick="goToSignaturesTab()">📸 Signatures Dashboard</button>
             <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-mm')">← Back to Member Manager</button>
           </div>
         </div>
@@ -731,7 +731,7 @@
             </div>
             <div style="background:var(--red-bg);border-radius:8px;padding:16px;border:1px solid #fecaca">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px;color:var(--red)">End of Semester Archive</div>
-              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Syncs all data to BigQuery, then clears assignments, submissions, fines, and weekly_status. <strong>This is irreversible.</strong></p>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5"><span class="mod-bigquery">Syncs all data to BigQuery, then clears</span><span class="mod-bigquery-off">Clears</span> assignments, submissions, <?= cfg.labels.label_fine.toLowerCase() ?>s, and weekly_status. <strong>This is irreversible.</strong></p>
               <button class="btn-danger" onclick="openEndSemesterModal()">End of Semester Archive</button>
             </div>
             <div style="background:#f8fafc;border-radius:8px;padding:16px">
@@ -906,7 +906,7 @@
           <option value="inactive">Inactive</option>
         </select>
       </div>
-      <div>
+      <div class="col-meal">
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Meal Plan</label>
         <select id="admin-edit-mealplan" class="inline-input" style="width:100%">
           <option value="">— Not set —</option>
@@ -915,7 +915,7 @@
           <option value="None">None</option>
         </select>
       </div>
-      <div>
+      <div class="col-housing">
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Living in the house?</label>
         <select id="admin-edit-living" class="inline-input" style="width:100%" onchange="onAdminEditLivingChange()">
           <option value="">— Not set —</option>
@@ -923,7 +923,7 @@
           <option value="No">No</option>
         </select>
       </div>
-      <div id="admin-edit-room-wrap" style="display:none">
+      <div id="admin-edit-room-wrap" class="col-housing" style="display:none">
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Room Number</label>
         <input type="text" id="admin-edit-room" class="inline-input" style="width:100%" placeholder="e.g. 214">
       </div>
@@ -941,7 +941,7 @@
     <h3 id="admin-fine-title">Fine History</h3>
     <div style="overflow-x:auto;margin:12px 0">
       <table class="data-table">
-        <thead><tr><th>Week</th><th>Chore</th><th>Reason</th></tr></thead>
+        <thead><tr><th>Week</th><th><?= cfg.labels.label_chore ?></th><th>Reason</th></tr></thead>
         <tbody id="admin-fine-tbody"></tbody>
       </table>
     </div>
@@ -1249,6 +1249,31 @@
 <div id="toast"></div>
 
 <script>
+// Chapter config injected at render time — available synchronously before any event fires.
+var CHAPTER_CONFIG = <?!= cfgJson ?>;
+
+// ---- Module visibility ------------------------------------
+// Called immediately (before DOMContentLoaded) because modules affect static HTML.
+(function applyModules(cfg) {
+  var m = cfg.modules;
+  // Build a <style> rule to hide columns/elements based on module flags.
+  var rules = [];
+  if (!m.module_housing)    rules.push('.col-housing { display:none!important }');
+  if (!m.module_meal_plan)  rules.push('.col-meal { display:none!important }');
+  if (!m.module_associates) rules.push('.mod-associates { display:none!important }');
+  if (!m.module_signatures) rules.push('.mod-signatures { display:none!important }');
+  if (!m.module_bigquery) {
+    rules.push('.mod-bigquery { display:none!important }');
+  } else {
+    rules.push('.mod-bigquery-off { display:none!important }');
+  }
+  if (rules.length) {
+    var s = document.createElement('style');
+    s.textContent = rules.join('\n');
+    document.head.appendChild(s);
+  }
+})(CHAPTER_CONFIG);
+
 // ---- PIN Auth ----------------------------------------------
 let correctPin = '1234';
 
@@ -2456,8 +2481,8 @@ function renderMMTable(data) {
       '<td>' + bkCell + '</td>' +
       '<td>' + nameCell + '</td>' +
       '<td>' + _statusBadgeMM(m) + '</td>' +
-      '<td style="font-size:0.82rem;white-space:nowrap">' + housingCell + '</td>' +
-      '<td style="font-size:0.82rem">' + mealCell + '</td>' +
+      '<td class="col-housing" style="font-size:0.82rem;white-space:nowrap">' + housingCell + '</td>' +
+      '<td class="col-meal" style="font-size:0.82rem">' + mealCell + '</td>' +
       '<td style="font-size:0.82rem">' + choreCell + '</td>' +
       '<td>' + fineCell + '</td>' +
       '<td style="text-align:center">' + _formBadge(m) + '</td>' +
@@ -2480,16 +2505,23 @@ function toggleMMExpand(memberId) {
 
 function _mmExpandHtml(m) {
   var ex = m.extra || {};
+  var cfg = CHAPTER_CONFIG;
+  var showUni = cfg.modules.module_university_fields;
+  var showHousing = cfg.modules.module_housing;
   var fields = [
-    ['Phone', m.phone], ['Major', ex.major], ['Year', ex.year],
-    ['GTID', ex.GTID], ['BuzzCard', ex.buzzcard], ['GT Username', ex.GT_username],
+    ['Phone', m.phone], ['Major', ex.major], ['Year', ex.year]
+  ];
+  if (showUni) {
+    fields.push(['GTID', ex.GTID], ['BuzzCard', ex.buzzcard], ['GT Username', ex.GT_username]);
+  }
+  fields.push(
     ['Hometown', ex.hometown], ['Birthday', ex.birthday], ['Shirt Size', ex.shirt_size],
     ['Car on Campus', ex.car_on_campus], ['Dietary Restrictions', ex.dietary_restrictions],
     ['Allergies', ex.allergies], ['Emergency Contact', ex.emergency_contact_name],
     ['Emergency Phone', ex.emergency_contact_phone], ['Campus Orgs', ex.campus_orgs],
     ['Leadership Positions', ex.leadership_positions], ['Which Positions', ex.which_positions],
     ['Service Orgs', ex.service_orgs], ['Anything Else', ex.anything_else]
-  ];
+  );
   return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px 16px;padding:12px 14px">' +
     fields.map(function(f) {
       return '<div><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em">' + f[0] + '</div>' +

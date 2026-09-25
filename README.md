@@ -1,294 +1,127 @@
-# Frat Chores — Automated Chore Management System
+# Fraternity Chore Manager
 
-A production-grade chore management platform for ~80-member fraternity chapters using **Google Workspace** as the backbone. Replaces manual Google Forms + Sheets workflows with automated enforcement, photo verification, and ML-ready data collection.
-
----
-
-## Motivation
-
-Managing chores in a house of 80+ brothers is a logistics problem that most chapters solve badly — paper sign-off sheets, honor-system Google Forms, or a house manager spending hours every Monday chasing people down. None of these scale, and all of them create conflict when the enforcement is inconsistent or perceived as unfair.
-
-This project started from a simple frustration: officers had no reliable way to know who actually completed their chores versus who just claimed they did, and there was no paper trail when fines were disputed. The result was a system built entirely on tools the chapter already pays for (Google Workspace) so there is no hosting cost and no new account to manage.
-
-**The core goals:**
-
-- **Accountability without friction** — Members scan a QR code in the chore area and upload a photo. That's the whole submission flow. No logins, no app to install.
-- **Tamper resistance** — Perceptual hashing detects duplicate or near-duplicate photos (e.g. the same photo submitted twice, or old photos from a previous week). EXIF date checking flags photos that predate the current week. Officers still have final say, but the system surfaces the suspicious ones automatically.
-- **Automated enforcement** — Every Monday at 6am, the system cross-references who was assigned a chore against who submitted a passing photo and writes fines automatically. Officers get an email summary. No manual work required.
-- **Data for better decisions** — Every submission, fine, and assignment is archived to BigQuery at the end of each semester. After two or more semesters, the included ML notebook can predict which members are likely to skip, and which chores historically get skipped most. Officers can use this during draft night to place reliable members on high-risk chores.
-- **Free infrastructure** — Everything runs on Google Apps Script, Sheets, Drive, and Gmail. The only optional paid component is BigQuery, which stays well within the free tier for a chapter this size.
-
-The system is deliberately simple under the hood — no frameworks, no servers, no databases to manage. If the chapter's Google account is active, it works.
+A production-grade chore management platform for fraternity chapters built entirely on **Google Workspace** — no servers, no monthly fees, no new accounts. Members scan a QR code, upload a photo proof, and the system handles the rest.
 
 ---
 
-## System Architecture
+## What it does
+
+| Feature | Details |
+|---|---|
+| Photo-verified submissions | Members scan a QR code in the chore area and upload a photo. No logins, no app to install. |
+| Tamper detection | Perceptual hashing flags duplicate or reused photos. EXIF date checking flags photos predating the current week. |
+| Automated enforcement | Every Monday at 6am the system cross-references assignments vs. verified submissions, writes fines, and emails officers. Zero manual work. |
+| Officer dashboard | Full web UI: this week's status, fine preview, member manager, chore draft, semester tools, config editor. |
+| Associate member (AM) track | Separate roster, event calendar, signature system, point tracking. |
+| Draft night board | TV-display mode for live chore assignments. Officers use manager mode (PIN-gated) on a laptop while the board updates in real time. |
+| Historical analytics | Optional BigQuery sync at end of semester feeds an included ML notebook that predicts which members are likely to skip. |
+
+---
+
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        GOOGLE APPS SCRIPT                           │
 │                                                                     │
-│  Code.gs ─── Main controller, routing, weekly reset, imports       │
-│  PhotoCheck.gs ─── Photo upload, perceptual hash, dupe detection   │
-│  BigQuerySync.gs ─── REST API sync to BigQuery                     │
+│  Code.gs ── Main controller, routing, weekly reset, imports        │
+│  PhotoCheck.gs ── Photo upload, perceptual hash, dupe detection    │
+│  Signatures.gs ── AM signature system, Drive album                 │
+│  AMEvents.gs ── AM event calendar and attendance                   │
+│  BigQuerySync.gs ── REST API sync to BigQuery                      │
 │                                                                     │
-│  Web Apps (single deployment URL, routed via ?app= param):         │
+│  Web App (single URL, routed via ?app= param):                     │
 │  ┌──────────┐  ┌──────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │ HomeApp  │  │SubmitApp │  │  DraftApp    │  │   Member     │   │
-│  │  (hub)   │  │(QR/manual│  │ (TV board +  │  │    View      │   │
-│  │          │  │submission│  │  manager)    │  │ (compliance) │   │
+│  │ HomeApp  │  │SubmitApp │  │  DraftApp    │  │  MemberView  │   │
+│  │  (hub)   │  │(QR/photo)│  │ (TV + mgmt)  │  │ (compliance) │   │
 │  └──────────┘  └──────────┘  └──────────────┘  └──────────────┘   │
 │                                                                     │
 │  ┌───────────────────────────────────────┐                         │
 │  │         OfficerDashboard              │                         │
 │  │  This Week · Fine Preview · Member    │                         │
-│  │  Stats · Admin (Chore Manager,        │                         │
-│  │  Member Manager, Config, Semester)    │                         │
+│  │  Stats · Admin (Chore, Members,       │                         │
+│  │  Config, Semester, AM Manager)        │                         │
 │  └───────────────────────────────────────┘                         │
-└────────────────────────────┬────────────────────────────────────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              ▼              ▼              ▼
-       Google Sheets    Google Drive    Gmail
-       (live database)  (photo store)  (fine emails)
-              │
-              ▼ (end of semester archive)
-       ┌─────────────┐
-       │  BigQuery   │  ← historical warehouse (free tier, optional)
-       └─────────────┘
-              │
-              ▼
-       Google Colab
-       (ML skip prediction notebook)
+└─────────────────────────┬───────────────────────────────────────────┘
+                          │
+           ┌──────────────┼──────────────┐
+           ▼              ▼              ▼
+    Google Sheets    Google Drive    Gmail
+    (live database)  (photo store)  (fine emails + officer reports)
+           │
+           ▼ (end-of-semester archive, optional)
+    ┌─────────────┐
+    │  BigQuery   │ ← historical warehouse (free tier)
+    └─────────────┘
+           │
+           ▼
+    Google Colab (ML skip-prediction notebook)
 ```
 
 ---
 
-## One-Time Setup Guide
+## Requirements
 
-### Step 1 — Google Sheets
+- A Google account that will own the deployment (Workspace or personal)
+- Google Sheets, Drive, and Gmail access (included in any Google account)
+- [clasp](https://github.com/google/clasp) installed locally for updates (`npm i -g @google/clasp`)
+- *(Optional)* A Google Cloud project with BigQuery enabled, for historical analytics
 
-1. Create a new Google Sheets workbook.
-2. Create these tabs (exact names): `members`, `chore_assignments`, `submissions`, `fines`, `weekly_status`, `config`, `logs`
-3. Add column headers to each tab:
-   - **members**: `member_id | bk_number | name | email | status | pledge_class | added_date`
-     - `status` values: `active`, `associate`, `inactive`, `alumni`
-   - **chore_assignments**: `assignment_id | member_id | chore_name | group_id | semester | assigned_date`
-   - **submissions**: `submission_id | member_id | chore_name | week_start | submitted_at | photo_url | photo_hash | exif_date | auto_status | human_status | verified_by | notes`
-   - **fines**: `fine_id | member_id | chore_name | week_start | reason | issued_at | issued_by`
-   - **weekly_status**: `chore_name | member_names | submitted | photo_status | human_verified`
-   - **config**: key-value pairs (see Step 4)
-   - **logs**: `timestamp | level | function | message`
-4. Note the Spreadsheet ID from the URL: `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit`
-
-### Step 2 — Apps Script Project
-
-1. In your Spreadsheet: **Extensions > Apps Script**
-2. Create files matching the filenames in `apps-script/`:
-   - Paste `Code.gs` content into `Code.gs` (rename the default `Code.gs`)
-   - Click **+** > **Script** for `PhotoCheck.gs` and `BigQuerySync.gs`
-   - Click **+** > **HTML** for each HTML file: `HomeApp`, `SubmitApp`, `OfficerDashboard`, `DraftApp`, `MemberView`, `MemberDirectory`
-3. Go to **Project Settings** (gear icon) > **Script Properties** > **Add property**:
-   - Key: `SPREADSHEET_ID` — Value: your Spreadsheet ID from Step 1
-4. Save all files.
-
-### Step 3 — Config Tab Setup
-
-Add these rows to your `config` tab (column A = key, column B = value):
-
-| Key | Example Value |
-|-----|---------------|
-| `semester` | `Spring 2026` |
-| `week_start` | `2026-01-13` (Monday of first week) |
-| `officer_emails` | `officer1@chapter.org,officer2@chapter.org` |
-| `fine_amount` | `5` |
-| `bigquery_project_id` | `your-gcp-project-id` |
-| `bigquery_dataset` | `frat_chores` |
-| `officer_pin` | `1234` |
-| `photo_hash_threshold` | `10` |
-| `exif_age_limit_days` | `8` |
-| `show_photos_in_member_view` | `true` |
-
-### Step 4 — Google Cloud / BigQuery
-
-1. Create a [Google Cloud project](https://console.cloud.google.com/) (free tier works).
-2. Enable the **BigQuery API**.
-3. Create a **Service Account**: IAM & Admin > Service Accounts > Create
-   - Role: **BigQuery Data Editor** + **BigQuery Job User**
-4. Create and download a JSON key for the service account.
-5. Back in Apps Script > **Project Settings > Script Properties**, add:
-   - Key: `BQ_SERVICE_ACCOUNT_KEY` — Value: paste the **entire JSON key file content**
-6. Upload `config/chore_ratios.json` to your Google Drive root (the script reads it by filename).
-
-### Step 5 — Initialize BigQuery Tables
-
-1. In the Spreadsheet: **Chore System > Setup: Init BigQuery Tables**
-2. This creates the `frat_chores` dataset and three tables in BigQuery.
-
-### Step 6 — Set Weekly Reset Trigger
-
-1. In the Spreadsheet: **Chore System > Setup: Create Monday Trigger**
-2. This creates a time-based trigger: every Monday at 6am Eastern.
-3. You will be prompted to authorize the script on first run.
-
-### Step 7 — Deploy as Web App
-
-1. In Apps Script: click **Deploy > New Deployment**
-2. Type: **Web app**
-3. Execute as: **Me**
-4. Who has access: **Anyone within [your org]** (or Anyone if chapter emails are not on Google Workspace)
-5. Click **Deploy** and copy the deployment URL.
-6. **This URL is permanent — never create a new deployment.** Always use **Deploy > Manage Deployments > Edit** to push updates to the same URL. All navigation links and QR codes depend on this URL staying fixed.
-
-### Step 8 — Generate QR Codes
-
-QR codes can be generated directly from the app — no Python needed:
-
-1. Log into the **Officer Dashboard** with your officer PIN
-2. Go to **Admin > Chore Manager**
-3. Click **QR** next to any chore to preview and download a labeled PNG
-4. Click **Download All QR Codes (ZIP)** to get a ZIP of all chores at once
-
-Print on cardstock, laminate, and post in each chore area. When members scan a QR code, SubmitApp pre-fills their chore so they only need to select their name and upload a photo.
-
-**Manual submission fallback:** Members can also navigate to `?app=submit` directly (no QR code) and will be prompted to select their chore from a dropdown first, then their name. This is useful if a QR code is damaged or a member's phone can't scan.
+No servers. No Docker. No databases to manage.
 
 ---
 
-## Semester Start Workflow
+## Quickstart
 
-The recommended path is **Semester Sync**, which updates the roster from two Google Forms without ever touching a member's existing chore/fine history:
+```
+10–20 minutes for a complete installation.
+```
 
-1. **New Member form**: brothers who just got their bid fill this out once; Semester Sync adds them as `associate` status. Existing members (matched by personal email) are skipped automatically.
-2. **Returning Member form**: sent to the whole active/associate roster each semester to update the fields that actually change — living situation, meal plan, major/year, campus orgs, etc. Semester Sync matches responses to existing members **by BK# only** (a name-based match is used as a last resort, and only if there's exactly one unambiguous match — anything uncertain is reported, never guessed). A blank answer on the form never overwrites a value that's already on file.
-3. Both forms must be linked once via **Admin > Semester Tools > Relink Google Forms** (`RUN ONCE` — this repoints the two chapter forms' destination sheet, so only run it against the live production spreadsheet, never a test copy).
-4. Run **Admin > Semester Tools > Run Semester Sync**. It reports, in a results modal: new members added, returning members updated, forms not submitted, unmatched returning-form rows (needs manual fix), potential graduates, and members left inactive from last semester. Nothing is changed automatically beyond the new/returning member fields — graduating, dissociating, or flipping status is always a manual officer action.
-5. **Graduate outgoing brothers**: In **Admin > Member Manager**, filter by Active and click **Graduate** (or use **Review Graduation Candidates** in Semester Tools, which is pre-filtered from the sync). This moves them to the separate **Alumni** tab — alumni never mix into the Active/Inactive/All views.
-6. **Auto-split or manual draft**:
-   - *Auto-split*: Officer Dashboard > Admin > Quick Actions > **Run Auto-Split**. Or open DraftApp > Manager Mode (PIN required) > **Auto-Split Remaining**.
-   - *Draft night*: Put DraftApp (Display Mode) on the TV via HDMI. House manager uses Manager Mode (PIN-gated) on a laptop to assign members live.
-7. **Verify config**: Check that `semester` and `week_start` in the `config` tab (or Config Editor in Admin) are correct.
+1. **Copy the Sheets template** — create a new Google Sheets workbook with the required tabs and headers (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#step-1--google-sheets-setup))
+2. **Connect Apps Script** — paste the source files from `apps-script/` into a bound script project and set `SPREADSHEET_ID` in Script Properties
+3. **Configure your chapter** — fill in the `config` tab with your semester dates, officer emails, fine amount, PIN, and chapter branding (see [docs/CONFIGURATION.md](docs/CONFIGURATION.md))
+4. **Deploy as Web App** — deploy once and copy the permanent URL; print QR codes from the Officer Dashboard
+5. **Create the Monday trigger** — one click from the Chore System menu; automation starts immediately
 
-**Import Members CSV** (Admin > Semester Tools, or Member Manager > Import CSV) still exists as a manual fallback for one-off batch adds/updates — pasted rows in `name, email, pledge_class` format. Prefer Semester Sync for the normal per-semester roster refresh.
+Full step-by-step guide: **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**
 
 ---
 
-## Weekly Workflow
+## Documentation
 
-| When | What happens | Automated? |
-|------|-------------|-----------|
-| All week | Members scan QR codes, upload photos | Member action |
-| Anytime | Officer reviews flagged photos in Officer Dashboard | Manual |
-| Monday 6am ET | Monday Reset runs automatically | Automated |
-| Monday Reset | Cross-references assignments vs. submissions, writes fines, emails officers, clears submissions, advances week | Automated |
-| As needed | Officers verify/fail photos in Officer Dashboard | Manual |
-
----
-
-## Member Manager
-
-**Admin > Member Manager** is the roster's single source of truth.
-
-- **Filters**: All / Active / AMs / Inactive / Alumni, plus Suspended and Probation (flags, not statuses — a suspended member can be filtered on top of any status). Every list sorts by BK# ascending. Alumni never mix into Active/Inactive/All — they live only under their own tab.
-- **Stats strip**: active brother count, how many are living in the house, and full/half meal plan counts — updates live with the current filter.
-- **Table columns**: BK# · Name · Status · Housing (🏠 + room number, or Off-campus) · Meal Plan · Chore · Fines · Form Completed · Actions. Suspended/probation rows get a red/amber row tint so they're visible without opening a filter.
-- **Alumni tab**: a lightweight contact sheet — BK#, Name, Phone, Email — for when someone just needs to reach an alum. A 📄 icon opens their full record, ↩️ restores them to Active if they come back.
-- **Per-row expand**: click the ▸ next to a name to reveal secondary info (major, year, GTID, BuzzCard, emergency contact, allergies, campus orgs, etc.) without cluttering the main table.
-- **Suspension/Probation**: place or lift both from the **···** menu on any active member (`Place Suspension` / `Lift Suspension`, `Place Probation` / `Lift Probation`) — the label and action flip automatically based on current status.
-- **Export CSV**: a lightweight roster export (BK#, name, status, housing, meal plan, chore, fines, form, officer role).
-- **Export Full CSV**: every field on file for every member and alumnus — GTID, BuzzCard, emergency contact, allergies, campus orgs, suspension/probation state, everything — for university or compliance requests that need the complete record.
+| Document | Contents |
+|---|---|
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Full provisioning guide: Sheets setup, Apps Script, Script Properties, Web App deployment, QR codes, triggers |
+| [docs/CONFIGURATION.md](docs/CONFIGURATION.md) | Complete dictionary of every Script Property and config-sheet key with types, defaults, and impact |
+| [docs/UPGRADE.md](docs/UPGRADE.md) | Pushing updates with clasp, managing versioned deployments, schema migrations |
+| [docs/BACKUP_RESTORE.md](docs/BACKUP_RESTORE.md) | Semester archive, Sheets export, BigQuery backup, disaster recovery |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Log inspection, common errors and fixes, Apps Script execution diagnostics |
+| [SECURITY.md](SECURITY.md) | Security model, responsible disclosure |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
 
 ---
 
-## End of Semester Workflow
+## Weekly lifecycle
 
-1. Go to **Officer Dashboard > Admin > Semester Tools > End of Semester Archive**
-2. Type `ARCHIVE` in the confirmation box and click the button (irreversible)
-3. The system:
-   - Pushes all data to BigQuery (optional — BigQuerySync.gs handles this)
-   - Clears chore_assignments, submissions, fines, weekly_status
-   - Keeps the members tab intact
-4. Update `semester` and `week_start` in the Config Editor (Admin tab)
-5. Graduate any brothers who crossed out (Admin > Member Manager > Graduate)
-6. Re-import the new semester's member CSV to add pledges and deactivate inactive members
-7. Run draft night for the new semester
-
----
-
-## ML Notebook (Google Colab)
-
-After accumulating 2+ semesters of data:
-
-1. Open `python/ml_skip_prediction.ipynb` in [Google Colab](https://colab.research.google.com/)
-2. Upload it: File > Upload notebook
-3. Set your `PROJECT_ID` in the notebook (cell 3)
-4. Run all cells
-5. Download the output CSVs: `member_risk_scores.csv`, `chore_risk_scores.csv`, `smart_assignments.csv`
-6. Use `smart_assignments.csv` during draft night to place reliable members on high-skip-rate chores
-
-The notebook needs at least 1 semester to produce risk scores, and 2+ semesters to train the predictive model properly.
-
----
-
-## Navigation & Access
-
-All pages live under the single deployment URL. Share the base URL with members — they land on HomeApp which routes everything.
-
-**Live link (this is the one to share/reuse):** https://script.google.com/macros/s/AKfycbwwC_E3KwYB_CG_M6SZiWEwXqXIUK0DK-Kpm8l-Jwr6SouV2yfZIIZafgZC22YahEyCdw/exec?app=home
-**Officer Dashboard direct link:** same deployment ID, with `?app=officer` instead of `?app=home`.
-
-**Important — two deployments exist, only one can ever be public:**
-- The link above is a real, versioned Web App deployment ("Manage deployments" in the Apps Script UI), configured with Execute as: me / Who has access: Anyone. This is the only kind of deployment Apps Script allows to be truly public with no Google login.
-- There is also a "Test deployment" (`AKfycbxwgSXSVWBD1L5ceLyXHvV-BhLa5xTT-J-26IUa_Gyk`, shows as `@HEAD` in `clasp deployments`) that auto-updates on every `clasp push` with no extra step. It looks tempting to use for that reason, but **Google enforces Google-account login on test deployments unconditionally** — no manifest or deployment setting can make it anonymous. Do not share that link with members.
-- Because the public link is a versioned deployment, `clasp push` alone does NOT update it — you must also run `clasp deploy -i AKfycbwwC_E3KwYB_CG_M6SZiWEwXqXIUK0DK-Kpm8l-Jwr6SouV2yfZIIZafgZC22YahEyCdw -d "description"` after every push that should reach the public link.
-
-| URL parameter | Page | Auth |
+| When | What | Automated? |
 |---|---|---|
-| `?app=home` (default) | HomeApp — navigation hub | None |
+| All week | Members scan QR codes and upload photos | Member action |
+| Anytime | Officer reviews flagged/pending photos | Manual |
+| Monday 6am | Monday Reset: cross-reference, write fines, email officers, advance week | Automated |
+| End of semester | Archive to BigQuery, clear live data, start new semester | One-click |
+
+---
+
+## Navigation reference
+
+All pages share a single deployment URL, distinguished by `?app=` parameter.
+
+| Parameter | Page | Auth |
+|---|---|---|
+| `?app=home` | HomeApp — navigation hub | None |
 | `?app=submit` | SubmitApp — chore photo upload | None |
-| `?app=submit&chore=Kitchen` | SubmitApp — pre-filled from QR code | None |
+| `?app=submit&chore=Kitchen` | SubmitApp — pre-filled from QR | None |
 | `?app=member` | MemberView — personal compliance history | None |
 | `?app=officer` | Officer Dashboard | Officer PIN |
-| `?app=draft&mode=display` | Draft Night Board (read-only TV display) | None |
+| `?app=draft&mode=display` | Draft Night Board (TV read-only) | None |
 | `?app=draft&mode=manage` | Draft Night Board (manage assignments) | Officer PIN |
-
-The `officer_pin` config value is the shared PIN used by OfficerDashboard and DraftApp Manager Mode. Change it in **Admin > Config Editor**.
-
----
-
-## Troubleshooting
-
-**QR codes scan but show an error page**
-- Check that the web app is deployed with "Anyone" access
-- Never create a new deployment — always edit the existing one (Deploy > Manage Deployments)
-
-**Monday Reset runs but doesn't email**
-- Verify `officer_emails` in config tab is a comma-separated list with no spaces
-- Ensure the script has Gmail authorization (run it manually once from the menu)
-
-**BigQuery sync fails with auth error**
-- Confirm `BQ_SERVICE_ACCOUNT_KEY` is set in Script Properties as the full JSON (not base64)
-- Verify the service account has `BigQuery Data Editor` role
-- Confirm BigQuery API is enabled in GCP Console
-
-**Photos not saving to Drive**
-- The script runs as the deploying user — ensure that user has write access to Drive
-- Check the `logs` tab for specific error messages
-
-**Auto-split gives uneven distribution**
-- Upload `chore_ratios.json` to Google Drive root and confirm the filename is exact
-- If the file can't be found, the function returns no chores — check the logs tab
-
-**"SPREADSHEET_ID not set" error**
-- Go to Apps Script > Project Settings > Script Properties > ensure `SPREADSHEET_ID` key exists
-
----
-
-## Future Improvements
-
-- **Better photo hashing**: The current hash uses byte sampling. A true perceptual hash (pHash) would require an external image processing service or Cloud Function. Consider Cloud Run + Python `imagehash` library for more accurate duplicate detection.
-- **Member self-service**: Add a member profile page where brothers can view their own compliance history and fine total.
-- **Trade/swap system**: Let members request chore swaps that officers can approve in the dashboard.
-- **Push notifications**: Use Twilio or Gmail to send reminder texts/emails on Sunday night before the Monday deadline.
-- **Pledge accountability**: Filter member stats by pledge class to surface compliance trends by class year.
-- **Automated ML inference**: Run the skip prediction model weekly via Cloud Scheduler and post the risk report to a Slack channel before draft nights.

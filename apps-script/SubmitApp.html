@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Chore Submission</title>
+<title><?= cfg.labels.label_chore ?> Submission</title>
 <style>
   :root {
-    --primary: #093D20;
-    --gold: #FFB71D;
+    --primary: <?= cfg.chapter.primary_color ?>;
+    --gold: <?= cfg.chapter.accent_color ?>;
     --green: #16a34a;
     --red: #dc2626;
     --yellow: #ca8a04;
@@ -165,7 +165,7 @@
     <img src="https://www.lambdachi.org/wp-content/uploads/2025/05/lca-logo-primary.svg"
          alt="Lambda Chi Alpha" style="height:52px;width:auto;margin-bottom:10px"
          onerror="this.style.display='none'">
-    <div class="badge">Chore Submission</div>
+    <div class="badge"><?= cfg.labels.label_chore ?> Submission</div>
     <h1 id="chore-title">Loading...</h1>
     <div class="week-label" id="week-label">Week of —</div>
   </div>
@@ -173,9 +173,9 @@
   <!-- Chore selection (shown when no QR chore param) -->
   <div id="chore-step" style="display:none">
     <div class="section">
-      <label>Step 1 — Select Your Chore</label>
+      <label>Step 1 — Select Your <?= cfg.labels.label_chore ?></label>
       <select id="chore-select" onchange="onChoreSelect(this.value)">
-        <option value="">— Select a chore —</option>
+        <option value="">— Select a <?= cfg.labels.label_chore.toLowerCase() ?> —</option>
       </select>
     </div>
     <div id="chore-loading" style="display:none;text-align:center;padding:16px 0;color:var(--muted);font-size:0.9rem">Loading members...</div>
@@ -212,7 +212,7 @@
       </div>
     </div>
 
-    <button id="submit-btn" onclick="submitForm()" disabled>Submit Chore</button>
+    <button id="submit-btn" onclick="submitForm()" disabled>Submit <?= cfg.labels.label_chore ?></button>
   </div>
 
   <!-- Loading -->
