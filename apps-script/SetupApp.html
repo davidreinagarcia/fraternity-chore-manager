@@ -310,10 +310,17 @@
     </div>
   </div>
 
-  <!-- Step 4: Options -->
+  <!-- Step 4: Options + Custom Fields -->
   <div class="step-panel" id="step-4">
-    <div class="step-title">Step 4 — Option Lists</div>
-    <div class="step-subtitle">Define the choices available in dropdowns. Comma-separated values.</div>
+    <div class="step-title">Step 4 — Custom Fields &amp; Options</div>
+    <div class="step-subtitle">Add extra fields to track on member profiles, and define dropdown choices. Every chapter tracks different info — configure yours here.</div>
+
+    <div class="card">
+      <div class="card-title">Member Custom Fields <span style="font-size:0.75rem;font-weight:500;color:var(--muted)">(max 10 — appear on profiles and in CSV exports)</span></div>
+      <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px">Track anything specific to your chapter: major, car on campus, dietary restrictions, instrument, hometown — whatever your officers actually need.</p>
+      <div id="cf-list"></div>
+      <button class="btn-outline" onclick="addCFRow()" id="add-cf-btn">+ Add Field</button>
+    </div>
 
     <div class="card">
       <div class="card-title">Dropdown Options</div>
@@ -890,6 +897,7 @@ function collectSetup() {
     fine_amount:   document.getElementById('s5-fine').value,
     officer_pin:   document.getElementById('s5-pin').value.trim(),
     timezone:      document.getElementById('s5-timezone').value,
+    custom_fields:        JSON.stringify(getCFFields()),
     meal_plan_options:    document.getElementById('opt-meal').value.trim(),
     officer_role_options: document.getElementById('opt-officer-roles').value.trim(),
     am_activity_types:    document.getElementById('opt-am-activities').value.trim(),
@@ -950,6 +958,80 @@ function doInit() {
       errBox.textContent = 'Error: ' + err.message;
     })
     .initChapter(JSON.stringify(setup));
+}
+
+// ---- Custom Fields Builder ----
+var CF_TYPES = [
+  { value:'text',     label:'Text' },
+  { value:'number',   label:'Number' },
+  { value:'email',    label:'Email' },
+  { value:'date',     label:'Date' },
+  { value:'checkbox', label:'Yes / No' },
+  { value:'select',   label:'Dropdown' }
+];
+
+function _cfSlugify(str) {
+  return 'cf_' + str.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').substring(0, 24);
+}
+
+function addCFRow(existing) {
+  var list = document.getElementById('cf-list');
+  if (list.querySelectorAll('.cf-row').length >= 10) { alert('Maximum 10 custom fields.'); return; }
+  var f = existing || {};
+  var idx = 'cf' + Date.now();
+  var typeOpts = CF_TYPES.map(function(t) {
+    return '<option value="' + t.value + '"' + (f.type === t.value ? ' selected' : '') + '>' + t.label + '</option>';
+  }).join('');
+  var html = '<div class="cf-row" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;padding:12px;background:#f8fafc;border-radius:8px;border:1px solid var(--border)" data-idx="' + idx + '">' +
+    '<div style="flex:1;min-width:0">' +
+      '<input type="text" class="cf-label-input" placeholder="Field label (e.g. Major, Car on campus, Instrument...)" value="' + (f.label || '') + '" ' +
+             'style="width:100%;margin-bottom:8px" oninput="updateCFKey(this)">' +
+      '<div style="display:flex;gap:8px;align-items:center">' +
+        '<select class="cf-type-input" style="flex:1">' + typeOpts + '</select>' +
+        '<label style="display:flex;align-items:center;gap:5px;font-size:0.8rem;white-space:nowrap;cursor:pointer">' +
+          '<input type="checkbox" class="cf-req-input"' + (f.required ? ' checked' : '') + '>Required' +
+        '</label>' +
+      '</div>' +
+      '<div class="cf-options-wrap" style="margin-top:8px;display:' + (f.type === 'select' ? '' : 'none') + '">' +
+        '<input type="text" class="cf-options-input" placeholder="Option A, Option B, Option C..." value="' + (f.options || '') + '" style="width:100%">' +
+        '<div class="hint">Comma-separated list of dropdown options.</div>' +
+      '</div>' +
+      '<div style="margin-top:5px;font-size:0.7rem;color:#94a3b8">Column key: <code class="cf-key-preview">' + (_cfSlugify(f.label || '') || 'cf_…') + '</code></div>' +
+    '</div>' +
+    '<button onclick="removeCFRow(this)" style="background:none;border:none;color:var(--red);font-size:1.2rem;cursor:pointer;padding:4px 6px;flex-shrink:0;line-height:1" title="Remove">✕</button>' +
+  '</div>';
+  list.insertAdjacentHTML('beforeend', html);
+  var row = list.lastElementChild;
+  row.querySelector('.cf-type-input').addEventListener('change', function() {
+    row.querySelector('.cf-options-wrap').style.display = this.value === 'select' ? '' : 'none';
+  });
+  document.getElementById('add-cf-btn').style.display = list.querySelectorAll('.cf-row').length >= 10 ? 'none' : '';
+}
+
+function removeCFRow(btn) {
+  btn.closest('.cf-row').remove();
+  document.getElementById('add-cf-btn').style.display = '';
+}
+
+function updateCFKey(input) {
+  var row = input.closest('.cf-row');
+  row.querySelector('.cf-key-preview').textContent = _cfSlugify(input.value) || 'cf_…';
+}
+
+function getCFFields() {
+  var fields = [];
+  document.querySelectorAll('#cf-list .cf-row').forEach(function(row) {
+    var label = row.querySelector('.cf-label-input').value.trim();
+    if (!label) return;
+    fields.push({
+      key:      _cfSlugify(label),
+      label:    label,
+      type:     row.querySelector('.cf-type-input').value,
+      required: row.querySelector('.cf-req-input').checked,
+      options:  row.querySelector('.cf-options-input').value.trim()
+    });
+  });
+  return fields;
 }
 
 // ---- Init on load ----

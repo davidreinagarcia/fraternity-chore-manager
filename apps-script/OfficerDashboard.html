@@ -956,6 +956,12 @@
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Room Number</label>
         <input type="text" id="admin-edit-room" class="inline-input" style="width:100%" placeholder="e.g. 214">
       </div>
+      <div id="admin-edit-cf-section" style="display:none">
+        <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:2px">
+          <div style="font-size:0.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">Chapter Fields</div>
+          <div id="admin-edit-cf-fields"></div>
+        </div>
+      </div>
     </div>
     <div class="modal-btns">
       <button class="btn-outline" onclick="closeAdminEditModal()">Cancel</button>
@@ -1867,6 +1873,39 @@ function openAdminEditModal(memberId) {
   document.getElementById('admin-edit-living').value   = m.livingInHouse || '';
   document.getElementById('admin-edit-room').value     = m.roomNumber || '';
   onAdminEditLivingChange();
+  // Render chapter-specific custom fields
+  var cfs = CHAPTER_CONFIG.customFields || [];
+  var cfSection = document.getElementById('admin-edit-cf-section');
+  var cfContainer = document.getElementById('admin-edit-cf-fields');
+  cfContainer.innerHTML = '';
+  if (cfs.length) {
+    cfSection.style.display = '';
+    cfs.forEach(function(f) {
+      var val = (m.extra || {})[f.key] || '';
+      var inputHtml;
+      if (f.type === 'checkbox') {
+        inputHtml = '<label style="display:flex;align-items:center;gap:6px;font-size:0.9rem;cursor:pointer">' +
+          '<input type="checkbox" id="cf-edit-' + f.key + '"' + (val === 'Yes' || val === 'true' ? ' checked' : '') + '>' +
+          esc(f.label) + (f.required ? ' *' : '') + '</label>';
+      } else if (f.type === 'select' && f.options) {
+        var opts = f.options.split(',').map(function(o){ return o.trim(); }).filter(Boolean);
+        inputHtml = '<select id="cf-edit-' + f.key + '" class="inline-input" style="width:100%">' +
+          '<option value=""></option>' +
+          opts.map(function(o){ return '<option value="' + esc(o) + '"' + (val === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') +
+          '</select>';
+      } else {
+        inputHtml = '<input type="' + f.type + '" id="cf-edit-' + f.key + '" class="inline-input" style="width:100%" value="' + esc(val) + '">';
+      }
+      cfContainer.insertAdjacentHTML('beforeend',
+        '<div style="margin-bottom:12px">' +
+        (f.type !== 'checkbox' ? '<label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">' + esc(f.label) + (f.required ? ' *' : '') + '</label>' : '') +
+        inputHtml + '</div>'
+      );
+    });
+  } else {
+    cfSection.style.display = 'none';
+  }
+
   document.getElementById('admin-edit-modal').classList.add('open');
   setTimeout(function() { document.getElementById('admin-edit-name').focus(); }, 80);
 }
@@ -1886,19 +1925,38 @@ function saveAdminEdit() {
   var m = mmData.find(function(x) { return x.memberId === adminEditPending; }) || {};
   var name   = document.getElementById('admin-edit-name').value.trim();
   var email  = document.getElementById('admin-edit-email').value.trim();
-  var pledge = m.pledgeClass || ''; // pledge class isn't tracked/editable in this UI — pass through unchanged
+  var pledge = m.pledgeClass || '';
   var status = document.getElementById('admin-edit-status').value;
   var mealPlan = document.getElementById('admin-edit-mealplan').value;
   var living   = document.getElementById('admin-edit-living').value;
   var room     = document.getElementById('admin-edit-room').value.trim();
   if (!name || !email) { showToast('Name and email are required.'); return; }
+
+  // Collect custom field values
+  var cfs = CHAPTER_CONFIG.customFields || [];
+  var cfValues = {};
+  cfs.forEach(function(f) {
+    var el = document.getElementById('cf-edit-' + f.key);
+    if (!el) return;
+    cfValues[f.key] = f.type === 'checkbox' ? (el.checked ? 'Yes' : '') : el.value;
+  });
+  var hasCF = Object.keys(cfValues).length > 0;
+
   var memberId = adminEditPending;
   closeAdminEditModal();
   google.script.run
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
-      showToast(r.success ? 'Member updated!' : 'Error: ' + (r.error || r.message));
-      if (r.success) loadMemberManager();
+      if (!r.success) { showToast('Error: ' + (r.error || r.message)); return; }
+      if (hasCF) {
+        google.script.run
+          .withSuccessHandler(function() { showToast('Member updated!'); loadMemberManager(); })
+          .withFailureHandler(function() { showToast('Member updated (fields partial).'); loadMemberManager(); })
+          .updateMemberCustomFields(memberId, JSON.stringify(cfValues));
+      } else {
+        showToast('Member updated!');
+        loadMemberManager();
+      }
     })
     .withFailureHandler(onError)
     .updateMember(memberId, name, email, pledge, m.bkNumber || '', status, mealPlan, living, room);
@@ -2744,6 +2802,12 @@ function _mmExpandHtml(m) {
     ['Leadership Positions', ex.leadership_positions], ['Which Positions', ex.which_positions],
     ['Service Orgs', ex.service_orgs], ['Anything Else', ex.anything_else]
   );
+  // Chapter-specific custom fields
+  (cfg.customFields || []).forEach(function(f) {
+    var val = ex[f.key];
+    if (f.type === 'checkbox') val = val === 'Yes' ? '✅' : (val ? val : '—');
+    fields.push([f.label, val]);
+  });
   return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px 16px;padding:12px 14px">' +
     fields.map(function(f) {
       return '<div><div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.03em">' + f[0] + '</div>' +
@@ -3275,6 +3339,7 @@ function exportMembersCSV() {
 function exportFullCSV() {
   if (!mmData.length) { showToast('No member data loaded.'); return; }
   var lbl = CHAPTER_CONFIG.labels;
+  var cfs = CHAPTER_CONFIG.customFields || [];
   var header = [lbl.label_member_id,'Name','Status','Email',lbl.label_university_email,'Phone','Officer Role',
     'Living in House','Room Number','Meal Plan',
     'University ID','Campus Card','Campus Username','Major','Year','Anticipated Graduation',
@@ -3283,11 +3348,11 @@ function exportFullCSV() {
     'Campus Orgs','Leadership Positions','Which Positions','Service Orgs','Anything Else',
     'Suspended','Suspension Reason','Suspension End','Academic Suspension',
     'Probation','Probation Type',
-    'Graduated Semester','Chore','Fines'];
+    'Graduated Semester','Chore','Fines'].concat(cfs.map(function(f){ return f.label; }));
   var rows = [header];
   mmData.forEach(function(m) {
     var x = m.extra || {};
-    rows.push([
+    var baseRow = [
       m.bkNumber||'', m.name||'', m.status||'', m.email||'', m.gtEmail||'', m.phone||'', m.officerRole||'',
       m.livingInHouse||'', m.roomNumber||'', m.mealPlan||'',
       x.GTID||'', x.buzzcard||'', x.GT_username||'', x.major||'', x.year||'', m.anticipatedGraduation||'',
@@ -3297,7 +3362,8 @@ function exportFullCSV() {
       (m.suspension || m.academicSuspension) ? 'Yes' : 'No', m.suspensionReason||'', m.suspensionEnd||'', m.academicSuspension ? 'Yes' : 'No',
       m.probation ? 'Yes' : 'No', m.probationType||'',
       m.graduatedSemester||'', m.chore||'', m.fineCount||0
-    ]);
+    ];
+    rows.push(baseRow.concat(cfs.map(function(f){ return x[f.key] || ''; })));
   });
   var csv = rows.map(function(r) { return r.map(function(c) { return '"' + String(c).replace(/"/g,'""') + '"'; }).join(','); }).join('\r\n');
   var blob = new Blob([csv], { type:'text/csv' });

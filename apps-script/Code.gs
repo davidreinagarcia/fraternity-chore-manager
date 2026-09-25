@@ -121,11 +121,13 @@ function _getMembersStructured(sheetName) {
     'dietary_restrictions','car_on_campus','allergies','emergency_contact_name',
     'emergency_contact_phone','campus_orgs','leadership_positions','which_positions',
     'service_orgs','anything_else','major','year'];
+  var cfKeys = Object.keys(cm).filter(function(k) { return k.slice(0, 3) === 'cf_'; });
   var out = [];
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
     var extra = {};
     extraFields.forEach(function(f) { extra[f] = cm[f] !== undefined ? String(r[cm[f]] || '') : ''; });
+    cfKeys.forEach(function(k) { extra[k] = String(r[cm[k]] || ''); });
     out.push({
       memberId:      String(r[0] || ''),
       bkNumber:      String(r[cm['BK#'] !== undefined ? cm['BK#'] : 1] || ''),
@@ -174,12 +176,14 @@ function _getAlumniStructured() {
     'dietary_restrictions','car_on_campus','allergies','emergency_contact_name',
     'emergency_contact_phone','campus_orgs','leadership_positions','which_positions',
     'service_orgs','anything_else','major','year'];
+  var cfKeys = Object.keys(cm).filter(function(k) { return k.slice(0, 3) === 'cf_'; });
   var out = [];
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
     if (!r.join('').trim()) continue;
     var extra = {};
     extraFields.forEach(function(f) { extra[f] = cm[f] !== undefined ? String(r[cm[f]] || '') : ''; });
+    cfKeys.forEach(function(k) { extra[k] = String(r[cm[k]] || ''); });
     extra['moved_to_alumni_date'] = cm['moved_to_alumni_date'] !== undefined ? String(r[cm['moved_to_alumni_date']] || '') : '';
     extra['notes'] = cm['notes'] !== undefined ? String(r[cm['notes']] || '') : '';
     out.push({
@@ -1473,10 +1477,23 @@ function getChapterConfig() {
       logo_url:      raw['logo_url']      !== undefined ? String(raw['logo_url'])       : ''
     };
 
-    return { chapter: chapter, labels: labels, modules: modules, options: options };
+    var customFieldsStr = raw['custom_fields'] ? String(raw['custom_fields']) : '[]';
+    var customFields = [];
+    try { customFields = JSON.parse(customFieldsStr); } catch(_) {}
+    customFields = customFields.slice(0, 10).map(function(f) {
+      return {
+        key:      String(f.key      || '').replace(/[^a-z0-9_]/g, '').substring(0, 30),
+        label:    String(f.label    || ''),
+        type:     ['text','number','email','date','checkbox','select'].indexOf(f.type) !== -1 ? f.type : 'text',
+        options:  String(f.options  || ''),
+        required: !!f.required
+      };
+    }).filter(function(f) { return f.key && f.label; });
+
+    return { chapter: chapter, labels: labels, modules: modules, options: options, customFields: customFields };
   } catch (e) {
     logError('getChapterConfig', e);
-    return { chapter: {}, labels: LABEL_DEFAULTS, modules: MODULE_DEFAULTS, options: OPTIONS_DEFAULTS };
+    return { chapter: {}, labels: LABEL_DEFAULTS, modules: MODULE_DEFAULTS, options: OPTIONS_DEFAULTS, customFields: [] };
   }
 }
 
@@ -1530,6 +1547,7 @@ function initChapter(setupJson) {
     if (setup.officer_pin)      toWrite['officer_pin']      = setup.officer_pin;
     if (setup.signature_points) toWrite['signature_points'] = setup.signature_points;
     if (setup.timezone)         toWrite['timezone']         = setup.timezone;
+    if (setup.custom_fields)    toWrite['custom_fields']    = setup.custom_fields;
 
     // Write all keys (upsert)
     Object.keys(toWrite).forEach(function(k) { setConfigValue(k, toWrite[k]); });
@@ -2231,6 +2249,50 @@ var RETURNING_MEMBER_FORM_HEADERS = [
   'Do you have a car on campus?','T-Shirt Size','Anything else we should know?'
 ];
 
+// Adds any configured custom field columns (cf_ prefix) to members and AMs sheets
+// if they don't already exist. Safe to call repeatedly — only adds missing columns.
+function _ensureCustomFieldColumns(ss) {
+  var cfRaw = getConfigValue('custom_fields');
+  if (!cfRaw) return;
+  var fields = [];
+  try { fields = JSON.parse(String(cfRaw)); } catch(_) {}
+  if (!fields.length) return;
+  ['members', 'AMs'].forEach(function(sheetName) {
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet || sheet.getLastRow() < 1) return;
+    var lastCol = Math.max(sheet.getLastColumn(), 1);
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    fields.forEach(function(f) {
+      if (!f.key || headers.indexOf(f.key) !== -1) return;
+      sheet.getRange(1, headers.length + 1).setValue(f.key);
+      headers.push(f.key);
+    });
+  });
+}
+
+// Writes custom field values (keys must start with cf_) to a member's row.
+// fieldsJson: JSON object like {"cf_major":"Computer Science","cf_car":"Yes"}
+function updateMemberCustomFields(memberId, fieldsJson) {
+  try {
+    var fields = JSON.parse(fieldsJson || '{}');
+    var found = _findMemberRowAcrossSheets(memberId);
+    if (!found) return JSON.stringify({ success: false, error: 'Member not found.' });
+    var cm = found.cm;
+    Object.keys(fields).forEach(function(k) {
+      if (k.slice(0, 3) !== 'cf_') return;
+      if (cm[k] === undefined) return;
+      found.sheet.getRange(found.rowNum, cm[k] + 1).setValue(fields[k]);
+    });
+    if (cm['last_updated'] !== undefined) {
+      found.sheet.getRange(found.rowNum, cm['last_updated'] + 1).setValue(new Date().toISOString());
+    }
+    return JSON.stringify({ success: true });
+  } catch(err) {
+    logError('updateMemberCustomFields', err);
+    return JSON.stringify({ success: false, error: err.toString() });
+  }
+}
+
 // Creates required tabs and migrates members tab to new schema if needed.
 function ensureTabsExist() {
   var ss = getSpreadsheet();
@@ -2330,6 +2392,9 @@ function ensureTabsExist() {
       created.push('config.signature_points');
     }
   }
+
+  // --- Custom field columns (added by chapter-specific config) ---
+  _ensureCustomFieldColumns(ss);
 
   var msg = 'Tabs verified. Created: ' + (created.length ? created.join(', ') : 'none (all exist)');
   logInfo('ensureTabsExist', msg);
