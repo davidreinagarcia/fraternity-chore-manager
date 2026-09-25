@@ -516,6 +516,12 @@ function runMondayReset() {
     const weekStart   = _normDate(getConfigValue('week_start')); // normalize: Sheets may return a Date object
     const emailsRaw   = getConfigValue('officer_emails') || '';
     const fineAmount  = Number(getConfigValue('fine_amount') || 5);
+    const chapterCfg  = getChapterConfig();
+    const lblChore    = chapterCfg.labels.label_chore  || 'Chore';
+    const lblFine     = chapterCfg.labels.label_fine   || 'Fine';
+    const chapterName = chapterCfg.chapter.chapter_name || 'Chapter';
+    const primaryColor= chapterCfg.chapter.primary_color || '#093D20';
+    const accentColor = chapterCfg.chapter.accent_color  || '#FFB71D';
 
     const subSheet    = ss.getSheetByName('submissions');
     const asgSheet    = ss.getSheetByName('chore_assignments');
@@ -562,7 +568,7 @@ function runMondayReset() {
       finesSheet.appendRow([
         'F' + Utilities.getUuid().replace(/-/g,'').substring(0,8).toUpperCase(),
         f.memberId, f.choreName, weekStart,
-        'Missed chore submission', new Date().toISOString(), 'system'
+        'Missed ' + lblChore.toLowerCase() + ' submission', new Date().toISOString(), 'system'
       ]);
     }
 
@@ -579,32 +585,33 @@ function runMondayReset() {
         `<td style="padding:6px 12px;text-align:center">$${fineAmount}</td></tr>`
       ).join('');
       const ghostSection = ghostAlerts.length > 0
-        ? `<h3 style="color:#b45309;margin-top:28px">⚠️ Ghost Alert — ${ghostAlerts.length} brother(s) with no submission this week</h3>
+        ? `<h3 style="color:#b45309;margin-top:28px">⚠️ Ghost Alert — ${ghostAlerts.length} member(s) with no submission this week</h3>
            <p style="font-size:13px;color:#444">These active members have zero submissions on record and may need to be contacted:</p>
            <ul style="font-size:14px">${ghostAlerts.map(g => `<li><strong>${g.name}</strong> — ${g.chore}</li>`).join('')}</ul>`
         : '';
+      const emailSubject = lblFine + ' List — Week of ' + weekStart;
       const html = `<html><body style="font-family:Arial,sans-serif">
-        <h2 style="color:#093D20">Chore Fine List — Week of ${weekStart}</h2>
+        <h2 style="color:${primaryColor}">${chapterName} — ${lblFine} List — Week of ${weekStart}</h2>
         ${fineList.length > 0 ? `
         <table border="1" cellspacing="0" cellpadding="0"
                style="border-collapse:collapse;font-size:14px">
           <thead>
-            <tr style="background:#093D20;color:#FFB71D">
+            <tr style="background:${primaryColor};color:${accentColor}">
               <th style="padding:8px 12px">Member</th>
-              <th style="padding:8px 12px">Chore</th>
+              <th style="padding:8px 12px">${lblChore}</th>
               <th style="padding:8px 12px">Week</th>
-              <th style="padding:8px 12px">Fine</th>
+              <th style="padding:8px 12px">${lblFine}</th>
             </tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
-        <p><strong>Total fines:</strong> ${fineList.length} ($${fineList.length * fineAmount})</p>` : '<p style="color:#666">No fines issued this week.</p>'}
+        <p><strong>Total ${lblFine.toLowerCase()}s:</strong> ${fineList.length} ($${fineList.length * fineAmount})</p>` : `<p style="color:#666">No ${lblFine.toLowerCase()}s issued this week.</p>`}
         ${ghostSection}
-        <p style="color:#888;font-size:12px">Sent automatically by the Chore Management System.</p>
+        <p style="color:#888;font-size:12px">Sent automatically by the ${lblChore} Management System.</p>
         </body></html>`;
       GmailApp.sendEmail(
         emailList.join(','),
-        'Chore Fine List — Week of ' + weekStart,
+        emailSubject,
         fineList.map(f => `${f.memberName}: ${f.choreName}`).join('\n') +
           (ghostAlerts.length ? '\n\nGhost alert: ' + ghostAlerts.map(g => g.name + ' (' + g.chore + ')').join(', ') : ''),
         { htmlBody: html }
@@ -3518,6 +3525,13 @@ function generateHandoffReport() {
     var fineAmt   = getConfigValue('fine_amount') || '5';
     var officers  = getConfigValue('officer_emails') || '—';
     var pin       = getConfigValue('officer_pin') || '(not set)';
+    var cfg_      = getChapterConfig();
+    var lblChore  = cfg_.labels.label_chore  || 'Chore';
+    var lblFine   = cfg_.labels.label_fine   || 'Fine';
+    var lblMembId = cfg_.labels.label_member_id || 'BK#';
+    var chName    = cfg_.chapter.chapter_name || 'Chapter';
+    var pColor    = cfg_.chapter.primary_color || '#093D20';
+    var aColor    = cfg_.chapter.accent_color  || '#FFB71D';
 
     var members   = _getMembersStructured();
     var asgData   = ss.getSheetByName('chore_assignments').getDataRange().getValues();
@@ -3557,7 +3571,7 @@ function generateHandoffReport() {
       var flags = [];
       if (m.suspension || m.academicSuspension) flags.push('SUSPENDED');
       if (m.probation) flags.push('PROBATION(' + m.probationType + ')');
-      if (fineMap[m.memberId]) flags.push(fineMap[m.memberId] + ' fines');
+      if (fineMap[m.memberId]) flags.push(fineMap[m.memberId] + ' ' + (cfg_.labels.label_fine || 'fine').toLowerCase() + 's');
       return '<tr><td>' + m.bkNumber + '</td><td>' + m.name + '</td><td>' + (asgMap[m.memberId]||'—') + '</td>' +
         '<td>' + (m.officerRole||'—') + '</td><td>' + (flags.join(', ')||'—') + '</td></tr>';
     }).join('');
@@ -3569,27 +3583,27 @@ function generateHandoffReport() {
     var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
       '<title>Officer Handoff — ' + semester + '</title>' +
       '<style>body{font-family:Arial,sans-serif;max-width:1100px;margin:0 auto;padding:24px;color:#0f172a}' +
-      'h1{color:#093D20}h2{color:#093D20;border-bottom:2px solid #FFB71D;padding-bottom:4px}' +
+      'h1{color:' + pColor + '}h2{color:' + pColor + ';border-bottom:2px solid ' + aColor + ';padding-bottom:4px}' +
       'table{width:100%;border-collapse:collapse;margin-bottom:24px;font-size:13px}' +
-      'th{background:#093D20;color:#FFB71D;padding:8px;text-align:left}' +
+      'th{background:' + pColor + ';color:' + aColor + ';padding:8px;text-align:left}' +
       'td{padding:7px 8px;border-bottom:1px solid #eee}tr:hover td{background:#f8fafc}' +
       '.meta{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:24px}' +
       '.instructions{background:#fefce8;border:1px solid #fde68a;border-radius:8px;padding:16px}' +
       '@media print{button{display:none}}' +
       '</style></head><body>' +
-      '<h1>Lambda Chi Alpha GT — Officer Handoff Report</h1>' +
+      '<h1>' + chName + ' — Officer Handoff Report</h1>' +
       '<div class="meta">' +
       '<strong>Semester:</strong> ' + semester + ' | ' +
       '<strong>Current Week Start:</strong> ' + weekStart + ' | ' +
-      '<strong>Fine Amount:</strong> $' + fineAmt + '<br>' +
+      '<strong>' + lblFine + ' Amount:</strong> $' + fineAmt + '<br>' +
       '<strong>Officer Emails:</strong> ' + officers + ' | ' +
       '<strong>Officer PIN:</strong> ' + pin +
       '</div>' +
       '<h2>Active Members (' + members.filter(function(m){return m.status==='active';}).length + ')</h2>' +
-      '<table><thead><tr><th>BK#</th><th>Name</th><th>Chore</th><th>Officer Role</th><th>Flags</th></tr></thead>' +
+      '<table><thead><tr><th>' + lblMembId + '</th><th>Name</th><th>' + lblChore + '</th><th>Officer Role</th><th>Flags</th></tr></thead>' +
       '<tbody>' + activeRows + '</tbody></table>' +
-      '<h2>Outstanding Fines</h2>' +
-      '<p>' + (fineData.length - 1) + ' fine record(s) this semester.</p>' +
+      '<h2>Outstanding ' + lblFine + 's</h2>' +
+      '<p>' + (fineData.length - 1) + ' ' + lblFine.toLowerCase() + ' record(s) this semester.</p>' +
       '<h2>Handoff Notes</h2>' +
       '<table><thead><tr><th>Member</th><th>Note</th><th>Left By</th><th>Date</th></tr></thead>' +
       '<tbody>' + handoffRows + '</tbody></table>' +
@@ -3597,8 +3611,8 @@ function generateHandoffReport() {
       '<ul>' +
       '<li><strong>Update config:</strong> Admin tab → Config Editor → update semester, week_start, officer_emails, officer_pin</li>' +
       '<li><strong>Semester Sync:</strong> Admin tab → Semester Tools → Semester Sync (runs at start of each semester)</li>' +
-      '<li><strong>Monday Reset:</strong> Runs automatically at 6am ET. Can also run manually from Admin tab → Fine Preview → "Send Fine List Now"</li>' +
-      '<li><strong>QR Codes:</strong> Admin tab → Chore Manager → "Download All QR Codes (ZIP)" — reprint if chores change</li>' +
+      '<li><strong>Monday Reset:</strong> Runs automatically at 6am ET. Can also run manually from Admin tab → ' + lblFine + ' Preview → "Send ' + lblFine + ' List Now"</li>' +
+      '<li><strong>QR Codes:</strong> Admin tab → ' + lblChore + ' Manager → "Download All QR Codes (ZIP)" — reprint if ' + lblChore.toLowerCase() + 's change</li>' +
       '</ul></div>' +
       '<p style="color:#999;font-size:12px;margin-top:32px">Generated ' + new Date().toLocaleString() + '</p>' +
       '</body></html>';
