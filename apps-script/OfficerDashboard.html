@@ -157,6 +157,8 @@
   .btn-primary { background: var(--primary); color: var(--gold); border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
   .btn-danger  { background: var(--red); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
   .btn-outline { background: white; color: var(--primary); border: 2px solid var(--primary); padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+  .btn-filter  { background: white; color: var(--muted); border: 1px solid var(--border); padding: 5px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+  .btn-filter.active { background: var(--primary); color: var(--gold); border-color: var(--primary); }
 
   /* ---- Summary stats ---- */
   .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
@@ -429,10 +431,15 @@
       <div class="card">
         <div class="card-header">
           <h2>Submission Status — <span id="week-label">Week of —</span></h2>
-          <div style="display:flex;gap:8px">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <input type="text" id="status-search" placeholder="Filter chores..."
                    style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem"
                    oninput="filterStatusTable()">
+            <div style="display:flex;gap:4px">
+              <button class="btn-filter active" id="sf-all"          onclick="setStatusFilter('all')">All</button>
+              <button class="btn-filter"         id="sf-not-submitted" onclick="setStatusFilter('not-submitted')">Not Submitted</button>
+              <button class="btn-filter"         id="sf-flagged"      onclick="setStatusFilter('flagged')">Flagged</button>
+            </div>
           </div>
         </div>
         <div class="card-body" style="overflow-x:auto">
@@ -658,6 +665,20 @@
           <h3>Auto-Split Members</h3>
           <p>Randomly distribute all unassigned active members into open chore slots.</p>
           <button class="btn-primary" onclick="callAutoSplit()">Run Auto-Split</button>
+        </div>
+      </div>
+
+      <!-- 0. Share Links -->
+      <div class="admin-section">
+        <div class="admin-section-header" onclick="toggleAdminSection('admin-links')">
+          <h2>Share Links</h2>
+          <span class="admin-section-toggle" id="admin-links-toggle">▼</span>
+        </div>
+        <div class="admin-section-body" id="admin-links-body" style="display:none">
+          <p style="font-size:0.82rem;color:var(--muted);margin-bottom:16px">Copy these URLs to share with members or bookmark for officers. All links go to the same base URL with different <code>?app=</code> parameters.</p>
+          <div id="share-links-list">
+            <div style="text-align:center;padding:20px;color:var(--muted)">Loading links...</div>
+          </div>
         </div>
       </div>
 
@@ -1473,11 +1494,30 @@ function filterMemberTable() {
   renderMemberTable(filtered);
 }
 
+var _statusFilterMode = 'all';
+
+function setStatusFilter(mode) {
+  _statusFilterMode = mode;
+  ['all','not-submitted','flagged'].forEach(function(m) {
+    var btn = document.getElementById('sf-' + m);
+    if (btn) btn.classList.toggle('active', m === mode);
+  });
+  filterStatusTable();
+}
+
 function filterStatusTable() {
-  const q = document.getElementById('status-search').value.toLowerCase();
-  const rows = document.querySelectorAll('#status-tbody tr');
-  rows.forEach(r => {
-    r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
+  var q = document.getElementById('status-search').value.toLowerCase();
+  var rows = document.querySelectorAll('#status-tbody tr');
+  rows.forEach(function(r) {
+    var text = r.textContent.toLowerCase();
+    var matchSearch = !q || text.includes(q);
+    var matchFilter = true;
+    if (_statusFilterMode === 'not-submitted') {
+      matchFilter = text.includes('not submitted') || text.includes('missing');
+    } else if (_statusFilterMode === 'flagged') {
+      matchFilter = text.includes('failed') || text.includes('flagged');
+    }
+    r.style.display = (matchSearch && matchFilter) ? '' : 'none';
   });
 }
 
@@ -1679,6 +1719,50 @@ var _adminSectionsLoaded = {};
 
 function initAdminTab() { /* sections lazy-load on first expand */ }
 
+function initShareLinks() {
+  var base = BASE_URL;
+  var links = [
+    { label: 'Home Page',          url: base + '?app=home',      desc: 'Share with all members' },
+    { label: 'Submit Chore',       url: base + '?app=submit',    desc: 'Direct link to submission form' },
+    { label: 'My Compliance',      url: base + '?app=member',    desc: 'Member history view' },
+    { label: 'Submit Signature',   url: base + '?app=signature', desc: 'AMs log activities with brothers' },
+    { label: 'Officer Dashboard',  url: base + '?app=officer',   desc: 'Officers only — keep private' },
+    { label: 'Draft Night Board',  url: base + '?app=draft&mode=display', desc: 'TV display mode' }
+  ];
+  var html = links.map(function(l) {
+    return '<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-weight:700;font-size:0.9rem">' + l.label + '</div>' +
+        '<div style="font-size:0.75rem;color:var(--muted);margin-top:2px">' + l.desc + '</div>' +
+        '<div style="font-size:0.7rem;color:#94a3b8;word-break:break-all;margin-top:4px;font-family:monospace">' + l.url + '</div>' +
+      '</div>' +
+      '<button class="btn-outline" style="white-space:nowrap;font-size:0.78rem;padding:6px 12px" onclick="copyLink(\'' + encodeURIComponent(l.url) + '\',this)">Copy</button>' +
+    '</div>';
+  }).join('');
+  document.getElementById('share-links-list').innerHTML = html;
+}
+
+function copyLink(encodedUrl, btn) {
+  var url = decodeURIComponent(encodedUrl);
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(function() {
+      var orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      btn.style.color = 'var(--green)';
+      setTimeout(function() { btn.textContent = orig; btn.style.color = ''; }, 2000);
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = url;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+  }
+}
+
 function toggleAdminSection(id) {
   var body   = document.getElementById(id + '-body');
   var toggle = document.getElementById(id + '-toggle');
@@ -1687,8 +1771,9 @@ function toggleAdminSection(id) {
   toggle.textContent = isOpen ? '▼' : '▲';
   if (!isOpen && !_adminSectionsLoaded[id]) {
     _adminSectionsLoaded[id] = true;
-    if (id === 'admin-chores')   loadAdminChores();
-    else if (id === 'admin-config')  loadAdminConfig();
+    if (id === 'admin-chores')        loadAdminChores();
+    else if (id === 'admin-config')   loadAdminConfig();
+    else if (id === 'admin-links')    initShareLinks();
   }
 }
 

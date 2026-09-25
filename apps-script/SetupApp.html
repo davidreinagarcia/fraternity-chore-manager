@@ -250,6 +250,11 @@
 <!-- Progress -->
 <div class="progress-wrap" id="progress-wrap"></div>
 
+<!-- Existing config warning (shown only if chapter already initialized) -->
+<div id="existing-config-banner" style="display:none;background:#fffbeb;border-bottom:2px solid #fde68a;padding:12px 24px;font-size:0.85rem;color:#92400e">
+  ⚠️ <strong>This chapter is already initialized</strong> — a config for "<span id="existing-chapter-name"></span>" was found. Running setup again will overwrite all current settings.
+</div>
+
 <div class="container">
 
   <!-- Step 1: Identity -->
@@ -368,6 +373,36 @@
           <label>Officer PIN</label>
           <input type="text" id="s5-pin" value="1234" maxlength="8" placeholder="4–8 digits">
         </div>
+      </div>
+      <div class="field">
+        <label>Chapter Timezone</label>
+        <select id="s5-timezone">
+          <optgroup label="United States &amp; Canada">
+            <option value="America/New_York">Eastern Time (ET)</option>
+            <option value="America/Chicago">Central Time (CT)</option>
+            <option value="America/Denver">Mountain Time (MT)</option>
+            <option value="America/Phoenix">Arizona (no DST)</option>
+            <option value="America/Los_Angeles">Pacific Time (PT)</option>
+            <option value="America/Anchorage">Alaska Time</option>
+            <option value="Pacific/Honolulu">Hawaii Time</option>
+            <option value="America/Toronto">Toronto (ET)</option>
+            <option value="America/Vancouver">Vancouver (PT)</option>
+          </optgroup>
+          <optgroup label="Europe">
+            <option value="Europe/London">London (GMT/BST)</option>
+            <option value="Europe/Madrid">Madrid (CET/CEST)</option>
+            <option value="Europe/Paris">Paris (CET/CEST)</option>
+            <option value="Europe/Berlin">Berlin (CET/CEST)</option>
+            <option value="Europe/Rome">Rome (CET/CEST)</option>
+            <option value="Europe/Amsterdam">Amsterdam (CET/CEST)</option>
+          </optgroup>
+          <optgroup label="Other">
+            <option value="Australia/Sydney">Sydney (AEST/AEDT)</option>
+            <option value="Asia/Tokyo">Tokyo (JST)</option>
+            <option value="Asia/Dubai">Dubai (GST)</option>
+          </optgroup>
+        </select>
+        <div class="hint">Sets when Monday resets run. Match your chapter's local time.</div>
       </div>
     </div>
 
@@ -854,6 +889,7 @@ function collectSetup() {
     officer_emails: document.getElementById('s5-emails').value.trim(),
     fine_amount:   document.getElementById('s5-fine').value,
     officer_pin:   document.getElementById('s5-pin').value.trim(),
+    timezone:      document.getElementById('s5-timezone').value,
     meal_plan_options:    document.getElementById('opt-meal').value.trim(),
     officer_role_options: document.getElementById('opt-officer-roles').value.trim(),
     am_activity_types:    document.getElementById('opt-am-activities').value.trim(),
@@ -922,6 +958,20 @@ buildVocabGrid();
 buildModulesGrid();
 seedDefaultChores();
 initColorPreviews();
+
+// Detect existing chapter config — show warning banner if already set up
+google.script.run
+  .withSuccessHandler(function(json) {
+    try {
+      var cfg = JSON.parse(json);
+      var name = cfg && cfg.chapter && cfg.chapter.chapter_name;
+      if (name && name !== 'My Chapter') {
+        document.getElementById('existing-chapter-name').textContent = name;
+        document.getElementById('existing-config-banner').style.display = '';
+      }
+    } catch (_) {}
+  })
+  .getChapterConfigJson();
 </script>
 </body>
 </html>

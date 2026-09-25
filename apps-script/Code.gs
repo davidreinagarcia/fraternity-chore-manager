@@ -254,12 +254,17 @@ function _checkOfficerPin(pin) {
   return String(pin || '') === stored;
 }
 
+// Returns the chapter's configured timezone, falling back to America/New_York.
+function _getTimezone() {
+  return String(getConfigValue('timezone') || 'America/New_York');
+}
+
 // Normalize any date value (Date object or string) to 'yyyy-MM-dd'.
 // Sheets auto-converts ISO-date strings to Date objects on read, so always
 // use this before comparing or storing week_start values.
 function _normDate(v) {
   if (!v) return '';
-  if (v instanceof Date) return Utilities.formatDate(v, 'America/New_York', 'yyyy-MM-dd');
+  if (v instanceof Date) return Utilities.formatDate(v, _getTimezone(), 'yyyy-MM-dd');
   return String(v).trim().substring(0, 10);
 }
 
@@ -358,7 +363,7 @@ function doGet(e) {
         break;
     }
     tmpl.baseUrl = ScriptApp.getService().getUrl();
-    tmpl.todayDate = Utilities.formatDate(new Date(), 'America/New_York', 'yyyy-MM-dd');
+    tmpl.todayDate = Utilities.formatDate(new Date(), _getTimezone(), 'yyyy-MM-dd');
     var cfg_ = getChapterConfig();
     tmpl.cfg = cfg_;
     tmpl.cfgJson = JSON.stringify(cfg_);
@@ -624,7 +629,7 @@ function runMondayReset() {
     // Advance week_start by 7 days
     const d = new Date(weekStart);
     d.setDate(d.getDate() + 7);
-    const nextMonday = Utilities.formatDate(d, 'America/New_York', 'yyyy-MM-dd');
+    const nextMonday = Utilities.formatDate(d, _getTimezone(), 'yyyy-MM-dd');
     setConfigValue('week_start', nextMonday);
 
     // Refresh weekly_status tab
@@ -772,7 +777,7 @@ function autoMondayTrigger() {
     .timeBased()
     .onWeekDay(ScriptApp.WeekDay.MONDAY)
     .atHour(6)
-    .inTimezone('America/New_York')
+    .inTimezone(_getTimezone())
     .create();
   logInfo('autoMondayTrigger', 'Trigger created.');
   try { SpreadsheetApp.getUi().alert('Monday 6am ET trigger created!'); } catch (_) {}
@@ -1355,7 +1360,7 @@ function getConfig() {
     for (var i = 1; i < data.length; i++) {  // skip header row (BUG 3)
       if (data[i][0] && CONFIG_EDITOR_HIDDEN_KEYS.indexOf(String(data[i][0]).trim()) === -1) {
         var val = data[i][1];
-        if (val instanceof Date) val = Utilities.formatDate(val, 'America/New_York', 'yyyy-MM-dd');  // BUG 4: normalize date cells
+        if (val instanceof Date) val = Utilities.formatDate(val, _getTimezone(), 'yyyy-MM-dd');  // BUG 4: normalize date cells
         config.push({ key: String(data[i][0]), value: val });
       }
     }
@@ -1524,6 +1529,7 @@ function initChapter(setupJson) {
     if (setup.fine_amount)      toWrite['fine_amount']      = setup.fine_amount;
     if (setup.officer_pin)      toWrite['officer_pin']      = setup.officer_pin;
     if (setup.signature_points) toWrite['signature_points'] = setup.signature_points;
+    if (setup.timezone)         toWrite['timezone']         = setup.timezone;
 
     // Write all keys (upsert)
     Object.keys(toWrite).forEach(function(k) { setConfigValue(k, toWrite[k]); });
@@ -1549,9 +1555,10 @@ function initChapter(setupJson) {
     });
     if (!hasTrigger) {
       try {
+        var triggerTz = setup.timezone || _getTimezone();
         ScriptApp.newTrigger('runMondayReset')
           .timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(6)
-          .inTimezone('America/New_York').create();
+          .inTimezone(triggerTz).create();
       } catch (_) {
         warnings.push('Could not create Monday trigger automatically — do it manually from Setup menu.');
       }

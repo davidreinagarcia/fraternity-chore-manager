@@ -210,6 +210,11 @@ window.addEventListener('load', function() {
     .withSuccessHandler(function(json) {
       var ams = JSON.parse(json);
       var sel = document.getElementById('am-select');
+      if (!ams || ams.length === 0) {
+        sel.innerHTML = '<option value="">No AMs found — contact an officer</option>';
+        sel.disabled = true;
+        return;
+      }
       sel.innerHTML = '<option value="">Select your name...</option>';
       ams.forEach(function(am) {
         var opt = document.createElement('option');
@@ -219,7 +224,12 @@ window.addEventListener('load', function() {
       });
       sel.addEventListener('change', checkSubmitReady);
     })
-    .withFailureHandler(function(e) { console.error(e); })
+    .withFailureHandler(function(e) {
+      var sel = document.getElementById('am-select');
+      sel.innerHTML = '<option value="">Error loading names — try refreshing</option>';
+      sel.disabled = true;
+      console.error(e);
+    })
     .getActiveAMsForSignature();
 
   document.getElementById('brother-input').addEventListener('input', checkSubmitReady);
