@@ -83,10 +83,11 @@ function getCustomFormUrls() {
 // ---- New Member Form (pledges / AMs) -----------------------
 
 function _cfCreateNewMemberForm(ss, cfg) {
-  var chName   = cfg.chapter.chapter_name || 'Chapter';
-  var semester = getConfigValue('semester') || '';
+  var chName      = cfg.chapter.chapter_name || 'Chapter';
+  var nmGroupName = cfg.labels.label_am_group || 'New Members';
+  var semester    = getConfigValue('semester') || '';
 
-  var form = FormApp.create(chName + ' — New Member Form' + (semester ? ' (' + semester + ')' : ''));
+  var form = FormApp.create(chName + ' — ' + nmGroupName + ' Intake Form' + (semester ? ' (' + semester + ')' : ''));
   form.setDescription(
     'Welcome to ' + chName + '! Complete this form so we can add you to our system. ' +
     'All fields marked * are required.'
@@ -128,16 +129,22 @@ function _cfBuildNMFormItems(form, cfg) {
     .setRequired(true)
     .setValidation(emailValidation);
 
-  // University fields — always included; chapter can hide via Form settings
-  // if module_university_fields is false. The column map in runSemesterSync
-  // uses optional lookup so missing columns are silently skipped.
-  form.addTextItem().setTitle('GTID').setRequired(false);
-  form.addTextItem().setTitle('BuzzCard 6-Digit Code').setRequired(false);
-  form.addTextItem().setTitle('GT Username').setRequired(false);
-  form.addTextItem()
-    .setTitle('GT Email')
-    .setRequired(false)
-    .setValidation(emailValidation);
+  // University fields — only included when module_university_fields is enabled.
+  // Labels come from chapter config so each deployment can name these fields
+  // whatever their university uses (student ID, NetID, banner ID, etc.).
+  if (cfg.modules.module_university_fields) {
+    form.addTextItem()
+      .setTitle(cfg.labels.label_university_id || 'University ID')
+      .setRequired(false);
+    form.addTextItem()
+      .setTitle('University Username')
+      .setRequired(false)
+      .setHelpText('Your university login username.');
+    form.addTextItem()
+      .setTitle(cfg.labels.label_university_email || 'University Email')
+      .setRequired(false)
+      .setValidation(emailValidation);
+  }
 
   // Academic info
   form.addTextItem().setTitle('Major').setRequired(false);
@@ -244,17 +251,24 @@ function _cfCreateReturningMemberForm(ss, cfg) {
 }
 
 function _cfBuildRMFormItems(form, cfg) {
-  // BK# is the primary lookup key in runSemesterSync
+  // Member ID is the primary lookup key in runSemesterSync.
+  // The field title is the chapter's label_member_id so the response sheet
+  // column name matches what the sync logic looks for.
+  var membIdLabel = cfg.labels.label_member_id || 'Member ID';
   form.addTextItem()
-    .setTitle('BK #')
+    .setTitle(membIdLabel)
     .setRequired(false)
-    .setHelpText('Your 4-digit BK number. Strongly recommended — without it we match by name only.');
+    .setHelpText('Your ' + membIdLabel + '. Strongly recommended — without it we match by name only.');
 
   form.addTextItem().setTitle('Legal First Name').setRequired(true);
   form.addTextItem().setTitle('Legal Last Name').setRequired(true);
 
-  // Status
-  var statusOpts = ['Active', 'Inactive', 'Inactive (Co-op)', 'Inactive (Study Abroad)', 'Graduated'];
+  // Status — base options plus per-chapter inactive sub-reasons
+  var inactiveReasons = (cfg.options.inactive_reason_options || '')
+    .split(',').map(function(r) { return r.trim(); }).filter(Boolean);
+  var statusOpts = ['Active', 'Inactive'];
+  inactiveReasons.forEach(function(r) { statusOpts.push('Inactive (' + r + ')'); });
+  statusOpts.push('Graduated');
   form.addMultipleChoiceItem()
     .setTitle('Status this semester')
     .setRequired(true)
@@ -616,13 +630,15 @@ function deduplicateFormResponses(pin) {
     return JSON.stringify({ success: false, error: 'Unauthorized: incorrect officer PIN.' });
   }
   try {
-    var ss = getSpreadsheet();
+    var ss  = getSpreadsheet();
+    var cfg = getChapterConfig();
+    var membIdLabel = cfg.labels.label_member_id || 'Member ID';
 
     var nmSheet = ss.getSheetByName('new_member_responses');
     var nmResult = nmSheet ? _cfDeduplicateSheet(nmSheet, 'Personal Email') : { removed: 0 };
 
     var rmSheet = ss.getSheetByName('returning_member_responses');
-    var rmResult = rmSheet ? _cfDeduplicateSheet(rmSheet, 'BK #') : { removed: 0 };
+    var rmResult = rmSheet ? _cfDeduplicateSheet(rmSheet, membIdLabel) : { removed: 0 };
 
     logInfo('deduplicateFormResponses',
       'NM removed: ' + nmResult.removed + ' | RM removed: ' + rmResult.removed);
@@ -758,12 +774,13 @@ function _cfEnsurePendingReviewSheet(ss) {
 
 // Writes an unmatched returning-member form response to the
 // pending-review queue. Officers can see these in the Admin tab.
-function _cfQueuePendingReview(ss, formType, rr, rmCM) {
+function _cfQueuePendingReview(ss, formType, rr, rmCM, membIdLabel) {
   try {
     var prSheet = _cfEnsurePendingReviewSheet(ss);
     var rid = 'PR' + Utilities.getUuid().replace(/-/g,'').substring(0,8).toUpperCase();
+    var idCol = membIdLabel && rmCM[membIdLabel] !== undefined ? rmCM[membIdLabel] : 1;
     var submittedAt = rr[rmCM['Timestamp'] !== undefined ? rmCM['Timestamp'] : 0];
-    var bkNum  = String(rr[rmCM['BK #']           !== undefined ? rmCM['BK #']           : 1] || '');
+    var bkNum  = String(rr[idCol] || '');
     var first  = String(rr[rmCM['Legal First Name']!== undefined ? rmCM['Legal First Name']: 2] || '');
     var last   = String(rr[rmCM['Legal Last Name'] !== undefined ? rmCM['Legal Last Name'] : 3] || '');
     var statusReq = String(rr[rmCM['Status this semester'] !== undefined ? rmCM['Status this semester'] : 4] || '');

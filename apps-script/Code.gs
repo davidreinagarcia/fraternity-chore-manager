@@ -1425,6 +1425,8 @@ var LABEL_DEFAULTS = {
   label_am_points:    'Points',
   label_pledge_class: 'Pledge Class',
   label_member_id:    'BK#',
+  label_new_member:   'New Member',
+  label_university_id:    'University ID',
   label_university_email: 'University Email',
   label_suspension:   'Suspension',
   label_probation:    'Probation',
@@ -1442,10 +1444,11 @@ var MODULE_DEFAULTS = {
 };
 
 var OPTIONS_DEFAULTS = {
-  meal_plan_options:     'Full,Half',
-  officer_role_options:  '',
-  am_activity_types:     '',
-  member_status_options: 'active,inactive,alumni,associate'
+  meal_plan_options:       'Full,Half',
+  officer_role_options:    '',
+  am_activity_types:       '',
+  member_status_options:   'active,inactive,alumni,associate',
+  inactive_reason_options: 'Co-op,Study Abroad'
 };
 
 // Returns a structured config object: { chapter, labels, modules, options }.
@@ -2241,19 +2244,27 @@ var ALUMNI_HEADERS = [
   'pledge_class','officer_role','graduated_semester','moved_to_alumni_date','notes'
 ];
 
+// These are stub headers used only by ensureTabsExist() to pre-create the
+// response sheets before a form has been linked. The actual headers are set
+// by Google Forms when it creates its destination sheet. University-specific
+// fields (University ID, University Email, etc.) are omitted here because
+// module_university_fields is off by default; chapters that enable it will
+// have those columns added by the form itself.
 var NEW_MEMBER_FORM_HEADERS = [
   'Timestamp','Bid Order','Legal First Name','Preferred Name','Legal Last Name',
-  'Phone Number','Personal Email','GTID','BuzzCard 6-Digit Code','GT Username',
-  'GT Email','Major','Year','Anticipated Graduation','Hometown','Birthday',
-  'Shirt Size','Dietary Restrictions','Do you have a car on campus?','Allergies',
+  'Phone Number','Personal Email','Major','Year','Anticipated Graduation',
+  'Hometown','Birthday','Shirt Size','Dietary Restrictions',
+  'Do you have a car on campus?','Allergies',
   'Emergency Contact Name','Emergency Contact Phone Number',
   'Please list campus organizations...','Do you hold a leadership position...',
   'Which ones/what position?','Are any of these clubs service-based?',
   'Will you be on the meal plan?','Anything else we should know?'
 ];
 
+// 'Member ID' is a generic placeholder; the real column name will be whatever
+// label_member_id is set to in the chapter config (e.g. 'BK#', 'Badge #', etc.).
 var RETURNING_MEMBER_FORM_HEADERS = [
-  'Timestamp','BK #','Legal First Name','Legal Last Name',
+  'Timestamp','Member ID','Legal First Name','Legal Last Name',
   'Status this semester','Are you living in the house?',
   'Will you be on the meal plan?','Major','Year','Anticipated Graduation',
   'Please list campus organizations...','Do you hold a leadership position...',
@@ -2813,6 +2824,8 @@ function runSemesterSync(pin) {
 
   try {
     var ss = getSpreadsheet();
+    var cfg = getChapterConfig();
+    var lblMemberId = cfg.labels.label_member_id || 'Member ID';
     var semester = getConfigValue('semester') || '';
     var memSheet = ss.getSheetByName('members');
     var memData  = memSheet.getDataRange().getValues();
@@ -2927,32 +2940,32 @@ function runSemesterSync(pin) {
       var rmWindowClosed = _cfIsLateSubmission(null, 'returning');
       for (var j = 1; j < rmData.length; j++) {
         var rr = rmData[j];
-        var rrBK    = String(rr[rmCM['BK #'] !== undefined ? rmCM['BK #'] : 1] || '').trim();
-        var rrFirst = String(rr[rmCM['Legal First Name'] !== undefined ? rmCM['Legal First Name'] : 2] || '').trim().toLowerCase();
-        var rrLast  = String(rr[rmCM['Legal Last Name']  !== undefined ? rmCM['Legal Last Name']  : 3] || '').trim().toLowerCase();
+        var rrMembId = String(rr[rmCM[lblMemberId] !== undefined ? rmCM[lblMemberId] : 1] || '').trim();
+        var rrFirst  = String(rr[rmCM['Legal First Name'] !== undefined ? rmCM['Legal First Name'] : 2] || '').trim().toLowerCase();
+        var rrLast   = String(rr[rmCM['Legal Last Name']  !== undefined ? rmCM['Legal Last Name']  : 3] || '').trim().toLowerCase();
         // Flag late submissions (informational only — still process)
         if (rmWindowClosed) {
-          lateSubmissions.push('RM: ' + (rrBK || rrFirst + ' ' + rrLast));
-          log.push('INFO: Late returning-member submission: BK#' + rrBK + ' (' + rrFirst + ' ' + rrLast + ')');
+          lateSubmissions.push('RM: ' + (rrMembId || rrFirst + ' ' + rrLast));
+          log.push('INFO: Late returning-member submission: ' + lblMemberId + ' ' + rrMembId + ' (' + rrFirst + ' ' + rrLast + ')');
         }
 
-        // Match by BK# only — it's the stable, unique key. Fall back to a
-        // full-name match (first + last, not just first) ONLY when no BK#
+        // Match by member ID only — it's the stable, unique key. Fall back to a
+        // full-name match (first + last, not just first) ONLY when no member ID
         // was submitted, and ONLY if exactly one member matches; an
         // ambiguous or missing match is logged for manual review rather
         // than guessed, since a wrong guess silently overwrites someone
         // else's semester data.
         var matchRow = -1;
-        if (rrBK) {
+        if (rrMembId) {
           for (var k = 1; k < memData.length; k++) {
-            var mBK = String(memData[k][memCM['BK#'] !== undefined ? memCM['BK#'] : 1] || '').trim();
-            if (mBK === rrBK) { matchRow = k; break; }
+            var mId = String(memData[k][memCM['BK#'] !== undefined ? memCM['BK#'] : 1] || '').trim();
+            if (mId === rrMembId) { matchRow = k; break; }
           }
           if (matchRow === -1) {
-            var msg1 = 'No member matches BK#' + rrBK + ' (' + rrFirst + ' ' + rrLast + ')';
+            var msg1 = 'No member matches ' + lblMemberId + ' ' + rrMembId + ' (' + rrFirst + ' ' + rrLast + ')';
             log.push('WARN: ' + msg1);
             unmatchedReturning.push(msg1);
-            _cfQueuePendingReview(ss, 'returning', rr, rmCM);
+            _cfQueuePendingReview(ss, 'returning', rr, rmCM, lblMemberId);
             continue;
           }
         } else if (rrFirst || rrLast) {
@@ -2966,16 +2979,16 @@ function runSemesterSync(pin) {
           if (nameMatches.length === 1) {
             matchRow = nameMatches[0];
           } else {
-            var msg2 = 'No BK# submitted, ' + nameMatches.length + ' name matches for ' + rrFirst + ' ' + rrLast + ' — needs manual review.';
+            var msg2 = 'No ' + lblMemberId + ' submitted, ' + nameMatches.length + ' name matches for ' + rrFirst + ' ' + rrLast + ' — needs manual review.';
             log.push('WARN: ' + msg2);
             unmatchedReturning.push(msg2);
-            _cfQueuePendingReview(ss, 'returning', rr, rmCM);
+            _cfQueuePendingReview(ss, 'returning', rr, rmCM, lblMemberId);
             continue;
           }
         } else {
-          log.push('WARN: Returning form row with no BK# and no name — skipped.');
-          unmatchedReturning.push('Row with no BK# and no name submitted');
-          _cfQueuePendingReview(ss, 'returning', rr, rmCM);
+          log.push('WARN: Returning form row with no ' + lblMemberId + ' and no name — skipped.');
+          unmatchedReturning.push('Row with no ' + lblMemberId + ' and no name submitted');
+          _cfQueuePendingReview(ss, 'returning', rr, rmCM, lblMemberId);
           continue;
         }
 
