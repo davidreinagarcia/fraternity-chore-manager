@@ -9,8 +9,11 @@
 
 function getSpreadsheet() {
   const id = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
-  if (!id) throw new Error('SPREADSHEET_ID not set in Script Properties.');
-  return SpreadsheetApp.openById(id);
+  if (id) return SpreadsheetApp.openById(id);
+  // Fresh install (bound script, SPREADSHEET_ID not yet set) — use the active spreadsheet.
+  const active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return active;
+  throw new Error('No spreadsheet found. Set SPREADSHEET_ID in Script Properties or run as a bound script.');
 }
 
 function getConfigValue(key) {
@@ -1671,25 +1674,32 @@ function importFromExternalSheet(spreadsheetUrl, sheetName, mappingJson) {
     }
     var destCM = _buildColMap(destSheet.getRange(1, 1, 1, Math.max(destSheet.getLastColumn(), 1)).getValues()[0]);
 
-    // Build a map from sourceCol → targetField
-    var colToField = {};
-    mapping.forEach(function(m) {
-      if (m.targetField && m.targetField !== 'ignore') colToField[m.sourceCol] = m.targetField;
-    });
-
-    // MEMBER_HEADERS field → column index
+    // MEMBER_HEADERS field → column index (0-based)
     var mhIdx = {};
     MEMBER_HEADERS.forEach(function(h, i) { mhIdx[h] = i; });
 
+    // Add any custom: target fields as cf_ columns to the members sheet (idempotent)
+    function _cfSlug(label) {
+      return 'cf_' + label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').substring(0, 24);
+    }
+    mapping.forEach(function(m) {
+      if (!m.targetField || m.targetField.indexOf('custom:') !== 0) return;
+      var slug = _cfSlug(m.targetField.slice(7));
+      if (destCM[slug] !== undefined) return;
+      var newColIdx = destSheet.getLastColumn() + 1;
+      destSheet.getRange(1, newColIdx).setValue(slug);
+      destCM[slug] = newColIdx - 1; // keep 0-based
+    });
+
+    var totalCols = Math.max(destSheet.getLastColumn(), MEMBER_HEADERS.length);
     var added = 0, skipped = 0;
-    var emailIdx = srcCM['email'] !== undefined ? srcCM['email'] :
-                   srcCM['personal_email'] !== undefined ? srcCM['personal_email'] : -1;
+    var rowsToWrite = [];
 
     for (var i = 1; i < srcData.length; i++) {
       var row = srcData[i];
       if (!row.join('').trim()) continue;
 
-      var newRow = new Array(MEMBER_HEADERS.length).fill('');
+      var newRow = new Array(totalCols).fill('');
       newRow[0] = 'M' + Utilities.getUuid().replace(/-/g,'').substring(0,8).toUpperCase();
 
       var hasName = false, hasEmail = false;
@@ -1700,10 +1710,23 @@ function importFromExternalSheet(spreadsheetUrl, sheetName, mappingJson) {
         var val = String(row[srcColIdx] || '').trim();
         if (!val) return;
 
-        if (m.targetField.indexOf('custom:') === 0) {
-          // Custom fields can't go into MEMBER_HEADERS — skip for now (future: separate handling)
+        // "Full Name" target: split on first space into legal_first + legal_last
+        if (m.targetField === 'full_name') {
+          var parts = val.split(/\s+/);
+          var fi = mhIdx['legal_first'], li = mhIdx['legal_last'];
+          if (fi !== undefined) { newRow[fi] = parts[0]; hasName = true; }
+          if (li !== undefined && parts.length > 1) newRow[li] = parts.slice(1).join(' ');
           return;
         }
+
+        // custom: → write to the cf_ column we added above
+        if (m.targetField.indexOf('custom:') === 0) {
+          var slug = _cfSlug(m.targetField.slice(7));
+          var cfIdx = destCM[slug];
+          if (cfIdx !== undefined) newRow[cfIdx] = val;
+          return;
+        }
+
         var destIdx = mhIdx[m.targetField];
         if (destIdx !== undefined) {
           newRow[destIdx] = val;
@@ -1717,8 +1740,13 @@ function importFromExternalSheet(spreadsheetUrl, sheetName, mappingJson) {
       newRow[mhIdx['added_date']] = new Date().toISOString();
 
       if (!hasName && !hasEmail) { skipped++; continue; }
-      destSheet.appendRow(newRow);
+      rowsToWrite.push(newRow);
       added++;
+    }
+
+    if (rowsToWrite.length > 0) {
+      var startRow = destSheet.getLastRow() + 1;
+      destSheet.getRange(startRow, 1, rowsToWrite.length, totalCols).setValues(rowsToWrite);
     }
 
     logInfo('importFromExternalSheet', 'Imported ' + added + ' members from ' + spreadsheetUrl + ' (' + skipped + ' skipped)');

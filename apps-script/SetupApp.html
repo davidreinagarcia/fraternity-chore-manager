@@ -586,8 +586,9 @@ function getMigTargetFields() {
   var univEmail = vocabVal('label_university_email', 'University Email');
   var univId    = vocabVal('label_university_id',    'University ID');
   return [
-    { value: 'legal_first',             label: 'First Name' },
-    { value: 'legal_last',              label: 'Last Name' },
+    { value: 'full_name',               label: 'Full Name (splits to First + Last)' },
+    { value: 'legal_first',             label: 'First Name only' },
+    { value: 'legal_last',              label: 'Last Name only' },
     { value: 'preferred_name',          label: 'Preferred Name / Nickname' },
     { value: 'personal_email',          label: 'Personal Email' },
     { value: 'university_email',        label: univEmail },
@@ -710,7 +711,8 @@ function _buildMigMapper(sheet) {
 
   // Comprehensive fuzzy automap (lowercase key → internal field value)
   var autoMap = {
-    'name': 'legal_first', 'full name': 'legal_first', 'first name': 'legal_first', 'first': 'legal_first',
+    'name': 'full_name', 'full name': 'full_name', 'full_name': 'full_name',
+    'first name': 'legal_first', 'first': 'legal_first',
     'fname': 'legal_first', 'given name': 'legal_first', 'given': 'legal_first',
     'last name': 'legal_last', 'last': 'legal_last', 'lname': 'legal_last', 'surname': 'legal_last', 'family name': 'legal_last',
     'preferred name': 'preferred_name', 'nickname': 'preferred_name', 'goes by': 'preferred_name', 'preferred': 'preferred_name',
