@@ -142,9 +142,9 @@
 <div class="card">
 
   <div class="header">
-    <img src="https://www.lambdachi.org/wp-content/uploads/2025/05/lca-logo-primary.svg"
-         alt="Lambda Chi Alpha" style="height:52px;width:auto;margin-bottom:10px"
-         onerror="this.style.display='none'">
+    <? if (cfg.chapter.logo_url) { ?>
+    <img src="<?= cfg.chapter.logo_url ?>" alt="<?= cfg.chapter.chapter_name ?>" style="height:52px;width:auto;margin-bottom:10px" onerror="this.style.display='none'">
+    <? } ?>
     <div class="badge">AM Signature</div>
     <h1>Submit a Signature</h1>
     <div class="sub-label">Did something with a brother? Log it here.</div>

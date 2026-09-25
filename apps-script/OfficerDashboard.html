@@ -370,8 +370,9 @@
 <!-- PIN Screen -->
 <div id="pin-screen">
   <div class="pin-card">
-    <img class="pin-logo" src="https://www.lambdachi.org/wp-content/uploads/2025/05/lca-logo-primary.svg"
-         alt="Lambda Chi Alpha" onerror="this.style.display='none'">
+    <? if (cfg.chapter.logo_url) { ?>
+    <img class="pin-logo" src="<?= cfg.chapter.logo_url ?>" alt="<?= cfg.chapter.chapter_name ?>" onerror="this.style.display='none'">
+    <? } ?>
     <h2>Officer Dashboard</h2>
     <p>Enter your officer PIN to continue</p>
     <input type="password" id="pin-input" maxlength="8" placeholder="••••"
@@ -385,8 +386,9 @@
 <div id="main">
   <div id="topbar">
     <div style="display:flex;align-items:center;gap:12px">
-      <img src="https://www.lambdachi.org/wp-content/uploads/2025/06/logo-white.svg"
-           alt="ΛΧΑ" style="height:34px;width:auto" onerror="this.style.display='none'">
+      <? if (cfg.chapter.logo_url) { ?>
+      <img src="<?= cfg.chapter.logo_url ?>" alt="<?= cfg.chapter.chapter_name ?>" style="height:34px;width:auto" onerror="this.style.display='none'">
+      <? } ?>
       <div>
         <h1>Officer Dashboard</h1>
         <div class="meta" id="meta-line">Loading...</div>
@@ -731,7 +733,7 @@
             </div>
             <div style="background:var(--red-bg);border-radius:8px;padding:16px;border:1px solid #fecaca">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px;color:var(--red)">End of Semester Archive</div>
-              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5"><span class="mod-bigquery">Syncs all data to BigQuery, then clears</span><span class="mod-bigquery-off">Clears</span> assignments, submissions, <?= cfg.labels.label_fine.toLowerCase() ?>s, and weekly_status. <strong>This is irreversible.</strong></p>
+              <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Clears assignments, submissions, <?= cfg.labels.label_fine.toLowerCase() ?>s, and weekly_status. <strong>This is irreversible.</strong></p>
               <button class="btn-danger" onclick="openEndSemesterModal()">End of Semester Archive</button>
             </div>
             <div style="background:#f8fafc;border-radius:8px;padding:16px">
@@ -821,7 +823,6 @@
     <div style="background:var(--red-bg);border:1px solid #fecaca;border-radius:8px;padding:14px;margin:12px 0 16px">
       <div style="font-weight:700;color:var(--red);margin-bottom:8px">WARNING — This action cannot be undone</div>
       <ul style="font-size:0.84rem;padding-left:18px;line-height:1.8;color:var(--text)">
-        <li>All data will be synced to BigQuery</li>
         <li>All chore assignments will be deleted</li>
         <li>All submissions will be deleted</li>
         <li>All fine records will be deleted</li>
@@ -1264,11 +1265,6 @@ var CHAPTER_CONFIG = <?!= cfgJson ?>;
   if (!m.module_signatures) rules.push('.mod-signatures { display:none!important }');
   if (!m.module_officer_roles)        rules.push('.mod-officer { display:none!important }');
   if (!m.module_academic_suspension)  rules.push('.mod-acad-susp { display:none!important }');
-  if (!m.module_bigquery) {
-    rules.push('.mod-bigquery { display:none!important }');
-  } else {
-    rules.push('.mod-bigquery-off { display:none!important }');
-  }
   if (rules.length) {
     var s = document.createElement('style');
     s.textContent = rules.join('\n');
@@ -1545,15 +1541,6 @@ function confirmEndSemester() {
     .endOfSemesterArchiveWeb(correctPin);
 }
 
-function callBQSync() {
-  if (!confirm('Sync all data to BigQuery now?')) return;
-  showToast('Syncing...');
-  google.script.run
-    .withSuccessHandler(function() { showToast('BigQuery sync complete!'); })
-    .withFailureHandler(onError)
-    .syncToBigQueryWeb(correctPin);
-}
-
 function callAutoSplit() {
   if (!confirm('Auto-split all unassigned members into open chore slots?')) return;
   showToast('Running auto-split...');
@@ -1668,7 +1655,7 @@ var VOCAB_KEY_LABELS = {
   label_semester:     { label: 'Semester Term',       help: 'What a term is called. Default: "Semester".' }
 };
 var MODULE_KEYS = ['module_housing','module_meal_plan','module_associates','module_signatures',
-                   'module_university_fields','module_academic_suspension','module_bigquery','module_officer_roles'];
+                   'module_university_fields','module_academic_suspension','module_officer_roles'];
 var MODULE_KEY_LABELS = {
   module_housing:             { label: 'Housing',             help: 'Room number, living-in-house fields.' },
   module_meal_plan:           { label: 'Meal Plan',           help: 'Meal plan tracking on member profiles.' },
@@ -1676,13 +1663,9 @@ var MODULE_KEY_LABELS = {
   module_signatures:          { label: 'Signatures',          help: 'AMs log activities with brothers for points.' },
   module_university_fields:   { label: 'University Fields',   help: 'GTID, BuzzCard, GT username.' },
   module_academic_suspension: { label: 'Academic Suspension', help: 'Separate academic suspension flag.' },
-  module_bigquery:            { label: 'BigQuery Analytics',  help: 'Sync data to Google BigQuery.' },
   module_officer_roles:       { label: 'Officer Roles',       help: 'Track officer role on member roster.' }
 };
-var ADVANCED_CONFIG_HELP = {
-  bigquery_project_id: 'Only used if BigQuery sync is turned back on — currently inactive.',
-  bigquery_dataset:    'Only used if BigQuery sync is turned back on — currently inactive.'
-};
+var ADVANCED_CONFIG_HELP = {};
 var _adminSectionsLoaded = {};
 
 function initAdminTab() { /* sections lazy-load on first expand */ }
@@ -2088,7 +2071,7 @@ function renderConfigEditor() {
   MODULE_KEYS.forEach(function(k) {
     var rawVal = configMap[k];
     var isOn = rawVal === undefined
-      ? (k !== 'module_bigquery' && k !== 'module_university_fields')  // match MODULE_DEFAULTS
+      ? (k !== 'module_university_fields')  // match MODULE_DEFAULTS
       : (String(rawVal).toLowerCase() === 'true' || rawVal === '1');
     var meta = MODULE_KEY_LABELS[k];
     var uid = 'mod-' + k;

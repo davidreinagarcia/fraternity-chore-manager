@@ -162,9 +162,9 @@
 
   <!-- Header -->
   <div class="header">
-    <img src="https://www.lambdachi.org/wp-content/uploads/2025/05/lca-logo-primary.svg"
-         alt="Lambda Chi Alpha" style="height:52px;width:auto;margin-bottom:10px"
-         onerror="this.style.display='none'">
+    <? if (cfg.chapter.logo_url) { ?>
+    <img src="<?= cfg.chapter.logo_url ?>" alt="<?= cfg.chapter.chapter_name ?>" style="height:52px;width:auto;margin-bottom:10px" onerror="this.style.display='none'">
+    <? } ?>
     <div class="badge"><?= cfg.labels.label_chore ?> Submission</div>
     <h1 id="chore-title">Loading...</h1>
     <div class="week-label" id="week-label">Week of —</div>

@@ -244,7 +244,7 @@
 
 <div id="topbar">
   <div style="display:flex;align-items:center">
-    <a href="https://www.youtube.com/watch?v=IPSfFz6S8A8" target="_blank" style="display:inline-flex;cursor:pointer"><img class="logo" src="https://www.lambdachi.org/wp-content/uploads/2025/05/lca-logo-primary.svg" alt="ΛΧΑ" onerror="this.style.display='none'"></a>
+    <? if (cfg.chapter.logo_url) { ?><img class="logo" src="<?= cfg.chapter.logo_url ?>" alt="<?= cfg.chapter.chapter_name ?>" onerror="this.style.display='none'"><? } ?>
     <div>
       <h1>Draft Night Board</h1>
       <div class="meta" id="semester-label">Loading...</div>

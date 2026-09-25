@@ -278,7 +278,6 @@ function onOpen() {
     .addItem('Open Officer Dashboard', 'openOfficerDashboard')
     .addSeparator()
     .addItem('Setup: Create Monday Trigger', 'autoMondayTrigger')
-    .addItem('Setup: Init BigQuery Tables', 'initBigQueryTables')
     .addItem('Setup: Create Required Tabs', 'ensureTabsExist')
     .addSeparator()
     .addSubMenu(ui.createMenu('Admin')
@@ -363,7 +362,7 @@ function doGet(e) {
     var cfg_ = getChapterConfig();
     tmpl.cfg = cfg_;
     tmpl.cfgJson = JSON.stringify(cfg_);
-    var title_ = (cfg_.chapter.chapter_name || 'BK Lambda Chi') + ' — ' + (cfg_.labels.label_chore || 'Chore') + ' System';
+    var title_ = (cfg_.chapter.chapter_name || 'Chore Manager') + ' — ' + (cfg_.labels.label_chore || 'Chore') + ' System';
     return tmpl.evaluate()
       .setTitle(title_)
       .addMetaTag('viewport', 'width=device-width, initial-scale=1')
@@ -673,8 +672,6 @@ function endOfSemesterArchiveWeb(pin) {
       outstandingFines = finesSheet.getLastRow() - 1;
     }
 
-    syncToBigQuery();
-
     ['chore_assignments', 'submissions', 'fines', 'weekly_status'].forEach(function(name) {
       var sheet = ss.getSheetByName(name);
       if (!sheet) return;
@@ -724,14 +721,12 @@ function endOfSemesterArchive() {
   var ans = ui.alert(
     'End of Semester Archive',
     warnMsg +
-    'This will:\n1. Push all data to BigQuery\n2. Clear assignments, submissions, fines, weekly_status\n3. Reset form completion flags\n4. Keep members intact\n\nContinue?',
+    'This will:\n1. Clear assignments, submissions, fines, weekly_status\n2. Reset form completion flags\n3. Keep members intact\n\nContinue?',
     ui.ButtonSet.YES_NO
   );
   if (ans !== ui.Button.YES) return;
 
   try {
-    syncToBigQuery();
-
     ['chore_assignments', 'submissions', 'fines', 'weekly_status'].forEach(function(name) {
       var sheet = ss.getSheetByName(name);
       if (!sheet) return;
@@ -1414,16 +1409,13 @@ var LABEL_DEFAULTS = {
   label_semester:     'Semester'
 };
 
-// All currently-shipped features default ON; module_bigquery defaults OFF
-// because BigQuery sync is intentionally hidden for now.
 var MODULE_DEFAULTS = {
   module_housing:             true,
   module_meal_plan:           true,
   module_associates:          true,
   module_signatures:          true,
-  module_university_fields:   true,
+  module_university_fields:   false,
   module_academic_suspension: true,
-  module_bigquery:            false,
   module_officer_roles:       true
 };
 
@@ -1469,7 +1461,7 @@ function getChapterConfig() {
     });
 
     var chapter = {
-      chapter_name:  raw['chapter_name']  !== undefined ? String(raw['chapter_name'])  : 'Lambda Chi Alpha',
+      chapter_name:  raw['chapter_name']  !== undefined ? String(raw['chapter_name'])  : 'My Chapter',
       primary_color: raw['primary_color'] !== undefined ? String(raw['primary_color']) : '#093D20',
       accent_color:  raw['accent_color']  !== undefined ? String(raw['accent_color'])  : '#FFB71D',
       logo_url:      raw['logo_url']      !== undefined ? String(raw['logo_url'])       : ''
