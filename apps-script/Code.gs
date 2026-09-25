@@ -1614,15 +1614,28 @@ function readExternalSheetHeaders(spreadsheetUrl) {
   try {
     var id = _extractSpreadsheetId(spreadsheetUrl);
     var ss = SpreadsheetApp.openById(id);
+    var tz = Session.getScriptTimeZone();
     var sheets = ss.getSheets();
     var result = sheets.map(function(sh) {
       var headers = [];
+      var preview = [];
       if (sh.getLastRow() > 0) {
-        headers = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0]
+        var numCols = Math.max(sh.getLastColumn(), 1);
+        headers = sh.getRange(1, 1, 1, numCols).getValues()[0]
           .map(function(h) { return String(h).trim(); })
           .filter(function(h) { return h; });
+        if (sh.getLastRow() > 1) {
+          var previewRows = Math.min(3, sh.getLastRow() - 1);
+          preview = sh.getRange(2, 1, previewRows, numCols).getValues()
+            .map(function(row) {
+              return row.map(function(cell) {
+                if (cell instanceof Date) return Utilities.formatDate(cell, tz, 'MM/dd/yyyy');
+                return String(cell === null || cell === undefined ? '' : cell);
+              });
+            });
+        }
       }
-      return { name: sh.getName(), headers: headers, rowCount: Math.max(sh.getLastRow() - 1, 0) };
+      return { name: sh.getName(), headers: headers, rowCount: Math.max(sh.getLastRow() - 1, 0), preview: preview };
     });
     return JSON.stringify({ success: true, sheets: result });
   } catch (err) {

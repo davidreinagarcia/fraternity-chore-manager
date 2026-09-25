@@ -345,6 +345,11 @@
         <input type="text" id="opt-statuses" value="active,inactive,alumni,associate">
         <div class="hint">Statuses officers can set on a member. <code>active</code> and <code>inactive</code> are required.</div>
       </div>
+      <div class="field">
+        <label>Inactive Reason Options</label>
+        <input type="text" id="opt-inactive-reasons" value="Co-op,Study Abroad">
+        <div class="hint">Reasons a member can go inactive. Shown as sub-options in the semester update form. Example: <code>Co-op,Study Abroad,Medical,Military</code></div>
+      </div>
     </div>
   </div>
 
@@ -362,7 +367,7 @@
         </div>
         <div class="field">
           <label>First Monday of Semester *</label>
-          <input type="text" id="s5-week-start" placeholder="YYYY-MM-DD">
+          <input type="date" id="s5-week-start">
           <div class="hint">The Monday that starts the first chore week.</div>
         </div>
       </div>
@@ -423,38 +428,66 @@
 
   <!-- Step 6: Migration (optional) -->
   <div class="step-panel" id="step-6">
-    <div class="step-title">Step 6 — Import Existing Roster <span style="font-size:0.75rem;font-weight:500;color:var(--muted)">(optional)</span></div>
-    <div class="step-subtitle">If you already have members in a Google Sheet, paste its URL below. The system will read your columns and let you map them to the right fields. You can skip this and add members manually later.</div>
+    <div class="step-title">Step 6 — Your Current Members <span style="font-size:0.75rem;font-weight:500;color:var(--muted)">(optional)</span></div>
+    <div class="step-subtitle">Got a spreadsheet with your roster? We'll pull it in and walk you through it. Don't worry about how messy it is — you pick what to import. Or skip this and add members manually from the dashboard later.</div>
 
-    <div class="card">
-      <div class="card-title">Source Spreadsheet</div>
-      <div class="field">
-        <label>Google Sheets URL or ID</label>
+    <!-- Phase 1: URL input + sheet selector -->
+    <div id="mig-phase-1">
+      <div class="card">
+        <div class="card-title">Paste your Google Sheets link</div>
+        <details style="margin-bottom:14px">
+          <summary style="font-size:0.83rem;color:var(--muted);cursor:pointer;user-select:none">How to share your sheet →</summary>
+          <div style="font-size:0.82rem;color:var(--muted);margin-top:10px;padding:12px;background:#f8fafc;border-radius:8px;line-height:1.8">
+            1. Open your Google Sheet<br>
+            2. Click <strong>Share</strong> (top-right corner)<br>
+            3. Under "General access" → set to <strong>Anyone with the link</strong><br>
+            4. Copy the link and paste it below
+          </div>
+        </details>
         <div style="display:flex;gap:8px">
           <input type="text" id="mig-url" placeholder="https://docs.google.com/spreadsheets/d/..." style="flex:1">
-          <button class="btn-outline" onclick="loadMigSheets()" id="mig-load-btn" style="white-space:nowrap">Load Sheets</button>
+          <button class="btn-primary" onclick="loadMigSheets()" id="mig-load-btn" style="white-space:nowrap">Load →</button>
         </div>
-        <div class="hint">The spreadsheet must be accessible by the Google account running this script.</div>
+        <div id="mig-load-error" style="display:none;margin-top:10px;padding:10px 14px;background:#fef2f2;border-radius:8px;font-size:0.83rem;color:#991b1b;line-height:1.5"></div>
       </div>
+
       <div id="mig-sheet-wrap" style="display:none">
-        <div class="field">
-          <label>Which sheet contains the member roster?</label>
-          <select id="mig-sheet-select" onchange="loadMigHeaders()">
-            <option value="">— Select a sheet —</option>
-          </select>
+        <div class="card">
+          <div class="card-title">Which tab has your members?</div>
+          <div id="mig-sheet-cards" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px"></div>
         </div>
       </div>
     </div>
 
-    <div id="mig-mapper-card" style="display:none">
+    <!-- Phase 2: preview + mapper + suggestions (hidden until sheet selected) -->
+    <div id="mig-phase-2" style="display:none">
+
       <div class="card">
-        <div class="card-title">Column Mapping</div>
-        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:14px">Map each of your source columns to a system field. Columns you don't want to import can be set to "Ignore".</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <div class="card-title" style="margin:0">Preview</div>
+            <div id="mig-row-count" style="font-size:0.82rem;color:var(--muted);margin-top:2px"></div>
+          </div>
+          <button class="btn-outline" onclick="resetMigration()" style="font-size:0.78rem;padding:5px 12px">Change sheet</button>
+        </div>
+        <div id="mig-preview-table" style="overflow-x:auto"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Your columns → How we'll import them</div>
+        <p style="font-size:0.83rem;color:var(--muted);margin-bottom:16px;line-height:1.5">We've matched your columns as best we can. Change any that look wrong, or set them to <em>Ignore</em> to skip them.</p>
         <div id="mig-mapper-rows"></div>
       </div>
-      <div style="display:flex;gap:10px;margin-bottom:16px">
-        <button class="btn-primary" id="mig-import-btn" onclick="doMigration()">Import Roster</button>
-        <button class="btn-outline" onclick="resetMigration()">Reset</button>
+
+      <div class="card" id="mig-suggestions-card" style="display:none">
+        <div class="card-title">Want to also track these?</div>
+        <p style="font-size:0.83rem;color:var(--muted);margin-bottom:14px;line-height:1.5">These fields aren't in your sheet yet, but you can start collecting them later via the member intake form. Check any you'd like to add.</p>
+        <div id="mig-suggestions-grid" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+        <button class="btn-primary" id="mig-import-btn" onclick="doMigration()">Import Members</button>
+        <button class="btn-outline" onclick="resetMigration()">Start Over</button>
       </div>
       <div id="mig-result" style="display:none;padding:12px 16px;border-radius:8px;font-size:0.85rem"></div>
     </div>
@@ -527,158 +560,292 @@ var STEPS = [
 ];
 
 // ---- Migration (step 6) ------------------------------------
-var migSheetData = null;
+var migSheetData    = null;
+var migSelectedSheet = null;
+
+// Build target fields list using vocab labels already entered in step 2
+function getMigTargetFields() {
+  function vocabVal(key, def) {
+    var el = document.getElementById('vocab-' + key);
+    return el && el.value.trim() ? el.value.trim() : def;
+  }
+  var membId    = vocabVal('label_member_id',       'Member ID');
+  var univEmail = vocabVal('label_university_email', 'University Email');
+  var univId    = vocabVal('label_university_id',    'University ID');
+  return [
+    { value: 'legal_first',             label: 'First Name' },
+    { value: 'legal_last',              label: 'Last Name' },
+    { value: 'preferred_name',          label: 'Preferred Name / Nickname' },
+    { value: 'personal_email',          label: 'Personal Email' },
+    { value: 'university_email',        label: univEmail },
+    { value: 'phone',                   label: 'Phone Number' },
+    { value: 'BK#',                     label: membId + ' (Member ID)' },
+    { value: 'pledge_class',            label: 'Pledge Class / Cohort' },
+    { value: 'status',                  label: 'Status (active / inactive / alumni)' },
+    { value: 'officer_role',            label: 'Officer Role' },
+    { value: 'major',                   label: 'Major / Program of Study' },
+    { value: 'year',                    label: 'Academic Year' },
+    { value: 'anticipated_graduation',  label: 'Anticipated Graduation' },
+    { value: 'hometown',                label: 'Hometown' },
+    { value: 'birthday',                label: 'Birthday' },
+    { value: 'shirt_size',              label: 'Shirt Size' },
+    { value: 'meal_plan',               label: 'Meal Plan' },
+    { value: 'living_in_house',         label: 'Living in House?' },
+    { value: 'room_number',             label: 'Room Number' },
+    { value: 'dietary_restrictions',    label: 'Dietary Restrictions' },
+    { value: 'emergency_contact_name',  label: 'Emergency Contact Name' },
+    { value: 'emergency_contact_phone', label: 'Emergency Contact Phone' },
+    { value: 'car_on_campus',           label: 'Car on Campus?' },
+    { value: 'university_id',           label: univId },
+    { value: 'custom',                  label: 'Keep as custom field' },
+    { value: 'ignore',                  label: 'Ignore this column' }
+  ];
+}
 
 function loadMigSheets() {
   var url = document.getElementById('mig-url').value.trim();
-  if (!url) { alert('Paste a Google Sheets URL first.'); return; }
+  var errEl = document.getElementById('mig-load-error');
+  errEl.style.display = 'none';
+  if (!url) {
+    errEl.textContent = 'Paste a Google Sheets link first.';
+    errEl.style.display = ''; return;
+  }
   var btn = document.getElementById('mig-load-btn');
-  btn.disabled = true; btn.textContent = 'Loading...';
+  btn.disabled = true; btn.textContent = 'Loading…';
+
   google.script.run
     .withSuccessHandler(function(json) {
-      btn.disabled = false; btn.textContent = 'Load Sheets';
+      btn.disabled = false; btn.textContent = 'Load →';
       var r = JSON.parse(json);
-      if (!r.success) { alert('Error: ' + r.error); return; }
+      if (!r.success) {
+        errEl.innerHTML = 'Could not open that spreadsheet. Make sure it\'s shared (Anyone with the link → Viewer) and the link is correct.<br><small style="color:#b91c1c">' + (r.error || '') + '</small>';
+        errEl.style.display = ''; return;
+      }
       migSheetData = r.sheets;
-      var sel = document.getElementById('mig-sheet-select');
-      sel.innerHTML = '<option value="">— Select a sheet —</option>';
-      r.sheets.forEach(function(s) {
-        var opt = document.createElement('option');
-        opt.value = s.name;
-        opt.textContent = s.name + ' (' + s.rowCount + ' rows)';
-        sel.appendChild(opt);
-      });
-      document.getElementById('mig-sheet-wrap').style.display = '';
-      document.getElementById('mig-mapper-card').style.display = 'none';
+      var dataSheets = r.sheets.filter(function(s) { return s.rowCount > 0 && s.headers.length > 0; });
+      if (!dataSheets.length) {
+        errEl.textContent = 'No data found in that spreadsheet. Make sure your sheet has a header row and at least one member row.';
+        errEl.style.display = ''; return;
+      }
+      if (dataSheets.length === 1) {
+        selectMigSheet(dataSheets[0].name);
+      } else {
+        var best = dataSheets.reduce(function(a, b) { return b.rowCount > a.rowCount ? b : a; });
+        var cards = document.getElementById('mig-sheet-cards');
+        cards.innerHTML = '';
+        dataSheets.forEach(function(s) {
+          var card = document.createElement('div');
+          var isSelected = s.name === best.name;
+          card.style.cssText = 'padding:12px 20px;border-radius:10px;border:2px solid ' + (isSelected ? 'var(--primary)' : 'var(--border)') + ';cursor:pointer;min-width:130px;text-align:center;transition:all 0.15s;background:' + (isSelected ? '#f0f9ff' : 'white');
+          card.innerHTML = '<div style="font-weight:700;font-size:0.92rem">' + s.name + '</div><div style="font-size:0.75rem;color:var(--muted);margin-top:3px">' + s.rowCount + ' rows</div>';
+          card.addEventListener('click', function() {
+            document.querySelectorAll('#mig-sheet-cards > div').forEach(function(c) {
+              c.style.borderColor = 'var(--border)'; c.style.background = 'white';
+            });
+            card.style.borderColor = 'var(--primary)'; card.style.background = '#f0f9ff';
+            selectMigSheet(s.name);
+          });
+          cards.appendChild(card);
+        });
+        document.getElementById('mig-sheet-wrap').style.display = '';
+        selectMigSheet(best.name);
+      }
     })
     .withFailureHandler(function(err) {
-      btn.disabled = false; btn.textContent = 'Load Sheets';
-      alert('Error: ' + err.message);
+      btn.disabled = false; btn.textContent = 'Load →';
+      errEl.textContent = 'Error: ' + err.message;
+      errEl.style.display = '';
     })
     .readExternalSheetHeaders(url);
 }
 
-var MIG_TARGET_FIELDS = [
-  { value: 'legal_first',   label: 'First Name' },
-  { value: 'legal_last',    label: 'Last Name' },
-  { value: 'preferred_name',label: 'Preferred Name' },
-  { value: 'personal_email',label: 'Personal Email' },
-  { value: 'GT_email',      label: 'GT Email' },
-  { value: 'phone',         label: 'Phone' },
-  { value: 'BK#',           label: 'Member ID (BK#)' },
-  { value: 'pledge_class',  label: 'Pledge Class' },
-  { value: 'status',        label: 'Status' },
-  { value: 'officer_role',  label: 'Officer Role' },
-  { value: 'major',         label: 'Major' },
-  { value: 'year',          label: 'Year' },
-  { value: 'hometown',      label: 'Hometown' },
-  { value: 'birthday',      label: 'Birthday' },
-  { value: 'meal_plan',     label: 'Meal Plan' },
-  { value: 'living_in_house', label: 'Living in House' },
-  { value: 'room_number',   label: 'Room Number' },
-  { value: 'GTID',          label: 'GTID' },
-  { value: 'custom',        label: 'Custom field (keep as-is)' },
-  { value: 'ignore',        label: 'Ignore' }
-];
-
-function loadMigHeaders() {
-  var sheetName = document.getElementById('mig-sheet-select').value;
-  if (!sheetName || !migSheetData) return;
-  var sheet = migSheetData.find(function(s) { return s.name === sheetName; });
+function selectMigSheet(name) {
+  migSelectedSheet = name;
+  var sheet = migSheetData.find(function(s) { return s.name === name; });
   if (!sheet) return;
+  document.getElementById('mig-row-count').textContent = sheet.rowCount + ' members found in tab "' + name + '"';
+  _buildMigPreview(sheet);
+  _buildMigMapper(sheet);
+  _buildMigSuggestions(sheet);
+  document.getElementById('mig-phase-2').style.display = '';
+  setTimeout(function() {
+    document.getElementById('mig-phase-2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
+}
+
+function _buildMigPreview(sheet) {
+  var el = document.getElementById('mig-preview-table');
+  if (!sheet.preview || !sheet.preview.length) { el.innerHTML = '<div style="color:var(--muted);font-size:0.83rem">No preview available.</div>'; return; }
+  var maxCols = Math.min(sheet.headers.length, 6);
+  var more = sheet.headers.length - maxCols;
+  var th = sheet.headers.slice(0, maxCols).map(function(h) {
+    return '<th style="padding:6px 10px;text-align:left;background:#f1f5f9;font-size:0.77rem;font-weight:700;border:1px solid var(--border);white-space:nowrap;color:var(--muted)">' + h + '</th>';
+  }).join('') + (more > 0 ? '<th style="padding:6px 10px;background:#f1f5f9;border:1px solid var(--border);color:var(--muted);font-size:0.77rem;font-style:italic">+' + more + ' more…</th>' : '');
+  var tbody = sheet.preview.map(function(row) {
+    var tds = row.slice(0, maxCols).map(function(cell) {
+      return '<td style="padding:6px 10px;border:1px solid var(--border);font-size:0.82rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + cell + '">' + (cell || '<span style="color:#cbd5e1">—</span>') + '</td>';
+    }).join('') + (more > 0 ? '<td style="padding:6px 10px;border:1px solid var(--border);color:#cbd5e1;font-size:0.82rem">…</td>' : '');
+    return '<tr>' + tds + '</tr>';
+  }).join('');
+  el.innerHTML = '<table style="border-collapse:collapse;width:100%;min-width:360px"><thead><tr>' + th + '</tr></thead><tbody>' + tbody + '</tbody></table>' +
+    (sheet.rowCount > 3 ? '<div style="font-size:0.75rem;color:var(--muted);margin-top:6px">Showing first 3 of ' + sheet.rowCount + ' members</div>' : '');
+}
+
+function _buildMigMapper(sheet) {
+  var fields = getMigTargetFields();
+  var optHtml = fields.map(function(f) { return '<option value="' + f.value + '">' + f.label + '</option>'; }).join('');
+
+  // Comprehensive fuzzy automap (lowercase key → internal field value)
+  var autoMap = {
+    'name': 'legal_first', 'full name': 'legal_first', 'first name': 'legal_first', 'first': 'legal_first',
+    'fname': 'legal_first', 'given name': 'legal_first', 'given': 'legal_first',
+    'last name': 'legal_last', 'last': 'legal_last', 'lname': 'legal_last', 'surname': 'legal_last', 'family name': 'legal_last',
+    'preferred name': 'preferred_name', 'nickname': 'preferred_name', 'goes by': 'preferred_name', 'preferred': 'preferred_name',
+    'email': 'personal_email', 'personal email': 'personal_email', 'e-mail': 'personal_email', 'gmail': 'personal_email', 'personal e-mail': 'personal_email',
+    'phone': 'phone', 'phone number': 'phone', 'cell': 'phone', 'mobile': 'phone', 'tel': 'phone', 'cell phone': 'phone', 'mobile number': 'phone',
+    'bk#': 'BK#', 'bk #': 'BK#', 'bk number': 'BK#', 'bk': 'BK#', 'bid order': 'BK#', 'member id': 'BK#', 'member #': 'BK#',
+    'badge': 'BK#', 'badge #': 'BK#', 'badge number': 'BK#', 'id': 'BK#', 'brother id': 'BK#', 'chapter id': 'BK#', 'chapter number': 'BK#',
+    'university email': 'university_email', 'school email': 'university_email', 'edu email': 'university_email', '.edu': 'university_email',
+    'student id': 'university_id', 'university id': 'university_id', 'gtid': 'university_id', 'cwid': 'university_id', 'uin': 'university_id',
+    'pledge class': 'pledge_class', 'class': 'pledge_class', 'cohort': 'pledge_class', 'pledge year': 'pledge_class', 'class year': 'pledge_class', 'initiation': 'pledge_class',
+    'status': 'status', 'member status': 'status', 'active status': 'status',
+    'major': 'major', 'major/minor': 'major', 'program': 'major', 'degree': 'major', 'field of study': 'major', 'concentration': 'major',
+    'year': 'year', 'academic year': 'year', 'grade': 'year', 'grade level': 'year', 'standing': 'year',
+    'graduation': 'anticipated_graduation', 'graduation date': 'anticipated_graduation', 'expected graduation': 'anticipated_graduation',
+    'grad date': 'anticipated_graduation', 'grad semester': 'anticipated_graduation', 'expected grad': 'anticipated_graduation',
+    'hometown': 'hometown', 'home city': 'hometown', 'from': 'hometown', 'home town': 'hometown', 'city': 'hometown',
+    'birthday': 'birthday', 'dob': 'birthday', 'date of birth': 'birthday', 'birth date': 'birthday',
+    'shirt': 'shirt_size', 'shirt size': 'shirt_size', 't-shirt': 'shirt_size', 'tshirt': 'shirt_size', 't shirt': 'shirt_size',
+    'dietary': 'dietary_restrictions', 'dietary restrictions': 'dietary_restrictions', 'allergies': 'dietary_restrictions',
+    'food restrictions': 'dietary_restrictions', 'diet': 'dietary_restrictions',
+    'meal plan': 'meal_plan', 'meal': 'meal_plan', 'meals': 'meal_plan', 'board': 'meal_plan', 'dining': 'meal_plan',
+    'living in house': 'living_in_house', 'in house': 'living_in_house', 'resident': 'living_in_house', 'lives in house': 'living_in_house', 'chapter house': 'living_in_house',
+    'room': 'room_number', 'room number': 'room_number', 'room #': 'room_number', 'room no': 'room_number',
+    'car': 'car_on_campus', 'car on campus': 'car_on_campus', 'has car': 'car_on_campus', 'vehicle': 'car_on_campus',
+    'officer': 'officer_role', 'officer role': 'officer_role', 'position': 'officer_role', 'role': 'officer_role', 'title': 'officer_role',
+    'emergency contact': 'emergency_contact_name', 'emergency name': 'emergency_contact_name', 'ec name': 'emergency_contact_name',
+    'emergency phone': 'emergency_contact_phone', 'emergency contact phone': 'emergency_contact_phone', 'ec phone': 'emergency_contact_phone'
+  };
+  // Also auto-map to whatever label_member_id says (e.g. if chapter uses "Badge #")
+  var membId = document.getElementById('vocab-label_member_id');
+  if (membId && membId.value.trim()) autoMap[membId.value.trim().toLowerCase()] = 'BK#';
 
   var rows = document.getElementById('mig-mapper-rows');
   rows.innerHTML = '';
-  var optionsHtml = MIG_TARGET_FIELDS.map(function(f) {
-    return '<option value="' + f.value + '">' + f.label + '</option>';
-  }).join('');
-
-  var autoMap = {
-    'name': 'legal_first', 'full name': 'legal_first', 'first name': 'legal_first',
-    'last name': 'legal_last', 'preferred name': 'preferred_name',
-    'email': 'personal_email', 'personal email': 'personal_email', 'gt email': 'GT_email',
-    'phone': 'phone', 'bk#': 'BK#', 'bk number': 'BK#', 'bid order': 'BK#',
-    'pledge class': 'pledge_class', 'status': 'status', 'major': 'major',
-    'year': 'year', 'hometown': 'hometown', 'birthday': 'birthday',
-    'meal plan': 'meal_plan', 'living in house': 'living_in_house',
-    'officer role': 'officer_role', 'gtid': 'GTID', 'room': 'room_number',
-    'room number': 'room_number'
-  };
-
   sheet.headers.forEach(function(h) {
-    var guess = autoMap[h.toLowerCase()] || 'ignore';
+    var guess = autoMap[h.toLowerCase().trim()] || 'custom';
     var div = document.createElement('div');
-    div.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)';
+    div.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)';
     div.innerHTML =
-      '<div style="flex:0 0 180px;font-size:0.85rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + h + '">' + h + '</div>' +
-      '<div style="color:var(--muted);font-size:1rem">→</div>' +
-      '<select style="flex:1" data-source="' + h + '">' + optionsHtml + '</select>';
+      '<div style="flex:0 0 200px;font-size:0.88rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)" title="' + h + '">' + h + '</div>' +
+      '<div style="color:#94a3b8;flex-shrink:0">→</div>' +
+      '<select style="flex:1;font-size:0.84rem" data-source="' + h + '">' + optHtml + '</select>';
     rows.appendChild(div);
-    div.querySelector('select').value = guess;
+    var sel = div.querySelector('select');
+    sel.value = guess;
+    // Highlight unrecognized columns subtly
+    if (guess === 'custom') sel.style.color = 'var(--muted)';
+    sel.addEventListener('change', function() { this.style.color = ''; });
+  });
+}
+
+var MIG_SUGGESTED_FIELDS = [
+  { value: 'emergency_contact_name',  label: 'Emergency Contact Name'  },
+  { value: 'emergency_contact_phone', label: 'Emergency Contact Phone' },
+  { value: 'birthday',                label: 'Birthday'                },
+  { value: 'hometown',                label: 'Hometown'                },
+  { value: 'dietary_restrictions',    label: 'Dietary Restrictions'    },
+  { value: 'car_on_campus',           label: 'Car on Campus?'          },
+  { value: 'shirt_size',              label: 'Shirt Size'              },
+  { value: 'major',                   label: 'Major / Program'         },
+  { value: 'anticipated_graduation',  label: 'Graduation Date'         }
+];
+
+function _buildMigSuggestions(sheet) {
+  // Which fields are already covered by the mapper?
+  var mappedValues = {};
+  sheet.headers.forEach(function(h) {
+    var autoMap = { /* reuse keys already in _buildMigMapper */ };
+    // Simple heuristic: check if it's a known field
   });
 
-  document.getElementById('mig-mapper-card').style.display = '';
+  // Show suggestions for fields typically not in old rosters
+  var grid = document.getElementById('mig-suggestions-grid');
+  grid.innerHTML = '';
+  MIG_SUGGESTED_FIELDS.forEach(function(f) {
+    var pill = document.createElement('label');
+    pill.style.cssText = 'display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:20px;border:1.5px solid var(--border);cursor:pointer;font-size:0.83rem;font-weight:500;background:white;transition:all 0.15s;user-select:none';
+    pill.innerHTML = '<input type="checkbox" value="' + f.value + '" style="width:14px;height:14px;cursor:pointer;flex-shrink:0"> ' + f.label;
+    var cb = pill.querySelector('input');
+    cb.addEventListener('change', function() {
+      pill.style.borderColor = this.checked ? 'var(--primary)' : 'var(--border)';
+      pill.style.background  = this.checked ? '#eff6ff' : 'white';
+    });
+    grid.appendChild(pill);
+  });
+  document.getElementById('mig-suggestions-card').style.display = '';
 }
 
 function doMigration() {
   var url = document.getElementById('mig-url').value.trim();
-  var sheetName = document.getElementById('mig-sheet-select').value;
-  if (!url || !sheetName) { alert('Please select a sheet first.'); return; }
+  if (!url || !migSelectedSheet) { alert('Please select a sheet first.'); return; }
 
   var selects = document.querySelectorAll('#mig-mapper-rows select');
   var mapping = [];
   selects.forEach(function(sel) {
-    var targetField = sel.value;
-    if (targetField === 'custom') targetField = 'custom:' + sel.getAttribute('data-source');
-    mapping.push({ sourceCol: sel.getAttribute('data-source'), targetField: targetField });
+    var tf = sel.value;
+    if (tf === 'custom') tf = 'custom:' + sel.getAttribute('data-source');
+    mapping.push({ sourceCol: sel.getAttribute('data-source'), targetField: tf });
   });
 
   var btn = document.getElementById('mig-import-btn');
-  btn.disabled = true; btn.textContent = 'Importing...';
+  btn.disabled = true; btn.textContent = 'Importing…';
   var result = document.getElementById('mig-result');
   result.style.display = 'none';
 
   google.script.run
     .withSuccessHandler(function(json) {
-      btn.disabled = false; btn.textContent = 'Import Roster';
+      btn.disabled = false; btn.textContent = 'Import Members';
       var r = JSON.parse(json);
-      result.style.display = '';
       if (r.success) {
-        result.style.background = '#f0fdf4'; result.style.border = '1px solid #bbf7d0'; result.style.color = '#166534';
-        result.textContent = '✅ Imported ' + r.added + ' members. ' + (r.skipped ? r.skipped + ' rows skipped (no name or email).' : '');
+        result.style.cssText = 'display:block;padding:12px 16px;border-radius:8px;font-size:0.85rem;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534';
+        result.innerHTML = '<strong>Done!</strong> ' + r.added + ' members imported.' + (r.skipped ? ' ' + r.skipped + ' rows skipped (no name or email).' : '') + ' You can continue to the Review step.';
+        btn.textContent = '✓ Imported'; btn.style.background = 'var(--green)';
       } else {
-        result.style.background = '#fef2f2'; result.style.border = '1px solid #fecaca'; result.style.color = '#991b1b';
-        result.textContent = '❌ Error: ' + r.error;
+        result.style.cssText = 'display:block;padding:12px 16px;border-radius:8px;font-size:0.85rem;background:#fef2f2;border:1px solid #fecaca;color:#991b1b';
+        result.textContent = 'Error: ' + r.error;
       }
     })
     .withFailureHandler(function(err) {
-      btn.disabled = false; btn.textContent = 'Import Roster';
-      result.style.display = '';
-      result.style.background = '#fef2f2'; result.style.border = '1px solid #fecaca'; result.style.color = '#991b1b';
-      result.textContent = '❌ Error: ' + err.message;
+      btn.disabled = false; btn.textContent = 'Import Members';
+      result.style.cssText = 'display:block;padding:12px 16px;border-radius:8px;font-size:0.85rem;background:#fef2f2;border:1px solid #fecaca;color:#991b1b';
+      result.textContent = 'Error: ' + err.message;
     })
-    .importFromExternalSheet(url, sheetName, JSON.stringify(mapping));
+    .importFromExternalSheet(url, migSelectedSheet, JSON.stringify(mapping));
 }
 
 function resetMigration() {
+  migSheetData = null; migSelectedSheet = null;
   document.getElementById('mig-url').value = '';
+  document.getElementById('mig-load-error').style.display = 'none';
   document.getElementById('mig-sheet-wrap').style.display = 'none';
-  document.getElementById('mig-mapper-card').style.display = 'none';
-  migSheetData = null;
+  document.getElementById('mig-phase-2').style.display = 'none';
 }
 
 var VOCAB_FIELDS = [
-  { key: 'label_chore',        label: 'Chore',              def: 'Chore' },
-  { key: 'label_fine',         label: 'Fine',               def: 'Fine' },
-  { key: 'label_am_group',     label: 'Associate Group',    def: 'Associate Members' },
-  { key: 'label_am_officer',   label: 'AM Officer Title',   def: 'High Kappa' },
-  { key: 'label_am_points',    label: 'AM Points Label',    def: 'Points' },
-  { key: 'label_pledge_class', label: 'Pledge Class',       def: 'Pledge Class' },
-  { key: 'label_member_id',       label: 'Member ID / Badge',  def: 'BK#' },
-  { key: 'label_university_email',label: 'University Email',   def: 'University Email' },
-  { key: 'label_suspension',      label: 'Suspension',         def: 'Suspension' },
-  { key: 'label_probation',    label: 'Probation',          def: 'Probation' },
-  { key: 'label_semester',     label: 'Semester Term',      def: 'Semester' }
+  { key: 'label_chore',        label: 'What do you call a "chore"?',                     def: 'Chore',             hint: 'e.g. Chore, Duty, Task, Job' },
+  { key: 'label_fine',         label: 'What do you call a "fine"?',                      def: 'Fine',              hint: 'e.g. Fine, Charge, Fee, Strike' },
+  { key: 'label_am_group',     label: 'What do you call your new-member group?',         def: 'Associate Members', hint: 'e.g. Pledges, New Members, Associates, Candidates' },
+  { key: 'label_new_member',   label: 'Singular term for one new member',                def: 'New Member',        hint: 'e.g. Pledge, Associate, Candidate, New Member' },
+  { key: 'label_am_officer',   label: 'Officer who leads the new-member program',        def: 'High Kappa',        hint: 'e.g. Pledge Educator, New Member Chair, Intake Director' },
+  { key: 'label_am_points',    label: 'What are the activity points called?',            def: 'Points',            hint: 'e.g. Points, Credits, Hours' },
+  { key: 'label_pledge_class', label: 'What do you call each new-member cohort?',        def: 'Pledge Class',      hint: 'e.g. Pledge Class, New Member Class, Class of Spring 2026' },
+  { key: 'label_member_id',    label: 'What\'s your member ID number called?',           def: 'BK#',               hint: 'e.g. BK#, Badge #, Member ID, Chapter Number' },
+  { key: 'label_university_id',label: 'What\'s the university student ID called?',       def: 'University ID',     hint: 'e.g. GTID, CWID, UIN, Student ID, Banner ID' },
+  { key: 'label_university_email', label: 'What\'s the university-issued email called?', def: 'University Email',  hint: 'e.g. University Email, School Email, .edu Email' },
+  { key: 'label_suspension',   label: 'Academic suspension label',                       def: 'Suspension',        hint: 'e.g. Academic Suspension, Academic Hold' },
+  { key: 'label_probation',    label: 'Probation label',                                 def: 'Probation',         hint: 'e.g. Probation, Social Probation, Conduct Hold' },
+  { key: 'label_semester',     label: 'What do you call a semester/term?',               def: 'Semester',          hint: 'e.g. Semester, Quarter, Term' }
 ];
 
 var MODULE_FIELDS = [
@@ -721,7 +888,7 @@ function buildVocabGrid() {
     div.innerHTML =
       '<label>' + f.label + '</label>' +
       '<input type="text" id="vocab-' + f.key + '" placeholder="' + f.def + '">' +
-      '<div class="default">Default: ' + f.def + '</div>';
+      '<div class="hint">' + (f.hint || ('Default: ' + f.def)) + '</div>';
     grid.appendChild(div);
   });
 }
@@ -858,8 +1025,10 @@ function validateStep(n) {
   if (n === 5) {
     var sem = document.getElementById('s5-semester').value.trim();
     var ws  = document.getElementById('s5-week-start').value.trim();
-    if (!sem) { alert('Semester is required.'); return false; }
-    if (!ws || !/^\d{4}-\d{2}-\d{2}$/.test(ws)) { alert('Week start must be in YYYY-MM-DD format.'); return false; }
+    if (!sem) { alert('Semester name is required (e.g. Fall 2026).'); return false; }
+    if (!ws)  { alert('Please pick the first Monday of the semester.'); return false; }
+    var day = new Date(ws + 'T12:00:00').getDay();
+    if (day !== 1) { alert('That date is not a Monday. Please pick a Monday.'); return false; }
   }
   // Step 6 (migration) is always optional — user can skip or click next after importing
   return true;
@@ -884,6 +1053,40 @@ function buildSummary() {
   }).join('');
 }
 
+// Merges step-4 custom fields with any suggested fields checked in step 6
+function _collectCFWithSuggestions() {
+  var fields = getCFFields();
+  var existingKeys = {};
+  fields.forEach(function(f) { existingKeys[f.key] = true; });
+
+  // Suggested field labels (friendly, for display in member profiles)
+  var SUGGESTED_LABELS = {
+    'emergency_contact_name':  'Emergency Contact Name',
+    'emergency_contact_phone': 'Emergency Contact Phone',
+    'birthday':                'Birthday',
+    'hometown':                'Hometown',
+    'dietary_restrictions':    'Dietary Restrictions',
+    'car_on_campus':           'Car on Campus?',
+    'shirt_size':              'Shirt Size',
+    'major':                   'Major / Program',
+    'anticipated_graduation':  'Graduation Date'
+  };
+  var SUGGESTED_TYPES = { 'birthday': 'date', 'car_on_campus': 'checkbox' };
+
+  document.querySelectorAll('#mig-suggestions-grid input[type=checkbox]:checked').forEach(function(cb) {
+    var key = 'cf_' + cb.value;
+    if (existingKeys[key] || existingKeys[cb.value]) return;
+    fields.push({
+      key:      key,
+      label:    SUGGESTED_LABELS[cb.value] || cb.value,
+      type:     SUGGESTED_TYPES[cb.value] || 'text',
+      required: false,
+      options:  ''
+    });
+  });
+  return fields;
+}
+
 // ---- Collect all setup data ----
 function collectSetup() {
   var setup = {
@@ -897,11 +1100,12 @@ function collectSetup() {
     fine_amount:   document.getElementById('s5-fine').value,
     officer_pin:   document.getElementById('s5-pin').value.trim(),
     timezone:      document.getElementById('s5-timezone').value,
-    custom_fields:        JSON.stringify(getCFFields()),
-    meal_plan_options:    document.getElementById('opt-meal').value.trim(),
-    officer_role_options: document.getElementById('opt-officer-roles').value.trim(),
-    am_activity_types:    document.getElementById('opt-am-activities').value.trim(),
-    member_status_options: document.getElementById('opt-statuses').value.trim(),
+    custom_fields:           JSON.stringify(_collectCFWithSuggestions()),
+    meal_plan_options:       document.getElementById('opt-meal').value.trim(),
+    officer_role_options:    document.getElementById('opt-officer-roles').value.trim(),
+    am_activity_types:       document.getElementById('opt-am-activities').value.trim(),
+    member_status_options:   document.getElementById('opt-statuses').value.trim(),
+    inactive_reason_options: document.getElementById('opt-inactive-reasons').value.trim(),
     chores: getChores()
   };
 
