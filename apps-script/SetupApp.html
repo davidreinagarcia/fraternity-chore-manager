@@ -104,7 +104,7 @@
   .field:last-child { margin-bottom: 0; }
   .field label { font-size: 0.75rem; font-weight: 700; display: block; margin-bottom: 5px; }
   .field .hint { font-size: 0.72rem; color: var(--muted); margin-top: 4px; line-height: 1.4; }
-  input[type=text], input[type=email], input[type=number], input[type=color], textarea, select {
+  input[type=text], input[type=email], input[type=number], input[type=color], input[type=date], textarea, select {
     width: 100%;
     padding: 9px 12px;
     border: 1px solid var(--border);
@@ -121,10 +121,23 @@
   .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 500px) { .field-row { grid-template-columns: 1fr; } }
 
-  /* Vocab grid */
-  .vocab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-  .vocab-item label { color: var(--text); }
-  .vocab-item .default { font-size: 0.68rem; color: var(--muted); }
+  /* Vocab list */
+  .vocab-grid { display: flex; flex-direction: column; gap: 0; }
+  .vocab-item {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .vocab-item:last-child { border-bottom: none; }
+  .vocab-item label {
+    flex: 1; font-size: 0.88rem; font-weight: 500; color: var(--text);
+    margin-bottom: 0; line-height: 1.4;
+  }
+  .vocab-item input { flex: 0 0 220px; width: 220px; }
+  .vocab-item .hint { display: none; }
+  @media (max-width: 560px) {
+    .vocab-item { flex-direction: column; align-items: flex-start; gap: 6px; }
+    .vocab-item input { flex: none; width: 100%; }
+  }
 
   /* Module toggles */
   .modules-grid { display: flex; flex-direction: column; gap: 10px; }
@@ -737,9 +750,9 @@ function _buildMigMapper(sheet) {
     var div = document.createElement('div');
     div.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)';
     div.innerHTML =
-      '<div style="flex:0 0 200px;font-size:0.88rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)" title="' + h + '">' + h + '</div>' +
-      '<div style="color:#94a3b8;flex-shrink:0">→</div>' +
-      '<select style="flex:1;font-size:0.84rem" data-source="' + h + '">' + optHtml + '</select>';
+      '<div style="flex:1;min-width:80px;max-width:200px;font-size:0.88rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)" title="' + h + '">' + h + '</div>' +
+      '<div style="color:#94a3b8;flex-shrink:0;padding:0 4px">→</div>' +
+      '<select style="flex:2;min-width:0;font-size:0.84rem" data-source="' + h + '">' + optHtml + '</select>';
     rows.appendChild(div);
     var sel = div.querySelector('select');
     sel.value = guess;
@@ -884,11 +897,10 @@ function buildVocabGrid() {
   grid.innerHTML = '';
   VOCAB_FIELDS.forEach(function(f) {
     var div = document.createElement('div');
-    div.className = 'vocab-item field';
+    div.className = 'vocab-item';
     div.innerHTML =
-      '<label>' + f.label + '</label>' +
-      '<input type="text" id="vocab-' + f.key + '" placeholder="' + f.def + '">' +
-      '<div class="hint">' + (f.hint || ('Default: ' + f.def)) + '</div>';
+      '<label title="' + (f.hint || '') + '">' + f.label + '</label>' +
+      '<input type="text" id="vocab-' + f.key + '" placeholder="' + f.def + '" title="' + (f.hint || f.def) + '">';
     grid.appendChild(div);
   });
 }
