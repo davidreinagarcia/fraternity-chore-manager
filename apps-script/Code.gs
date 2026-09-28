@@ -1632,37 +1632,19 @@ function initChapter(setupJson) {
 }
 
 // Tries to get or create the web app deployment URL.
-// Returns empty string if it can't (buyer will see manual instructions).
 function autoDeployWebApp() {
-  try {
-    var existing = ScriptApp.getService().getUrl();
-    if (existing) return existing;
-  } catch (_) {}
-  try {
-    var scriptId = ScriptApp.getScriptId();
-    var token = ScriptApp.getOAuthToken();
-    var base = 'https://script.googleapis.com/v1/projects/' + scriptId;
-    var headers = { 'Authorization': 'Bearer ' + token };
+  try { return ScriptApp.getService().getUrl() || ''; } catch (_) { return ''; }
+}
 
-    var vResp = UrlFetchApp.fetch(base + '/versions', {
-      method: 'post', headers: headers, contentType: 'application/json',
-      payload: JSON.stringify({ description: 'Setup Wizard auto-deploy' }),
-      muteHttpExceptions: true
-    });
-    if (vResp.getResponseCode() !== 200) return '';
-    var versionNumber = JSON.parse(vResp.getContentText()).versionNumber;
-
-    var dResp = UrlFetchApp.fetch(base + '/deployments', {
-      method: 'post', headers: headers, contentType: 'application/json',
-      payload: JSON.stringify({ versionNumber: versionNumber, manifestFileName: 'appsscript', description: 'Fraternity System Web App' }),
-      muteHttpExceptions: true
-    });
-    if (dResp.getResponseCode() !== 200) return '';
-    var deploy = JSON.parse(dResp.getContentText());
-    var ep = (deploy.entryPoints || []).filter(function(e) { return e.entryPointType === 'WEB_APP'; })[0];
-    return ep ? ep.webApp.url : '';
-  } catch (_) {
-    return '';
+function setWebAppUrl(url) {
+  try {
+    url = (url || '').trim().replace(/[?&]app=.*$/, '').replace(/\/$/, '');
+    if (!url) return JSON.stringify({ success: false, error: 'Empty URL' });
+    setConfigValue('web_app_url', url);
+    updateWelcomeSheet(getSpreadsheet(), url);
+    return JSON.stringify({ success: true, webAppUrl: url });
+  } catch (err) {
+    return JSON.stringify({ success: false, error: err.toString() });
   }
 }
 
@@ -1747,12 +1729,16 @@ function updateWelcomeSheet(ss, webAppUrl) {
   });
   sh.getRange(1, 1, values.length, 4).setValues(values);
 
-  // HYPERLINK formulas for link rows
+  // Clickable links via RichTextValue (more reliable than HYPERLINK formula)
   if (webAppUrl) {
     rows.forEach(function(d, i) {
       if (d.style === 'link' || d.style === 'link-green' || d.style === 'link-muted') {
         var url = d.cols[2];
-        if (url) sh.getRange(i + 1, 3).setFormula('=HYPERLINK("' + url + '","' + url + '")');
+        if (url) {
+          sh.getRange(i + 1, 3).setRichTextValue(
+            SpreadsheetApp.newRichTextValue().setText(url).setLinkUrl(url).build()
+          );
+        }
       }
     });
   }

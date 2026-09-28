@@ -539,7 +539,7 @@
       <p id="success-msg"></p>
       <div id="success-warnings" style="margin-top:12px"></div>
 
-      <!-- URL ready -->
+      <!-- Active links (shown after URL is saved) -->
       <div id="url-section" style="display:none;margin-top:20px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:16px;text-align:left">
         <div style="font-weight:700;margin-bottom:10px;color:#166534;font-size:0.9rem">Your App URL</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -551,20 +551,26 @@
           <a id="link-home" href="#" target="_blank" class="btn-outline" style="text-decoration:none">Open Member Home →</a>
         </div>
         <div style="margin-top:10px;font-size:0.78rem;color:#64748b">
-          The <b>📋 Start Here</b> tab in your spreadsheet has been updated with all your links and a quick-start guide.
+          The <b>📋 Start Here</b> tab has been updated with your links and quick-start guide.
         </div>
       </div>
 
-      <!-- Manual deploy fallback -->
-      <div id="deploy-instructions" style="display:none;margin-top:20px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:16px;text-align:left">
-        <div style="font-weight:700;margin-bottom:10px;color:#c2410c;font-size:0.9rem">One last step: deploy your web app</div>
-        <ol style="margin:0;padding-left:20px;line-height:2.2;font-size:0.85rem;color:#374151">
-          <li>Close this dialog and click <b>Extensions → Apps Script</b></li>
+      <!-- Deploy + paste URL (always shown until URL is saved) -->
+      <div id="deploy-instructions" style="margin-top:20px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:16px;text-align:left">
+        <div style="font-weight:700;margin-bottom:10px;color:#c2410c;font-size:0.9rem">Last step: activate your web app (2 minutes)</div>
+        <ol style="margin:0 0 14px 0;padding-left:20px;line-height:2.2;font-size:0.85rem;color:#374151">
+          <li>In your spreadsheet click <b>Extensions → Apps Script</b></li>
           <li>Click <b>Deploy → New deployment</b></li>
           <li>Type: <b>Web app</b> · Execute as: <b>Me</b> · Access: <b>Anyone</b></li>
-          <li>Click <b>Deploy</b> and copy the URL</li>
+          <li>Click <b>Deploy</b>, then copy the URL it gives you</li>
+          <li>Paste it below and click <b>Activate</b></li>
         </ol>
-        <div style="margin-top:10px;font-size:0.78rem;color:#64748b">That URL is your chapter's permanent link for all dashboards and QR codes.</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input id="url-input" type="url" placeholder="https://script.google.com/macros/s/…/exec"
+            style="flex:1;padding:8px 12px;border:1px solid #fed7aa;border-radius:6px;font-size:0.82rem;min-width:0">
+          <button onclick="saveWebAppUrl()" style="background:#d97706;color:white;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-weight:700;white-space:nowrap;font-size:0.85rem">Activate →</button>
+        </div>
+        <div id="url-save-error" style="display:none;margin-top:8px;color:#dc2626;font-size:0.8rem"></div>
       </div>
     </div>
   </div>
@@ -1187,13 +1193,9 @@ function doInit() {
         }
         var appUrl = res.webAppUrl || BASE_URL;
         if (appUrl) {
-          document.getElementById('url-section').style.display = '';
-          document.getElementById('app-url-display').textContent = appUrl;
-          document.getElementById('link-dashboard').href = appUrl + '?app=officer';
-          document.getElementById('link-home').href = appUrl + '?app=home';
-        } else {
-          document.getElementById('deploy-instructions').style.display = '';
+          showActivatedUrl(appUrl);
         }
+        // deploy instructions always shown until user pastes URL
       } else {
         btn.textContent = '🚀 Initialize Chapter';
         errBox.style.display = '';
@@ -1207,6 +1209,40 @@ function doInit() {
       errBox.textContent = 'Error: ' + err.message;
     })
     .initChapter(JSON.stringify(setup));
+}
+
+function showActivatedUrl(url) {
+  document.getElementById('deploy-instructions').style.display = 'none';
+  document.getElementById('url-section').style.display = '';
+  document.getElementById('app-url-display').textContent = url;
+  document.getElementById('link-dashboard').href = url + '?app=officer';
+  document.getElementById('link-home').href = url + '?app=home';
+}
+
+function saveWebAppUrl() {
+  var url = document.getElementById('url-input').value.trim();
+  var errBox = document.getElementById('url-save-error');
+  errBox.style.display = 'none';
+  if (!url || !url.startsWith('https://script.google.com')) {
+    errBox.textContent = 'Paste the full URL from the Apps Script deploy dialog (starts with https://script.google.com/macros/s/…)';
+    errBox.style.display = '';
+    return;
+  }
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var res = JSON.parse(json);
+      if (res.success) {
+        showActivatedUrl(res.webAppUrl);
+      } else {
+        errBox.textContent = 'Error: ' + (res.error || 'Unknown error');
+        errBox.style.display = '';
+      }
+    })
+    .withFailureHandler(function(err) {
+      errBox.textContent = 'Error: ' + err.message;
+      errBox.style.display = '';
+    })
+    .setWebAppUrl(url);
 }
 
 function copyAppUrl() {
