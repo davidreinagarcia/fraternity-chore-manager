@@ -312,11 +312,14 @@ function onOpen() {
 }
 
 function openSetupWizard() {
-  var url = ScriptApp.getService().getUrl() + '?app=setup';
-  var html = HtmlService.createHtmlOutput(
-    '<script>window.open("' + url + '","_blank");google.script.host.close();</script>'
-  );
-  SpreadsheetApp.getUi().showModalDialog(html, 'Opening Setup Wizard...');
+  var tmpl = HtmlService.createTemplateFromFile('SetupApp');
+  tmpl.baseUrl = ScriptApp.getService().getUrl() || '';
+  tmpl.todayDate = Utilities.formatDate(new Date(), _getTimezone(), 'yyyy-MM-dd');
+  var cfg = getChapterConfig();
+  tmpl.cfg = cfg;
+  tmpl.cfgJson = JSON.stringify(cfg);
+  var html = tmpl.evaluate().setWidth(900).setHeight(700).setTitle('Chapter Setup');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Chapter Setup');
 }
 
 function openDraftApp() {
