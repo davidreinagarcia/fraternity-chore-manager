@@ -1718,11 +1718,17 @@ function updateWelcomeSheet(ss, webAppUrl) {
     r(['', 'Welcome to Fraternity System', '', ''], 'header');
     r(['', 'Your all-in-one chapter management platform', '', ''], 'subtitle');
     r(['', '', '', ''], 'spacer');
-    r(['', 'GET STARTED IN 4 STEPS', '', ''], 'section');
+    r(['', 'GET STARTED IN 5 STEPS', '', ''], 'section');
     r(['1', 'Open the menu', 'Click "Fraternity System" in the spreadsheet menu above', ''], 'step');
     r(['2', 'Launch the wizard', 'Click "Set Up My Chapter"', ''], 'step');
-    r(['3', 'Complete setup', 'Follow the 7-step wizard — takes about 5 minutes', ''], 'step');
-    r(['4', 'You\'re done', 'This page will update automatically with all your links', ''], 'step');
+    r(['3', 'AUTHORIZE THE APP ← important', '', ''], 'warn-header');
+    r(['', 'Google shows a warning screen — this is normal for private apps.', '', ''], 'warn-body');
+    r(['', '① Click "Advanced settings" (bottom-left of the warning)', '', ''], 'warn-body');
+    r(['', '② Click "Go to Fraternity System (unsafe)"', '', ''], 'warn-body');
+    r(['', '③ Scroll down and click "Allow"', '', ''], 'warn-body');
+    r(['', 'This happens once only. The app is safe — it only accesses your own spreadsheet.', '', ''], 'warn-note');
+    r(['4', 'Complete setup', 'Follow the 7-step wizard — takes about 5 minutes', ''], 'step');
+    r(['5', 'You\'re done', 'This page will update automatically with all your links', ''], 'step');
     r(['', '', '', ''], 'spacer');
     r(['', 'WHAT THIS SYSTEM DOES', '', ''], 'section');
     r(['', 'Photo-verified chores', 'Members scan QR codes and upload photo proof — auto fraud detection included', ''], 'body');
@@ -1753,7 +1759,8 @@ function updateWelcomeSheet(ss, webAppUrl) {
 
   var H = { bg: '#1a3a4a', fg: '#ffffff', sectionBg: '#edf2f7', sectionFg: '#2d3748',
             stepBg: '#ebf8ff', stepFg: '#2b6cb0', link: '#0d9488', green: '#15803d',
-            muted: '#64748b', body: '#374151', gold: '#f5a623' };
+            muted: '#64748b', body: '#374151', gold: '#f5a623',
+            warnBg: '#fff7ed', warnFg: '#92400e', warnBorder: '#fbbf24', warnNote: '#78350f' };
 
   rows.forEach(function(d, i) {
     var row = i + 1;
@@ -1816,6 +1823,26 @@ function updateWelcomeSheet(ss, webAppUrl) {
         sh.getRange(row, 2).setFontWeight('bold').setFontColor(H.body);
         sh.getRange(row, 3).setFontColor(H.body);
         sh.setRowHeight(row, 22);
+        break;
+      case 'warn-header':
+        full.merge().setValue(d.cols[1])
+            .setBackground(H.warnBg).setFontColor(H.warnFg)
+            .setFontWeight('bold').setFontSize(9)
+            .setHorizontalAlignment('left').setVerticalAlignment('middle');
+        sh.setRowHeight(row, 26);
+        break;
+      case 'warn-body':
+        full.merge().setValue(d.cols[1])
+            .setBackground(H.warnBg).setFontColor(H.warnFg)
+            .setHorizontalAlignment('left').setVerticalAlignment('middle');
+        sh.setRowHeight(row, 22);
+        break;
+      case 'warn-note':
+        full.merge().setValue(d.cols[1])
+            .setBackground(H.warnBg).setFontColor(H.warnNote)
+            .setFontStyle('italic').setFontSize(8)
+            .setHorizontalAlignment('left').setVerticalAlignment('middle');
+        sh.setRowHeight(row, 20);
         break;
     }
   });
