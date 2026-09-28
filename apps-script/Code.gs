@@ -1642,6 +1642,10 @@ function autoDeployWebApp() {
   } catch (_) { return ''; }
 }
 
+function getScriptEditorUrl() {
+  return 'https://script.google.com/d/' + ScriptApp.getScriptId() + '/edit';
+}
+
 function setWebAppUrl(url) {
   try {
     url = (url || '').trim().replace(/[?&]app=.*$/, '').replace(/\/$/, '');
