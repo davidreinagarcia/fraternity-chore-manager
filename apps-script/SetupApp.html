@@ -523,7 +523,8 @@
         <li><span class="ck">✅</span> Required tabs created (members, fines, submissions, etc.)</li>
         <li><span class="ck">✅</span> Chore list saved to Drive (chore_ratios.json)</li>
         <li><span class="ck">✅</span> Monday 6am reset trigger created automatically</li>
-        <li><span class="ck">ℹ️</span> You'll need to generate QR codes separately after setup</li>
+        <li><span class="ck">✅</span> Start Here tab updated with your links and quick-start guide</li>
+        <li><span class="ck">✅</span> Web app deployed automatically — your URL will be ready instantly</li>
       </ul>
     </div>
 
@@ -537,9 +538,33 @@
       <h2>🎉 Chapter Initialized!</h2>
       <p id="success-msg"></p>
       <div id="success-warnings" style="margin-top:12px"></div>
-      <div style="margin-top:20px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center">
-        <a id="link-dashboard" href="?app=officer" target="_blank" class="btn-primary" style="text-decoration:none">Open Officer Dashboard →</a>
-        <a id="link-home" href="?app=home" target="_blank" class="btn-outline" style="text-decoration:none">Open Home Page →</a>
+
+      <!-- URL ready -->
+      <div id="url-section" style="display:none;margin-top:20px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:16px;text-align:left">
+        <div style="font-weight:700;margin-bottom:10px;color:#166534;font-size:0.9rem">Your App URL</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <code id="app-url-display" style="flex:1;background:white;border:1px solid #d1fae5;border-radius:6px;padding:8px 12px;font-size:0.75rem;word-break:break-all"></code>
+          <button id="copy-btn" onclick="copyAppUrl()" style="background:#16a34a;color:white;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:600;white-space:nowrap;font-size:0.85rem">Copy URL</button>
+        </div>
+        <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:10px">
+          <a id="link-dashboard" href="#" target="_blank" class="btn-primary" style="text-decoration:none">Open Officer Dashboard →</a>
+          <a id="link-home" href="#" target="_blank" class="btn-outline" style="text-decoration:none">Open Member Home →</a>
+        </div>
+        <div style="margin-top:10px;font-size:0.78rem;color:#64748b">
+          The <b>📋 Start Here</b> tab in your spreadsheet has been updated with all your links and a quick-start guide.
+        </div>
+      </div>
+
+      <!-- Manual deploy fallback -->
+      <div id="deploy-instructions" style="display:none;margin-top:20px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:16px;text-align:left">
+        <div style="font-weight:700;margin-bottom:10px;color:#c2410c;font-size:0.9rem">One last step: deploy your web app</div>
+        <ol style="margin:0;padding-left:20px;line-height:2.2;font-size:0.85rem;color:#374151">
+          <li>Close this dialog and click <b>Extensions → Apps Script</b></li>
+          <li>Click <b>Deploy → New deployment</b></li>
+          <li>Type: <b>Web app</b> · Execute as: <b>Me</b> · Access: <b>Anyone</b></li>
+          <li>Click <b>Deploy</b> and copy the URL</li>
+        </ol>
+        <div style="margin-top:10px;font-size:0.78rem;color:#64748b">That URL is your chapter's permanent link for all dashboards and QR codes.</div>
       </div>
     </div>
   </div>
@@ -1155,14 +1180,20 @@ function doInit() {
       if (res.success) {
         btn.style.display = 'none';
         document.getElementById('success-box').style.display = '';
-        document.getElementById('success-msg').textContent = res.message ||
-          'All tabs created, config saved. You can now open the Officer Dashboard.';
+        document.getElementById('success-msg').textContent = res.message || 'All tabs created, config saved.';
         if (res.warnings && res.warnings.length) {
           document.getElementById('success-warnings').innerHTML =
             res.warnings.map(function(w) { return '<div class="warn-box">' + w + '</div>'; }).join('');
         }
-        document.getElementById('link-dashboard').href = BASE_URL + '?app=officer';
-        document.getElementById('link-home').href = BASE_URL + '?app=home';
+        var appUrl = res.webAppUrl || BASE_URL;
+        if (appUrl) {
+          document.getElementById('url-section').style.display = '';
+          document.getElementById('app-url-display').textContent = appUrl;
+          document.getElementById('link-dashboard').href = appUrl + '?app=officer';
+          document.getElementById('link-home').href = appUrl + '?app=home';
+        } else {
+          document.getElementById('deploy-instructions').style.display = '';
+        }
       } else {
         btn.textContent = '🚀 Initialize Chapter';
         errBox.style.display = '';
@@ -1176,6 +1207,21 @@ function doInit() {
       errBox.textContent = 'Error: ' + err.message;
     })
     .initChapter(JSON.stringify(setup));
+}
+
+function copyAppUrl() {
+  var url = document.getElementById('app-url-display').textContent;
+  var btn = document.getElementById('copy-btn');
+  (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject())
+    .catch(function() {
+      var ta = document.createElement('textarea');
+      ta.value = url; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+    })
+    .finally(function() {
+      btn.textContent = 'Copied!';
+      setTimeout(function() { btn.textContent = 'Copy URL'; }, 1800);
+    });
 }
 
 // ---- Custom Fields Builder ----

@@ -279,7 +279,7 @@ function _normDate(v) {
 
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
-  ui.createMenu('Chore System')
+  ui.createMenu('Fraternity System')
     .addItem('Set Up My Chapter', 'openSetupWizard')
     .addSeparator()
     .addItem('Run Monday Reset', 'runMondayReset')
@@ -1613,12 +1613,210 @@ function initChapter(setupJson) {
       }
     }
 
+    // Auto-deploy the web app and update the welcome sheet
+    var webAppUrl = autoDeployWebApp();
+    updateWelcomeSheet(ss, webAppUrl);
+
     logInfo('initChapter', 'Chapter initialized: ' + (setup.chapter_name || '?'));
-    return JSON.stringify({ success: true, message: 'Chapter initialized successfully!', warnings: warnings });
+    return JSON.stringify({ success: true, message: 'Chapter initialized successfully!', warnings: warnings, webAppUrl: webAppUrl });
   } catch (err) {
     logError('initChapter', err);
     return JSON.stringify({ success: false, error: err.toString() });
   }
+}
+
+// Tries to get or create the web app deployment URL.
+// Returns empty string if it can't (buyer will see manual instructions).
+function autoDeployWebApp() {
+  try {
+    var existing = ScriptApp.getService().getUrl();
+    if (existing) return existing;
+  } catch (_) {}
+  try {
+    var scriptId = ScriptApp.getScriptId();
+    var token = ScriptApp.getOAuthToken();
+    var base = 'https://script.googleapis.com/v1/projects/' + scriptId;
+    var headers = { 'Authorization': 'Bearer ' + token };
+
+    var vResp = UrlFetchApp.fetch(base + '/versions', {
+      method: 'post', headers: headers, contentType: 'application/json',
+      payload: JSON.stringify({ description: 'Setup Wizard auto-deploy' }),
+      muteHttpExceptions: true
+    });
+    if (vResp.getResponseCode() !== 200) return '';
+    var versionNumber = JSON.parse(vResp.getContentText()).versionNumber;
+
+    var dResp = UrlFetchApp.fetch(base + '/deployments', {
+      method: 'post', headers: headers, contentType: 'application/json',
+      payload: JSON.stringify({ versionNumber: versionNumber, manifestFileName: 'appsscript', description: 'Fraternity System Web App' }),
+      muteHttpExceptions: true
+    });
+    if (dResp.getResponseCode() !== 200) return '';
+    var deploy = JSON.parse(dResp.getContentText());
+    var ep = (deploy.entryPoints || []).filter(function(e) { return e.entryPointType === 'WEB_APP'; })[0];
+    return ep ? ep.webApp.url : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+function updateWelcomeSheet(ss, webAppUrl) {
+  var SHEET_NAME = '📋 Start Here';
+  var sh = ss.getSheetByName(SHEET_NAME);
+  if (!sh) {
+    sh = ss.insertSheet(SHEET_NAME, 0);
+  } else {
+    sh.clearContents();
+    sh.clearFormats();
+  }
+
+  sh.setColumnWidth(1, 28);
+  sh.setColumnWidth(2, 200);
+  sh.setColumnWidth(3, 370);
+  sh.setColumnWidth(4, 220);
+
+  var chapterName = getConfigValue('chapter_name') || 'Your Chapter';
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MMM d, yyyy');
+
+  // rows: [colA, colB, colC, colD], style
+  var rows = [];
+  function r(cols, style) { rows.push({ cols: cols, style: style }); }
+
+  if (webAppUrl) {
+    r(['', chapterName + ' — Fraternity System', '', ''], 'header');
+    r(['', 'Setup complete · ' + today, '', ''], 'subtitle');
+    r(['', '', '', ''], 'spacer');
+    r(['', 'YOUR LINKS', '', ''], 'section');
+    r(['', 'Officer Dashboard', webAppUrl + '?app=officer', 'Officers only — PIN required'], 'link');
+    r(['', 'Member Home Page', webAppUrl + '?app=home',    'Share this with ALL brothers'], 'link-green');
+    r(['', 'Submit Chores',    webAppUrl + '?app=submit',  'Via QR codes — don\'t share directly'], 'link-muted');
+    r(['', '', '', ''], 'spacer');
+    r(['', 'FIRST WEEK CHECKLIST', '', ''], 'section');
+    r(['☐', 'Officer Dashboard', 'Open it (link above) and log in with your PIN', ''], 'check');
+    r(['☐', 'Assign chores', 'Officer Dashboard → Admin → Draft Night or Auto-Split', ''], 'check');
+    r(['☐', 'Print QR codes', 'Officer Dashboard → Admin → Chore Manager → Download All QR Codes', ''], 'check');
+    r(['☐', 'Post QR codes', 'Hang a QR code in each chore area (laminate if possible)', ''], 'check');
+    r(['☐', 'Share with brothers', 'Send the Member Home Page link to your entire chapter', ''], 'check');
+    r(['', '', '', ''], 'spacer');
+    r(['', 'WHAT EACH LINK DOES', '', ''], 'section');
+    r(['', 'Officer Dashboard', 'Full control: chore assignments, fines, member roster, config, semester tools', ''], 'body');
+    r(['', 'Member Home Page', 'Brothers view their chore assignment, submission status and fine history', ''], 'body');
+    r(['', 'Submit Chores', 'Photo upload page — brothers reach it by scanning the QR code in the chore area', ''], 'body');
+    r(['', 'Draft Night', 'TV display mode for live assignment nights (Officer Dashboard → Admin → Draft Night)', ''], 'body');
+    r(['', '', '', ''], 'spacer');
+    r(['', 'HOW THE SYSTEM RUNS AUTOMATICALLY', '', ''], 'section');
+    r(['', 'Monday 6am', 'Missed chores → fines written automatically', ''], 'body');
+    r(['', 'Monday 6am', 'Officer email report sent with that week\'s summary', ''], 'body');
+    r(['', 'Monday 6am', 'Chore assignments reset for the new week', ''], 'body');
+  } else {
+    r(['', 'Welcome to Fraternity System', '', ''], 'header');
+    r(['', 'Your all-in-one chapter management platform', '', ''], 'subtitle');
+    r(['', '', '', ''], 'spacer');
+    r(['', 'GET STARTED IN 4 STEPS', '', ''], 'section');
+    r(['1', 'Open the menu', 'Click "Fraternity System" in the spreadsheet menu above', ''], 'step');
+    r(['2', 'Launch the wizard', 'Click "Set Up My Chapter"', ''], 'step');
+    r(['3', 'Complete setup', 'Follow the 7-step wizard — takes about 5 minutes', ''], 'step');
+    r(['4', 'You\'re done', 'This page will update automatically with all your links', ''], 'step');
+    r(['', '', '', ''], 'spacer');
+    r(['', 'WHAT THIS SYSTEM DOES', '', ''], 'section');
+    r(['', 'Photo-verified chores', 'Members scan QR codes and upload photo proof — auto fraud detection included', ''], 'body');
+    r(['', 'Automated fines', 'Every Monday at 6am: missed chores → fines written + officer email report sent', ''], 'body');
+    r(['', 'Officer dashboard', 'Full web UI: assignments, fines, member roster, semester tools, analytics', ''], 'body');
+    r(['', 'Member portal', 'Brothers check their chore status — no login needed, no app to install', ''], 'body');
+    r(['', 'Associate member track', 'Separate AM roster with events, signatures and point tracking', ''], 'body');
+    r(['', 'QR code system', 'Generate and print labeled QR codes for every chore area in seconds', ''], 'body');
+  }
+
+  // Write values (skip formula rows for now)
+  var values = rows.map(function(d) {
+    var c = d.cols.slice();
+    while (c.length < 4) c.push('');
+    return c;
+  });
+  sh.getRange(1, 1, values.length, 4).setValues(values);
+
+  // HYPERLINK formulas for link rows
+  if (webAppUrl) {
+    rows.forEach(function(d, i) {
+      if (d.style === 'link' || d.style === 'link-green' || d.style === 'link-muted') {
+        var url = d.cols[2];
+        if (url) sh.getRange(i + 1, 3).setFormula('=HYPERLINK("' + url + '","' + url + '")');
+      }
+    });
+  }
+
+  var H = { bg: '#1a3a4a', fg: '#ffffff', sectionBg: '#edf2f7', sectionFg: '#2d3748',
+            stepBg: '#ebf8ff', stepFg: '#2b6cb0', link: '#0d9488', green: '#15803d',
+            muted: '#64748b', body: '#374151', gold: '#f5a623' };
+
+  rows.forEach(function(d, i) {
+    var row = i + 1;
+    var full = sh.getRange(row, 1, 1, 4);
+    switch (d.style) {
+      case 'header':
+        full.merge().setValue(d.cols[1])
+            .setBackground(H.bg).setFontColor(H.fg)
+            .setFontWeight('bold').setFontSize(15)
+            .setHorizontalAlignment('center').setVerticalAlignment('middle');
+        sh.setRowHeight(row, 42);
+        break;
+      case 'subtitle':
+        full.merge().setValue(d.cols[1])
+            .setFontColor(H.muted).setFontStyle('italic')
+            .setHorizontalAlignment('center').setVerticalAlignment('middle');
+        sh.setRowHeight(row, 22);
+        break;
+      case 'spacer':
+        sh.setRowHeight(row, 10);
+        break;
+      case 'section':
+        full.merge().setValue(d.cols[1])
+            .setBackground(H.sectionBg).setFontColor(H.sectionFg)
+            .setFontWeight('bold').setFontSize(8)
+            .setHorizontalAlignment('left').setVerticalAlignment('middle');
+        sh.setRowHeight(row, 22);
+        break;
+      case 'link':
+        sh.getRange(row, 2).setFontWeight('bold').setFontColor(H.body);
+        sh.getRange(row, 3).setFontColor(H.link).setFontWeight('bold');
+        sh.getRange(row, 4).setFontColor(H.muted).setFontStyle('italic');
+        sh.setRowHeight(row, 22);
+        break;
+      case 'link-green':
+        sh.getRange(row, 2).setFontWeight('bold').setFontColor(H.body);
+        sh.getRange(row, 3).setFontColor(H.green).setFontWeight('bold');
+        sh.getRange(row, 4).setFontColor(H.muted).setFontStyle('italic');
+        sh.setRowHeight(row, 22);
+        break;
+      case 'link-muted':
+        sh.getRange(row, 2).setFontColor(H.body);
+        sh.getRange(row, 3).setFontColor(H.muted);
+        sh.getRange(row, 4).setFontColor(H.muted).setFontStyle('italic');
+        sh.setRowHeight(row, 22);
+        break;
+      case 'step':
+        sh.getRange(row, 1).setBackground(H.stepBg).setFontColor(H.stepFg).setFontWeight('bold').setHorizontalAlignment('center');
+        sh.getRange(row, 2).setFontWeight('bold').setFontColor(H.stepFg);
+        sh.getRange(row, 3).setFontColor(H.body);
+        sh.setRowHeight(row, 24);
+        break;
+      case 'check':
+        sh.getRange(row, 1).setFontColor(H.muted).setHorizontalAlignment('center');
+        sh.getRange(row, 2).setFontWeight('bold').setFontColor(H.body);
+        sh.getRange(row, 3).setFontColor(H.body);
+        sh.setRowHeight(row, 22);
+        break;
+      case 'body':
+        sh.getRange(row, 2).setFontWeight('bold').setFontColor(H.body);
+        sh.getRange(row, 3).setFontColor(H.body);
+        sh.setRowHeight(row, 22);
+        break;
+    }
+  });
+
+  sh.setFrozenRows(0);
+  // Move to first position if it's a new sheet
+  try { ss.setActiveSheet(sh); ss.moveActiveSheet(1); } catch (_) {}
 }
 
 // ---- Migration from external Sheets (setup wizard step 6) -
@@ -2473,6 +2671,12 @@ function ensureTabsExist() {
 
   // --- Custom field columns (added by chapter-specific config) ---
   _ensureCustomFieldColumns(ss);
+
+  // --- Welcome sheet: create in pre-setup state if missing ---
+  if (!ss.getSheetByName('📋 Start Here')) {
+    updateWelcomeSheet(ss, '');
+    created.push('📋 Start Here');
+  }
 
   var msg = 'Tabs verified. Created: ' + (created.length ? created.join(', ') : 'none (all exist)');
   logInfo('ensureTabsExist', msg);
