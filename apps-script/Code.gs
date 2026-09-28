@@ -1631,10 +1631,15 @@ function initChapter(setupJson) {
   }
 }
 
-// Tries to get the current web app URL; returns empty string if none exists yet.
-// A new chapter won't have a deployment — the wizard shows manual deploy instructions.
+// Returns the stored web app URL from config, falling back to the service URL.
+// A brand-new install (no stored URL, no deployment) returns '' so the wizard
+// shows the manual "deploy & paste" instructions instead of a broken link.
 function autoDeployWebApp() {
-  try { return ScriptApp.getService().getUrl() || ''; } catch (_) { return ''; }
+  try {
+    var stored = getConfigValue('web_app_url');
+    if (stored) return stored;
+    return ScriptApp.getService().getUrl() || '';
+  } catch (_) { return ''; }
 }
 
 function setWebAppUrl(url) {
