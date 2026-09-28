@@ -278,6 +278,12 @@ function _normDate(v) {
 // ---- Custom Menu -------------------------------------------
 
 function onOpen() {
+  // Create the Start Here tab on fresh installs (first time the sheet is opened)
+  try {
+    var _ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (_ss && !_ss.getSheetByName('📋 Start Here')) updateWelcomeSheet(_ss, '');
+  } catch (_) {}
+
   var ui = SpreadsheetApp.getUi();
   ui.createMenu('Fraternity System')
     .addItem('Set Up My Chapter', 'openSetupWizard')
