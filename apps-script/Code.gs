@@ -280,6 +280,8 @@ function _normDate(v) {
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
   ui.createMenu('Chore System')
+    .addItem('Set Up My Chapter', 'openSetupWizard')
+    .addSeparator()
     .addItem('Run Monday Reset', 'runMondayReset')
     .addSeparator()
     .addItem('End of Semester Archive', 'endOfSemesterArchive')
@@ -307,6 +309,14 @@ function onOpen() {
       .addItem('Deduplicate Form Responses', 'deduplicateFormResponsesMenu')
       .addItem('Send Reminders (Returning Form)', 'sendReturningFormRemindersMenu'))
     .addToUi();
+}
+
+function openSetupWizard() {
+  var url = ScriptApp.getService().getUrl() + '?app=setup';
+  var html = HtmlService.createHtmlOutput(
+    '<script>window.open("' + url + '","_blank");google.script.host.close();</script>'
+  );
+  SpreadsheetApp.getUi().showModalDialog(html, 'Opening Setup Wizard...');
 }
 
 function openDraftApp() {
