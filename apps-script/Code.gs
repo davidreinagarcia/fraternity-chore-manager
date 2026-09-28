@@ -1631,9 +1631,61 @@ function initChapter(setupJson) {
   }
 }
 
-// Tries to get or create the web app deployment URL.
+// Creates a versioned web app deployment using the current user's OAuth token.
+// Must run in a user-auth context (menu action / dialog), not as a cron.
 function autoDeployWebApp() {
-  try { return ScriptApp.getService().getUrl() || ''; } catch (_) { return ''; }
+  try {
+    var existing = getConfigValue('web_app_url');
+    if (existing) return existing;
+
+    var token    = ScriptApp.getOAuthToken();
+    var scriptId = ScriptApp.getScriptId();
+    var base     = 'https://script.googleapis.com/v1/projects/' + scriptId;
+    var headers  = { Authorization: 'Bearer ' + token };
+
+    // Create a new script version
+    var vResp = UrlFetchApp.fetch(base + '/versions', {
+      method: 'POST', headers: headers, contentType: 'application/json',
+      payload: JSON.stringify({ description: 'Setup wizard auto-deploy' }),
+      muteHttpExceptions: true
+    });
+    if (vResp.getResponseCode() !== 200) {
+      logError('autoDeployWebApp', 'version create failed: ' + vResp.getContentText());
+      return '';
+    }
+    var versionNumber = JSON.parse(vResp.getContentText()).versionNumber;
+
+    // Create deployment — manifest supplies access:ANYONE_ANONYMOUS + executeAs:USER_DEPLOYING
+    var dResp = UrlFetchApp.fetch(base + '/deployments', {
+      method: 'POST', headers: headers, contentType: 'application/json',
+      payload: JSON.stringify({
+        versionNumber: versionNumber,
+        manifestFileName: 'appsscript',
+        description: 'Chapter web app'
+      }),
+      muteHttpExceptions: true
+    });
+    if (dResp.getResponseCode() !== 200) {
+      logError('autoDeployWebApp', 'deployment create failed: ' + dResp.getContentText());
+      return '';
+    }
+    var deployData = JSON.parse(dResp.getContentText());
+    var eps = deployData.entryPoints || [];
+    var webEp = null;
+    for (var i = 0; i < eps.length; i++) {
+      if (eps[i].entryPointType === 'WEB_APP') { webEp = eps[i]; break; }
+    }
+    if (!webEp) {
+      logError('autoDeployWebApp', 'no WEB_APP entry point: ' + JSON.stringify(deployData));
+      return '';
+    }
+    var url = webEp.webApp.url;
+    setConfigValue('web_app_url', url);
+    return url;
+  } catch (e) {
+    logError('autoDeployWebApp', e);
+    return '';
+  }
 }
 
 function setWebAppUrl(url) {

@@ -555,16 +555,13 @@
         </div>
       </div>
 
-      <!-- Deploy + paste URL (always shown until URL is saved) -->
+      <!-- Fallback: shown only if auto-deploy failed -->
       <div id="deploy-instructions" style="margin-top:20px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:16px;text-align:left">
-        <div style="font-weight:700;margin-bottom:10px;color:#c2410c;font-size:0.9rem">Last step: activate your web app (2 minutes)</div>
-        <ol style="margin:0 0 14px 0;padding-left:20px;line-height:2.2;font-size:0.85rem;color:#374151">
-          <li>In your spreadsheet click <b>Extensions → Apps Script</b></li>
-          <li>Click <b>Deploy → New deployment</b></li>
-          <li>Type: <b>Web app</b> · Execute as: <b>Me</b> · Access: <b>Anyone</b></li>
-          <li>Click <b>Deploy</b>, then copy the URL it gives you</li>
-          <li>Paste it below and click <b>Activate</b></li>
-        </ol>
+        <div style="font-weight:700;margin-bottom:8px;color:#c2410c;font-size:0.9rem">⚠️ Auto-deploy didn't complete — one extra step</div>
+        <p style="font-size:0.84rem;color:#374151;margin-bottom:12px;line-height:1.6">
+          In this spreadsheet: <b>Extensions → Apps Script → Deploy → New deployment</b><br>
+          Type: <b>Web app</b> · Execute as: <b>Me</b> · Access: <b>Anyone</b> → Deploy → copy URL → paste below.
+        </p>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input id="url-input" type="url" placeholder="https://script.google.com/macros/s/…/exec"
             style="flex:1;padding:8px 12px;border:1px solid #fed7aa;border-radius:6px;font-size:0.82rem;min-width:0">
@@ -1175,7 +1172,7 @@ function doInit() {
   var errBox = document.getElementById('init-error');
   errBox.style.display = 'none';
   btn.disabled = true;
-  btn.textContent = '⏳ Initializing...';
+  btn.textContent = '⏳ Setting up & deploying… (30 s)';
 
   var setup = collectSetup();
 
@@ -1191,11 +1188,10 @@ function doInit() {
           document.getElementById('success-warnings').innerHTML =
             res.warnings.map(function(w) { return '<div class="warn-box">' + w + '</div>'; }).join('');
         }
-        var appUrl = res.webAppUrl || BASE_URL;
-        if (appUrl) {
-          showActivatedUrl(appUrl);
+        if (res.webAppUrl) {
+          showActivatedUrl(res.webAppUrl);
         }
-        // deploy instructions always shown until user pastes URL
+        // if auto-deploy failed, fallback paste section stays visible
       } else {
         btn.textContent = '🚀 Initialize Chapter';
         errBox.style.display = '';
