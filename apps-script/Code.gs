@@ -1710,6 +1710,10 @@ function updateWelcomeSheet(ss, webAppUrl) {
     r(['', 'Welcome to Fraternity System', '', ''], 'header');
     r(['', 'Your all-in-one chapter management platform', '', ''], 'subtitle');
     r(['', '', '', ''], 'spacer');
+    r(['', 'BEFORE YOU START — GOOGLE ACCOUNT', '', ''], 'section');
+    r(['', 'Use a Google Workspace account if you have one', 'Workspace accounts (e.g. from a paid chapter Google account) have higher daily limits than regular Gmail. If your university uses Microsoft 365 / Outlook, you probably don\'t have a Workspace .edu — use whatever Google account your chapter uses.', ''], 'body');
+    r(['', 'Regular Gmail works fine for most chapters', 'The system uses well under Gmail\'s limits in normal operation. You would only hit them if hundreds of brothers were using it simultaneously every day — unlikely for a chapter.', ''], 'body');
+    r(['', '', '', ''], 'spacer');
     r(['', 'GET STARTED IN 5 STEPS', '', ''], 'section');
     r(['1', 'Open the menu', 'Click "Fraternity System" in the spreadsheet menu above', ''], 'step');
     r(['2', 'Launch the wizard', 'Click "Set Up My Chapter"', ''], 'step');
