@@ -1430,9 +1430,8 @@ function saveConfig(key, value) {
 //
 // getChapterConfig() is the foundation of the distributed-product
 // customization system. It reads labels, module flags, and option
-// lists from the config sheet, falling back to Lambda Chi defaults
-// for any key not yet present. Existing deployments get no behavior
-// change — all defaults match the current Lambda Chi setup.
+// lists from the config sheet, falling back to sensible defaults
+// for any key not yet present.
 //
 // Downstream uses (not yet wired):
 //   - applyVocabulary(cfg) in each HTML page (Layer 1)

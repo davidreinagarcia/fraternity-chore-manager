@@ -22,6 +22,8 @@
     --yellow-bg: #fefce8;
     --radius: 12px;
     --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04);
+    --sw: 228px;
+    --swc: 60px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; }
@@ -69,28 +71,48 @@
   }
   #pin-error { color: var(--red); font-size: 0.85rem; margin-top: 10px; display: none; }
 
-  /* ---- Main layout ---- */
-  #main { display: none; }
-  .container { max-width: 1280px; margin: 0 auto; padding: 20px 20px; }
+  /* ---- Layout ---- */
+  #dash-layout { display:none; flex-direction:row; height:100vh; overflow:hidden; }
+  body.dash #pin-screen { display:none; }
+  body.dash #dash-layout { display:flex; }
+  #dash-main { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+  #ct { flex:1; overflow-y:auto; background:var(--bg); }
+  .container { max-width:1280px; margin:0 auto; padding:20px; }
 
-  /* ---- Tabs ---- */
-  .tabs {
-    display: flex; gap: 2px; background: var(--card);
-    border-radius: var(--radius); padding: 6px;
-    margin-bottom: 20px; box-shadow: var(--shadow);
-    overflow-x: auto;
-  }
-  .tab-btn {
-    flex: 1; min-width: 130px; padding: 10px 16px;
-    border: none; border-radius: 8px; cursor: pointer;
-    font-size: 0.85rem; font-weight: 600; color: var(--muted);
-    background: transparent; white-space: nowrap;
-    transition: all 0.15s;
-  }
-  .tab-btn.active { background: var(--primary); color: var(--gold); }
-  .tab-btn:hover:not(.active) { background: var(--bg); }
-  .tab-pane { display: none; }
-  .tab-pane.active { display: block; }
+  /* ---- Sidebar ---- */
+  #sb { width:var(--sw); flex-shrink:0; height:100vh; overflow-y:auto; background:var(--primary); display:flex; flex-direction:column; transition:width 0.2s; border-right:2px solid var(--gold); overflow-x:hidden; }
+  #sb.col { width:var(--swc); }
+  .sb-hdr { padding:20px 16px 14px; display:flex; align-items:center; gap:10px; border-bottom:1px solid rgba(255,255,255,0.12); flex-shrink:0; }
+  .sb-logo { height:34px; width:auto; flex-shrink:0; }
+  .sb-chapter { color:var(--gold); font-size:0.78rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:opacity 0.15s; }
+  #sb.col .sb-chapter { opacity:0; width:0; }
+  .ng { padding:12px 8px 4px; }
+  .nl { font-size:0.62rem; font-weight:700; letter-spacing:0.08em; color:rgba(255,255,255,0.45); padding:0 8px; margin-bottom:4px; white-space:nowrap; transition:opacity 0.15s; }
+  #sb.col .nl { opacity:0; }
+  .ni { width:100%; display:flex; align-items:center; gap:10px; padding:9px 8px; border-radius:8px; border:none; background:transparent; color:rgba(255,255,255,0.75); cursor:pointer; font-size:0.85rem; font-weight:600; text-align:left; transition:background 0.12s,color 0.12s; margin-bottom:2px; white-space:nowrap; }
+  .ni:hover { background:rgba(255,255,255,0.1); color:white; }
+  .ni.on { background:var(--gold); color:var(--primary); }
+  .ni-ic { font-size:1rem; width:20px; text-align:center; flex-shrink:0; }
+  .ni-lbl { transition:opacity 0.15s; }
+  #sb.col .ni-lbl { opacity:0; width:0; overflow:hidden; }
+  .tog { width:100%; background:rgba(255,255,255,0.08); border:none; color:rgba(255,255,255,0.6); padding:8px; cursor:pointer; font-size:0.75rem; text-align:center; margin-top:auto; flex-shrink:0; }
+  .tog:hover { background:rgba(255,255,255,0.15); }
+
+  /* ---- Sections & sub-panes ---- */
+  .sec { display:none; }
+  .sec.on { display:block; }
+  .sub-pane { display:none; }
+  .sub-pane.active { display:block; }
+  .tab-pane { display:none; }
+  .tab-pane.active { display:block; }
+  .sub-nav { display:flex; gap:4px; background:var(--card); padding:6px; border-radius:var(--radius); margin-bottom:16px; box-shadow:var(--shadow); overflow-x:auto; }
+  .sub-btn { flex:1; min-width:80px; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.82rem; font-weight:600; color:var(--muted); background:transparent; white-space:nowrap; transition:all 0.15s; }
+  .sub-btn.active { background:var(--primary); color:var(--gold); }
+  .sub-btn:hover:not(.active) { background:var(--bg); }
+  .coming-soon { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 40px; text-align:center; }
+  .coming-soon .cs-icon { font-size:3rem; margin-bottom:16px; }
+  .coming-soon h2 { color:var(--primary); margin-bottom:8px; }
+  .coming-soon p { color:var(--muted); font-size:0.9rem; }
 
   /* ---- Cards ---- */
   .card {
@@ -392,42 +414,54 @@
 </div>
 
 <!-- Main Dashboard -->
-<div id="main">
-  <div id="topbar">
-    <div style="display:flex;align-items:center;gap:12px">
+<div id="dash-layout">
+  <nav id="sb">
+    <div class="sb-hdr">
       <? if (cfg.chapter.logo_url) { ?>
-      <img src="<?= cfg.chapter.logo_url ?>" alt="<?= cfg.chapter.chapter_name ?>" style="height:34px;width:auto" onerror="this.style.display='none'">
+      <img class="sb-logo" src="<?= cfg.chapter.logo_url ?>" alt="<?= cfg.chapter.chapter_name ?>" onerror="this.style.display='none'">
       <? } ?>
+      <span class="sb-chapter"><?= cfg.chapter.chapter_name ?></span>
+    </div>
+    <div class="ng"><div class="nl">MANAGEMENT</div>
+      <button class="ni" data-s="chores" onclick="showSection('chores',this)"><span class="ni-ic">📋</span><span class="ni-lbl">Chores</span></button>
+      <button class="ni on" data-s="members" onclick="showSection('members',this)"><span class="ni-ic">👥</span><span class="ni-lbl">Members</span></button>
+      <button class="ni" data-s="events" onclick="showSection('events',this)"><span class="ni-ic">📅</span><span class="ni-lbl">Events</span></button>
+    </div>
+    <div class="ng"><div class="nl">FINANCE</div>
+      <button class="ni" data-s="finance" onclick="showSection('finance',this)"><span class="ni-ic">💰</span><span class="ni-lbl">Finance</span></button>
+      <button class="ni" data-s="philanthropy" onclick="showSection('philanthropy',this)"><span class="ni-ic">🤝</span><span class="ni-lbl">Philanthropy</span></button>
+    </div>
+    <div class="ng"><div class="nl">SETUP</div>
+      <button class="ni" data-s="forms" onclick="showSection('forms',this)"><span class="ni-ic">📝</span><span class="ni-lbl">Forms</span></button>
+      <button class="ni" data-s="admin" onclick="showSection('admin',this)"><span class="ni-ic">⚙️</span><span class="ni-lbl">Admin</span></button>
+    </div>
+    <button class="tog" id="sb-tog" onclick="toggleSidebar()">◀</button>
+  </nav>
+  <div id="dash-main">
+    <div id="topbar">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div><h1 id="topbar-title">Members</h1><div class="meta" id="meta-line">Loading...</div></div>
+      </div>
       <div>
-        <h1>Officer Dashboard</h1>
-        <div class="meta" id="meta-line">Loading...</div>
+        <button class="top-btn" onclick="refreshAll()">↻ Refresh</button>
+        <button class="top-btn" onclick="logout()">Lock</button>
       </div>
     </div>
-    <div>
-      <button class="top-btn" onclick="refreshAll()">↻ Refresh</button>
-      <button class="top-btn" onclick="logout()">Lock</button>
-    </div>
-  </div>
-
-  <div class="container">
-    <!-- Summary stats -->
-    <div class="stats-row" id="stats-row">
-      <div class="stat-card"><div class="label">Total <?= cfg.labels.label_chore ?>s</div><div class="value" id="stat-total-chores">—</div></div>
-      <div class="stat-card"><div class="label">Submitted</div><div class="value" id="stat-submitted">—</div></div>
-      <div class="stat-card"><div class="label">Flagged</div><div class="value" id="stat-flagged" style="color:var(--yellow)">—</div></div>
-      <div class="stat-card"><div class="label">Pending <?= cfg.labels.label_fine ?>s</div><div class="value" id="stat-pending-fines" style="color:var(--red)">—</div></div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab-btn active" onclick="showTab('tab-status',this)">This Week</button>
-      <button class="tab-btn" onclick="showTab('tab-fines',this)">Fine Preview</button>
-      <button class="tab-btn" onclick="showTab('tab-mm',this);initMemberManager()">Member Manager</button>
-      <button class="tab-btn" onclick="showTab('tab-admin',this);initAdminTab()">Admin</button>
-    </div>
-
+    <div id="ct">
+    <!-- CHORES SECTION -->
+    <div class="sec" id="sec-chores"><div class="container">
+      <div class="stats-row" id="stats-row">
+        <div class="stat-card"><div class="label">Total <?= cfg.labels.label_chore ?>s</div><div class="value" id="stat-total-chores">—</div></div>
+        <div class="stat-card"><div class="label">Submitted</div><div class="value" id="stat-submitted">—</div></div>
+        <div class="stat-card"><div class="label">Flagged</div><div class="value" id="stat-flagged" style="color:var(--yellow)">—</div></div>
+        <div class="stat-card"><div class="label">Pending <?= cfg.labels.label_fine ?>s</div><div class="value" id="stat-pending-fines" style="color:var(--red)">—</div></div>
+      </div>
+      <div class="sub-nav">
+        <button class="sub-btn active" data-tab="tab-status" onclick="showTab('tab-status',this)">This Week</button>
+        <button class="sub-btn" data-tab="tab-fines" onclick="showTab('tab-fines',this)">Fine Preview</button>
+      </div>
     <!-- Tab: This Week's Status -->
-    <div id="tab-status" class="tab-pane active">
+    <div id="tab-status" class="sub-pane active">
       <div class="card">
         <div class="card-header">
           <h2>Submission Status — <span id="week-label">Week of —</span></h2>
@@ -463,7 +497,7 @@
     </div>
 
     <!-- Tab: Fine Preview -->
-    <div id="tab-fines" class="tab-pane">
+    <div id="tab-fines" class="sub-pane">
       <div class="card">
         <div class="card-header">
           <h2><?= cfg.labels.label_fine ?> Preview (would be issued on Monday reset)</h2>
@@ -486,9 +520,19 @@
         </div>
       </div>
     </div>
+    </div></div><!-- /sec-chores -->
 
+    <!-- MEMBERS SECTION -->
+    <div class="sec on" id="sec-members"><div class="container">
+      <div class="sub-nav">
+        <button class="sub-btn active" data-tab="tab-mm" onclick="showTab('tab-mm',this)">Members</button>
+        <button class="sub-btn mod-associates" data-tab="tab-ams" onclick="showTab('tab-ams',this)">🧑‍🎓 <?= cfg.labels.label_am_group ?></button>
+        <button class="sub-btn mod-signatures mod-associates" data-tab="tab-signatures" onclick="showTab('tab-signatures',this)">📸 Signatures</button>
+        <button class="sub-btn mod-associates" data-tab="tab-am-events" onclick="showTab('tab-am-events',this)">📅 AM Events</button>
+        <button class="sub-btn" data-tab="tab-alumni" onclick="showTab('tab-alumni',this)">🎓 Alumni</button>
+      </div>
     <!-- Tab: Member Manager -->
-    <div id="tab-mm" class="tab-pane">
+    <div id="tab-mm" class="sub-pane active">
       <div class="card">
         <div class="card-header">
           <h2>Member Manager</h2>
@@ -538,8 +582,8 @@
       </div>
     </div>
 
-    <!-- Tab: AM Manager (reached only via the banner button in Member Manager, not the top nav) -->
-    <div id="tab-ams" class="tab-pane">
+    <!-- Tab: AM Manager -->
+    <div id="tab-ams" class="sub-pane">
       <div class="card">
         <div class="card-header">
           <h2>🧑‍🎓 <?= cfg.labels.label_am_group ?> Manager</h2>
@@ -571,8 +615,8 @@
       </div>
     </div>
 
-    <!-- Tab: Signatures Dashboard (reached only via the banner button in AM Manager) -->
-    <div id="tab-signatures" class="tab-pane">
+    <!-- Tab: Signatures Dashboard -->
+    <div id="tab-signatures" class="sub-pane">
       <div class="card">
         <div class="card-header">
           <h2>📸 Signatures Dashboard</h2>
@@ -585,8 +629,8 @@
       </div>
     </div>
 
-    <!-- Tab: AM Event Points (reached only via the banner button in AM Manager) -->
-    <div id="tab-am-events" class="tab-pane">
+    <!-- Tab: AM Event Points -->
+    <div id="tab-am-events" class="sub-pane">
       <div class="card">
         <div class="card-header">
           <h2>📅 AM Event Points</h2>
@@ -630,8 +674,8 @@
       </div>
     </div>
 
-    <!-- Tab: Alumni (reached only via the banner button in Member Manager, not the top nav) -->
-    <div id="tab-alumni" class="tab-pane">
+    <!-- Tab: Alumni -->
+    <div id="tab-alumni" class="sub-pane">
       <div class="card">
         <div class="card-header">
           <h2>🎓 Alumni</h2>
@@ -656,8 +700,20 @@
       </div>
     </div>
 
-    <!-- Tab: Admin -->
-    <div id="tab-admin" class="tab-pane">
+    </div></div><!-- /sec-members -->
+
+    <!-- EVENTS SECTION -->
+    <div class="sec" id="sec-events"><div class="container"><div class="coming-soon"><div class="cs-icon">📅</div><h2>Events &amp; Attendance</h2><p>Unified event tracking and Google Calendar sync — coming in the next update.</p></div></div></div>
+    <!-- FINANCE SECTION -->
+    <div class="sec" id="sec-finance"><div class="container"><div class="coming-soon"><div class="cs-icon">💰</div><h2>Finance</h2><p>Dues tracker and financial dashboard — coming soon.</p></div></div></div>
+    <!-- PHILANTHROPY SECTION -->
+    <div class="sec" id="sec-philanthropy"><div class="container"><div class="coming-soon"><div class="cs-icon">🤝</div><h2>Philanthropy</h2><p>Community service hours tracking — coming soon.</p></div></div></div>
+    <!-- FORMS SECTION -->
+    <div class="sec" id="sec-forms"><div class="container"><div class="coming-soon"><div class="cs-icon">📝</div><h2>Forms</h2><p>Custom Forms Manager lives in Admin → Custom Forms Manager.</p><button class="btn-primary" style="margin-top:16px" onclick="showSection('admin',document.querySelector('.ni[data-s=admin]'));setTimeout(function(){toggleAdminSection('admin-forms');formsManagerOnExpand();},120)">Go to Forms Manager</button></div></div></div>
+
+    <!-- ADMIN SECTION -->
+    <div class="sec" id="sec-admin"><div class="container">
+    <div id="tab-admin">
 
       <!-- Quick actions -->
       <div class="admin-grid" style="margin-bottom:20px">
@@ -883,9 +939,11 @@
         </div>
       </div>
 
-    </div>
-  </div>
-</div>
+    </div><!-- /tab-admin -->
+    </div></div><!-- /sec-admin -->
+    </div><!-- /ct -->
+  </div><!-- /dash-main -->
+</div><!-- /dash-layout -->
 
 <!-- Verification Modal -->
 <div class="modal-overlay" id="verify-modal">
@@ -1423,10 +1481,9 @@ google.script.run
   .getConfigPin();
 
 function checkPin() {
-  const val = document.getElementById('pin-input').value;
+  var val = document.getElementById('pin-input').value;
   if (val === correctPin) {
-    document.getElementById('pin-screen').style.display = 'none';
-    document.getElementById('main').style.display = 'block';
+    document.body.className = 'dash';
     initDashboard();
   } else {
     document.getElementById('pin-error').style.display = 'block';
@@ -1436,9 +1493,29 @@ function checkPin() {
 }
 
 function logout() {
-  document.getElementById('main').style.display = 'none';
-  document.getElementById('pin-screen').style.display = 'flex';
+  document.body.className = '';
   document.getElementById('pin-input').value = '';
+}
+
+function toggleSidebar() {
+  var sb = document.getElementById('sb');
+  var tog = document.getElementById('sb-tog');
+  sb.classList.toggle('col');
+  tog.textContent = sb.classList.contains('col') ? '▶' : '◀';
+}
+
+var _sectionTitles = {chores:'Chores',members:'Members',events:'Events & Attendance',finance:'Finance',philanthropy:'Philanthropy',forms:'Forms',admin:'Admin'};
+function showSection(id, btn) {
+  document.querySelectorAll('.sec').forEach(function(s) { s.classList.remove('on'); });
+  document.querySelectorAll('.ni').forEach(function(n) { n.classList.remove('on'); });
+  var sec = document.getElementById('sec-' + id);
+  if (sec) sec.classList.add('on');
+  if (btn) { btn.classList.add('on'); }
+  else { var m = document.querySelector('.ni[data-s="' + id + '"]'); if (m) m.classList.add('on'); }
+  var t = document.getElementById('topbar-title');
+  if (t) t.textContent = _sectionTitles[id] || id;
+  if (id === 'members') initMemberManager();
+  if (id === 'forms' && !_formsManagerInitialized) formsManagerOnExpand();
 }
 
 // ---- Dashboard init ----------------------------------------
@@ -1468,6 +1545,7 @@ function initDashboard() {
     }
   }).getConfigValue('forms_relinked');
   refreshAll();
+  showSection('chores');
 }
 
 var _mmLoaded = false;
@@ -1477,7 +1555,6 @@ function initMemberManager() {
 
 function refreshAll() {
   loadWeeklyStatus();
-  loadMemberStats();
 }
 
 // ---- Weekly Status tab -------------------------------------
@@ -1565,49 +1642,6 @@ function onWeeklyStatus(json) {
 }
 
 // ---- Member Stats tab --------------------------------------
-function loadMemberStats() {
-  google.script.run
-    .withSuccessHandler(onMemberStats)
-    .withFailureHandler(onError)
-    .getMemberStats();
-}
-
-function onMemberStats(json) {
-  memberData = JSON.parse(json);
-  if (memberData.error) return;
-  renderMemberTable(memberData);
-}
-
-function renderMemberTable(data) {
-  const tbody = document.getElementById('members-tbody');
-  tbody.innerHTML = '';
-  const sorted = data.slice().sort((a, b) => b.complianceRate - a.complianceRate);
-  for (const m of sorted) {
-    const color = m.complianceRate >= 80 ? 'var(--green)' : m.complianceRate >= 50 ? 'var(--yellow)' : 'var(--red)';
-    tbody.insertAdjacentHTML('beforeend', `
-      <tr>
-        <td><strong>${esc(m.name)}</strong></td>
-        <td>${m.assignments}</td>
-        <td>${m.submissions}</td>
-        <td style="color:${m.fines > 0 ? 'var(--red)' : 'inherit'}">${m.fines}</td>
-        <td>
-          <div style="display:flex;align-items:center;gap:10px">
-            <div class="compliance-bar" style="width:80px">
-              <div class="compliance-fill" style="width:${m.complianceRate}%;background:${color}"></div>
-            </div>
-            <span style="color:${color};font-weight:700">${m.complianceRate}%</span>
-          </div>
-        </td>
-      </tr>`);
-  }
-}
-
-function filterMemberTable() {
-  if (!memberData) return;
-  const q = document.getElementById('member-filter').value.toLowerCase();
-  const filtered = memberData.filter(m => m.name.toLowerCase().includes(q));
-  renderMemberTable(filtered);
-}
 
 var _statusFilterMode = 'all';
 
@@ -1747,10 +1781,18 @@ function callImportMembers() {
 
 // ---- Tabs --------------------------------------------------
 function showTab(id, btn) {
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  if (btn) btn.classList.add('active');
+  var sec = document.getElementById(id);
+  if (!sec) return;
+  var parent = sec.parentElement;
+  parent.querySelectorAll('.sub-pane').forEach(function(p) { p.classList.remove('active'); });
+  parent.querySelectorAll('.sub-btn').forEach(function(b) { b.classList.remove('active'); });
+  sec.classList.add('active');
+  if (btn) {
+    btn.classList.add('active');
+  } else {
+    var m = parent.querySelector('.sub-btn[data-tab="' + id + '"]');
+    if (m) m.classList.add('active');
+  }
 }
 
 // ---- Sort --------------------------------------------------
@@ -2951,6 +2993,7 @@ function renderMMAlumni(data) {
 }
 
 function goToAlumniTab() {
+  showSection('members');
   showTab('tab-alumni');
   document.getElementById('alumni-search').value = '';
   filterAlumniTab();
@@ -3041,6 +3084,7 @@ function renderMMAMs(data) {
 }
 
 function goToAMsTab() {
+  showSection('members');
   showTab('tab-ams');
   document.getElementById('ams-search').value = '';
   ensureAMEventsLoaded(filterAMsTab);
@@ -3091,6 +3135,7 @@ var amAttPending = null; // { eventId, title }
 var amEventsView = 'calendar'; // or 'list' — persists for the session once switched
 
 function goToAMEventsTab() {
+  showSection('members');
   showTab('tab-am-events');
   loadAMEventsCalendar();
 }
@@ -3362,6 +3407,7 @@ function saveAttendanceFromModal() {
 
 // ---- Signatures Dashboard -----------------------------------
 function goToSignaturesTab() {
+  showSection('members');
   showTab('tab-signatures');
   loadSignaturesDashboard();
 }
@@ -4084,7 +4130,6 @@ function loadAdminMembers() { loadMemberManager(); }
 // Custom Forms Manager
 // ============================================================
 
-var correctPin = null; // reuse the already-authenticated PIN
 
 function openCreateFormsModal() {
   document.getElementById('create-forms-result').style.display = 'none';
