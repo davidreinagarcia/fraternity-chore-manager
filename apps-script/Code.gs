@@ -1678,6 +1678,8 @@ function updateWelcomeSheet(ss, webAppUrl) {
   var rows = [];
   function r(cols, style) { rows.push({ cols: cols, style: style }); }
 
+  var officerPin = getConfigValue('officer_pin') || '1234';
+
   if (webAppUrl) {
     r(['', chapterName + ' — Fraternity System', '', ''], 'header');
     r(['', 'Setup complete · ' + today, '', ''], 'subtitle');
@@ -1686,6 +1688,9 @@ function updateWelcomeSheet(ss, webAppUrl) {
     r(['', 'Officer Dashboard', webAppUrl + '?app=officer', 'Officers only — PIN required'], 'link');
     r(['', 'Member Home Page', webAppUrl + '?app=home',    'Share this with ALL brothers'], 'link-green');
     r(['', 'Submit Chores',    webAppUrl + '?app=submit',  'Via QR codes — don\'t share directly'], 'link-muted');
+    r(['', '', '', ''], 'spacer');
+    r(['', 'OFFICER PIN', '', ''], 'section');
+    r(['🔑', 'Your PIN is: ' + officerPin, 'Enter this when opening the Officer Dashboard. Change it anytime: Officer Dashboard → Officer Handoff → Change PIN.', ''], 'pin');
     r(['', '', '', ''], 'spacer');
     r(['', 'FIRST WEEK CHECKLIST', '', ''], 'section');
     r(['☐', 'Officer Dashboard', 'Open it (link above) and log in with your PIN', ''], 'check');
@@ -1810,6 +1815,13 @@ function updateWelcomeSheet(ss, webAppUrl) {
         sh.getRange(row, 2).setFontWeight('bold').setFontColor(H.stepFg);
         sh.getRange(row, 3).setFontColor(H.body);
         sh.setRowHeight(row, 24);
+        break;
+      case 'pin':
+        sh.getRange(row, 1).setFontSize(14).setHorizontalAlignment('center').setVerticalAlignment('middle');
+        sh.getRange(row, 2).setFontWeight('bold').setFontSize(13).setFontColor('#92400e').setBackground('#fef9c3').setVerticalAlignment('middle');
+        sh.getRange(row, 3).setFontColor(H.muted).setFontStyle('italic').setBackground('#fef9c3').setWrap(true).setVerticalAlignment('middle');
+        sh.getRange(row, 4).setBackground('#fef9c3');
+        sh.setRowHeight(row, 36);
         break;
       case 'check':
         sh.getRange(row, 1).setFontColor(H.muted).setHorizontalAlignment('center');
