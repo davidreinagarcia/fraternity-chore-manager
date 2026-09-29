@@ -1631,14 +1631,12 @@ function initChapter(setupJson) {
   }
 }
 
-// Returns the stored web app URL from config, falling back to the service URL.
-// A brand-new install (no stored URL, no deployment) returns '' so the wizard
-// shows the manual "deploy & paste" instructions instead of a broken link.
+// Returns the stored web app URL from config, or '' if none saved yet.
+// ScriptApp.getService().getUrl() is intentionally NOT used as a fallback:
+// it returns the @HEAD test deployment URL which Google never serves anonymously.
 function autoDeployWebApp() {
   try {
-    var stored = getConfigValue('web_app_url');
-    if (stored) return stored;
-    return ScriptApp.getService().getUrl() || '';
+    return getConfigValue('web_app_url') || '';
   } catch (_) { return ''; }
 }
 
