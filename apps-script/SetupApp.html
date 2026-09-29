@@ -564,24 +564,67 @@
       </div>
 
       <!-- Shown when no URL is available yet — links to the script editor directly -->
-      <div id="deploy-instructions" style="margin-top:20px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:20px;text-align:left">
-        <div style="font-weight:800;margin-bottom:4px;color:#92400e;font-size:0.95rem">One last step — deploy your web app</div>
-        <div style="font-size:0.83rem;color:#78350f;margin-bottom:16px">Your chapter is set up. Now you need a public URL so members can access it.</div>
+      <div id="deploy-instructions" style="margin-top:20px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:20px;text-align:left">
+        <div style="font-weight:800;margin-bottom:4px;color:#92400e;font-size:1rem">🚀 One last step — activate your web app</div>
+        <div style="font-size:0.83rem;color:#78350f;margin-bottom:16px;line-height:1.5">Your chapter data is all set up. Now you need to create a public URL so your brothers can access the system. Takes about 2 minutes.</div>
 
-        <a id="open-editor-btn" href="#" target="_blank"
-           style="display:inline-block;background:#d97706;color:white;text-decoration:none;border-radius:8px;padding:10px 20px;font-weight:700;font-size:0.9rem;margin-bottom:16px">
-          Open Apps Script Editor →
-        </a>
-
-        <div style="font-size:0.83rem;color:#374151;line-height:2;margin-bottom:14px">
-          In the editor: <b>Deploy</b> → <b>New deployment</b> →
-          type <b>Web app</b> · Execute as <b>Me</b> · Access <b>Anyone</b> →
-          <b>Deploy</b> → copy the URL → paste below
+        <div style="margin-bottom:16px">
+          <a id="open-editor-btn" href="#" target="_blank"
+             style="display:inline-block;background:#d97706;color:white;text-decoration:none;border-radius:8px;padding:11px 22px;font-weight:700;font-size:0.92rem">
+            Step 1 — Open Apps Script Editor →
+          </a>
+          <div style="font-size:0.75rem;color:#92400e;margin-top:6px">Opens in a new tab. Keep this tab open — you'll come back to it.</div>
         </div>
 
+        <div style="background:white;border:1px solid #fde68a;border-radius:8px;padding:14px;margin-bottom:16px">
+          <div style="font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;color:#92400e;margin-bottom:12px">Step 2 — In the editor that just opened:</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div style="background:#d97706;color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem;flex-shrink:0;margin-top:1px">1</div>
+              <div style="font-size:0.84rem;color:#374151;line-height:1.5">Click the <strong>Deploy</strong> button — it's in the <strong>top-right corner</strong> of the editor, dark blue</div>
+            </div>
+
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div style="background:#d97706;color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem;flex-shrink:0;margin-top:1px">2</div>
+              <div style="font-size:0.84rem;color:#374151;line-height:1.5">Click <strong>"New deployment"</strong> from the dropdown</div>
+            </div>
+
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div style="background:#d97706;color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem;flex-shrink:0;margin-top:1px">3</div>
+              <div style="font-size:0.84rem;color:#374151;line-height:1.5">Click the <strong>gear icon ⚙️</strong> next to "Select type" → choose <strong>Web app</strong></div>
+            </div>
+
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div style="background:#d97706;color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem;flex-shrink:0;margin-top:1px">4</div>
+              <div style="font-size:0.84rem;color:#374151;line-height:1.5">
+                Set <strong>"Execute as"</strong> → <strong>Me</strong><br>
+                Set <strong>"Who has access"</strong> → <strong>Anyone</strong>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div style="background:#d97706;color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem;flex-shrink:0;margin-top:1px">5</div>
+              <div style="font-size:0.84rem;color:#374151;line-height:1.5">Click <strong>Deploy</strong> → if Google asks for permissions, click <strong>Authorize access</strong> → sign in → <strong>Allow</strong></div>
+            </div>
+
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div style="background:#16a34a;color:white;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem;flex-shrink:0;margin-top:1px">6</div>
+              <div style="font-size:0.84rem;color:#374151;line-height:1.5"><strong>Copy the URL</strong> that appears — it starts with <code style="font-size:0.75rem;background:#f1f5f9;padding:1px 4px;border-radius:3px">https://script.google.com/macros/s/</code></div>
+            </div>
+
+          </div>
+        </div>
+
+        <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:0.8rem;color:#713f12;line-height:1.5">
+          ⚠️ <strong>Seeing a "Google hasn't verified this app" warning?</strong> That's normal — it's your own private app.
+          Click <strong>Advanced</strong> (bottom-left) → <strong>"Go to [your app] (unsafe)"</strong> → <strong>Allow</strong>.
+        </div>
+
+        <div style="font-weight:700;font-size:0.82rem;color:#92400e;margin-bottom:8px">Step 3 — Come back here and paste your URL:</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input id="url-input" type="url" placeholder="https://script.google.com/macros/s/…/exec"
-            style="flex:1;padding:9px 12px;border:1px solid #fed7aa;border-radius:6px;font-size:0.85rem;min-width:0">
+            style="flex:1;padding:9px 12px;border:1px solid #fbbf24;border-radius:6px;font-size:0.85rem;min-width:0">
           <button onclick="saveWebAppUrl()" style="background:#d97706;color:white;border:none;border-radius:6px;padding:9px 18px;cursor:pointer;font-weight:700;white-space:nowrap;font-size:0.88rem">Activate →</button>
         </div>
         <div id="url-save-error" style="display:none;margin-top:8px;color:#dc2626;font-size:0.8rem"></div>
