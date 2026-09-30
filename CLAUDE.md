@@ -15,21 +15,25 @@ is the live beta; the codebase is generic.
 
 ## Dev workflow
 
-1. Edit files locally in `apps-script/`
-2. `clasp push --force` (pushes to the sheet in `.clasp.json`)
-3. `clasp deploy -i <deployment-id> -d "<description>"` for versioned deploys
-4. `git commit` + `git push origin main`
+GitHub is the source of truth. There is no permanent local checkout: each session works in a
+throwaway shallow clone and deletes it at the end.
 
-**No staging step** — push straight to prod for beta.
+1. `gh repo clone davidreinagarcia/fraternity-chore-manager /tmp/frat-chores -- --depth 1`
+2. Create `.clasp.json` (gitignored) for the target: `scriptId`, `parentId`, `rootDir: "apps-script"`
+   (dev IDs below; prod IDs live in Alexandria memory, not in this public repo)
+3. Edit files in `apps-script/`
+4. `clasp push --force`, then `clasp deploy -i <deployment-id> -d "<description>"` for versioned deploys
+5. `git commit` + `git push origin main`
+6. `rm -rf /tmp/frat-chores`
 
-`.clasp.json` is gitignored. Its `scriptId` and `parentId` change per deployment target
-(Dev sheet vs Lambda Chi prod sheet). Verify before pushing.
+Dev is the default target. **No staging step** on dev: push straight through. Pushing to the
+Lambda Chi prod sheet always needs explicit confirmation from David.
 
-## Active sheets (as of 2026-09-28)
+## Active sheets (as of 2026-09-30)
 
 | Sheet | Purpose |
 |---|---|
-| "Fraternity Digitalization Project" `12WifDjeX-FntZOqQrIB2C-HplPKPwYUCoNSVL-7XImE` | **Dev / unified source sheet** — all future development here |
+| "Fraternity Digitalization Project" `12WifDjeX-FntZOqQrIB2C-HplPKPwYUCoNSVL-7XImE`, scriptId `1AV-RMgKsr97YPk5qnRXL9O5PhkSplgb6cSvjLBex_kbEvaTS7lX_uO9a` | **Dev / unified source sheet**, all future development here |
 | "Chore System Test" `1__vs3wLiVF4FNW2BvuEgyySapb73qCPeaQVn49b5_38` | Lambda Chi production (real data, 98 active + 33 alumni) |
 
 ## Architecture
