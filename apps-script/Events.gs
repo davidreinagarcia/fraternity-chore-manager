@@ -289,8 +289,19 @@ function createEventsCalendar(name, performedBy) {
   } catch (err) { logError('createEventsCalendar', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
 
-// Run once from the Apps Script editor after deploying a version that adds
-// the calendar scope: web app executions cannot show the consent prompt.
+// Web app executions cannot show Google's consent screen, so chapters that
+// installed before the calendar scope existed authorize it once from the
+// sheet menu (Fraternity System > Setup: Authorize Google Calendar).
+// Fresh installs get it in the first-run consent prompt.
 function authorizeCalendar() {
-  return CalendarApp.getAllCalendars().length + ' calendar(s) visible. Calendar access is authorized.';
+  return CalendarApp.getAllCalendars().length + ' calendar(s) visible. Google Calendar access is authorized.';
+}
+
+function authorizeCalendarFromMenu() {
+  var ui = SpreadsheetApp.getUi();
+  try {
+    ui.alert('Google Calendar', authorizeCalendar() + '\n\nYou can now go to the Events tab of the dashboard and pick your calendar.', ui.ButtonSet.OK);
+  } catch (err) {
+    ui.alert('Google Calendar', 'Authorization failed: ' + err + '\n\nRun this menu item again and tick ALL the permission checkboxes, including Google Calendar.', ui.ButtonSet.OK);
+  }
 }

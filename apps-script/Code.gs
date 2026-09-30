@@ -300,6 +300,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Setup: Create Monday Trigger', 'autoMondayTrigger')
     .addItem('Setup: Create Required Tabs', 'ensureTabsExist')
+    .addItem('Setup: Authorize Google Calendar', 'authorizeCalendarFromMenu')
     .addSeparator()
     .addSubMenu(ui.createMenu('Admin')
       .addItem('Semester Sync (Start of Semester)', 'runSemesterSync')
@@ -1764,8 +1765,8 @@ function updateWelcomeSheet(ss, webAppUrl) {
     r(['', 'Google shows a warning screen — this is normal for private apps.', '', ''], 'warn-body');
     r(['', '① Click "Advanced settings" (bottom-left of the warning)', '', ''], 'warn-body');
     r(['', '② Click "Go to Fraternity System (unsafe)"', '', ''], 'warn-body');
-    r(['', '③ Scroll down and click "Allow"', '', ''], 'warn-body');
-    r(['', 'This happens once only. The app is safe — it only accesses your own spreadsheet.', '', ''], 'warn-note');
+    r(['', '③ Tick ALL the permission checkboxes (including Google Calendar), scroll down and click "Allow"', '', ''], 'warn-body');
+    r(['', 'This happens once only. The app runs inside your own Google account and uses: your spreadsheet (data), Drive (chore and signature photos), Gmail (officer emails) and Google Calendar (chapter events). Nothing is shared with anyone else.', '', ''], 'warn-note');
     r(['4', 'Complete setup', 'Follow the 7-step wizard — takes about 5 minutes', ''], 'step');
     r(['5', 'You\'re done', 'This page will update automatically with all your links', ''], 'step');
     r(['', '', '', ''], 'spacer');

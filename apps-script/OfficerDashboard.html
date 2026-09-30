@@ -3788,7 +3788,7 @@ function openEvCalModal() {
       var r = JSON.parse(json);
       var loading = document.getElementById('evs-cal-loading');
       if (!r.success) {
-        loading.textContent = 'Could not read your calendars: ' + r.error + '. If this says authorization is required, run authorizeCalendar once from the Apps Script editor.';
+        loading.textContent = 'Could not read your calendars: ' + r.error + '. If it mentions authorization or permissions, open the Google Sheet and click Fraternity System > Setup: Authorize Google Calendar (tick every permission box), then reload this page.';
         return;
       }
       loading.style.display = 'none';

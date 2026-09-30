@@ -37,7 +37,7 @@ The dev sheet is the only live target. **No staging step**: push straight throug
 
 - `Code.gs` — core logic: chores, fines, member CRUD, config, semester tools
 - `AMEvents.gs` — associate member events and attendance
-- `Events.gs` — chapter-wide events (`events` tab) with auto-sync to Google Calendar (config key `events_calendar_id`; needs the `calendar` OAuth scope authorized once via `authorizeCalendar()` in the editor)
+- `Events.gs` — chapter-wide events (`events` tab) with auto-sync to Google Calendar (config key `events_calendar_id`; needs the `calendar` OAuth scope: fresh installs get it in the first-run consent prompt, older installs authorize via sheet menu "Setup: Authorize Google Calendar")
 - `Signatures.gs` — AM signature submissions and dashboard
 - `CustomForms.gs` — custom NM/RM forms, reminders, response tracking
 - `BigQuerySync.gs` — BigQuery archival (inactive, hidden in Config Editor)
