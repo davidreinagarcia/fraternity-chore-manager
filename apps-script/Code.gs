@@ -134,6 +134,7 @@ function _getMembersStructured(sheetName) {
     out.push({
       memberId:      String(r[0] || ''),
       bkNumber:      String(r[cm['BK#'] !== undefined ? cm['BK#'] : 1] || ''),
+      bidOrder:      cm['bid_order']      !== undefined ? String(r[cm['bid_order']]      || '') : '',
       name:          _displayName(r, cm),
       email:         _memberEmail(r, cm),
       gtEmail:       cm['GT_email']       !== undefined ? String(r[cm['GT_email']]       || '') : '',
@@ -1280,10 +1281,43 @@ function getMembers() {
 // Adds a new member.
 // Accepts new-schema fields (legalFirst, preferredName, legalLast, personalEmail, gtEmail, phone)
 // OR old-style (name as legalFirst, email as personalEmail) for backwards compat.
-function addMember(legalFirst, legalLast, preferredName, personalEmail, gtEmail, phone, pledgeClass, bkNumber, status) {
+// Next free bid number among current associates on the 'AMs' sheet (max + 1).
+function getNextBidNumber() {
+  try {
+    var sheet = getSpreadsheet().getSheetByName('AMs');
+    var max = 0;
+    if (sheet && sheet.getLastRow() > 1) {
+      var data = sheet.getDataRange().getValues();
+      var cm = _buildColMap(data[0]);
+      if (cm['bid_order'] !== undefined) {
+        for (var i = 1; i < data.length; i++) {
+          var n = parseInt(data[i][cm['bid_order']], 10);
+          if (!isNaN(n) && n > max) max = n;
+        }
+      }
+    }
+    return JSON.stringify({ success: true, bidNumber: String(max + 1) });
+  } catch (err) { logError('getNextBidNumber', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+function addMember(legalFirst, legalLast, preferredName, personalEmail, gtEmail, phone, pledgeClass, bkNumber, status, bidNumber) {
   try {
     if (!legalFirst || !personalEmail) return JSON.stringify({ success: false, error: 'First name and email are required.' });
     var memberStatus = (status === 'associate' || status === 'inactive') ? status : 'active';
+    if (memberStatus === 'associate') {
+      bkNumber = '';
+      bidNumber = String(bidNumber || '').trim();
+      if (!bidNumber) bidNumber = JSON.parse(getNextBidNumber()).bidNumber;
+      if (!/^\d+$/.test(bidNumber)) return JSON.stringify({ success: false, error: getChapterConfig().labels.label_bid_number + ' must be a number (digits only).' });
+      var bidSheet = getSpreadsheet().getSheetByName('AMs');
+      if (bidSheet && bidSheet.getLastRow() > 1) {
+        var bd = bidSheet.getDataRange().getValues();
+        var bc = _buildColMap(bd[0])['bid_order'];
+        for (var b = 1; bc !== undefined && b < bd.length; b++) {
+          if (String(bd[b][bc]).trim() === bidNumber) return JSON.stringify({ success: false, error: getChapterConfig().labels.label_bid_number + ' ' + bidNumber + ' is already taken.' });
+        }
+      }
+    }
     var ss = getSpreadsheet();
     var targetSheetName = memberStatus === 'associate' ? 'AMs' : 'members';
     var sheet = ss.getSheetByName(targetSheetName);
@@ -1317,6 +1351,7 @@ function addMember(legalFirst, legalLast, preferredName, personalEmail, gtEmail,
       var newRow = new Array(headers.length).fill('');
       newRow[0] = mid;
       if (cm['BK#'] !== undefined)             newRow[cm['BK#']]             = bkNumber || '';
+      if (memberStatus === 'associate' && cm['bid_order'] !== undefined) newRow[cm['bid_order']] = bidNumber;
       if (cm['legal_first'] !== undefined)     newRow[cm['legal_first']]     = legalFirst;
       if (cm['preferred_name'] !== undefined)  newRow[cm['preferred_name']]  = preferredName || '';
       if (cm['legal_last'] !== undefined)      newRow[cm['legal_last']]      = legalLast || '';
@@ -1447,9 +1482,10 @@ var LABEL_DEFAULTS = {
   label_pledge_class: 'Pledge Class',
   label_member_id:    'BK#',
   label_new_member:   'Associate Member',
-  label_am_short:     'AM',
+  label_am_short:     '',
   label_active_member:'Brother',
   label_brotherhood:  'Brotherhood',
+  label_bid_number:   'Bid Number',
   label_university_id:    'University ID',
   label_university_email: 'University Email',
   label_suspension:   'Suspension',
@@ -1493,6 +1529,7 @@ function getChapterConfig() {
     Object.keys(LABEL_DEFAULTS).forEach(function(k) {
       labels[k] = raw[k] !== undefined ? String(raw[k]) : LABEL_DEFAULTS[k];
     });
+    if (!labels.label_am_short) labels.label_am_short = labels.label_new_member;
 
     var modules = {};
     Object.keys(MODULE_DEFAULTS).forEach(function(k) {
@@ -2259,6 +2296,7 @@ function getMemberDirectoryData() {
   try {
     var ss = getSpreadsheet();
     var semester = getConfigValue('semester');
+    if (!ss.getSheetByName('chore_assignments') || !ss.getSheetByName('fines')) ensureTabsExist();
     var asgData  = ss.getSheetByName('chore_assignments').getDataRange().getValues();
     var fineData = ss.getSheetByName('fines').getDataRange().getValues();
 
@@ -2294,7 +2332,7 @@ function getMemberDirectoryData() {
     // reads from there instead of filtering associates out of 'members'.
     var ams = _getMembersStructured('AMs').map(function(m) {
       return {
-        memberId: m.memberId, bkNumber: m.bkNumber, name: m.name,
+        memberId: m.memberId, bkNumber: m.bkNumber, bidOrder: m.bidOrder, name: m.name,
         email: m.email, gtEmail: m.gtEmail, status: m.status,
         pledgeClass: m.pledgeClass, officerRole: m.officerRole,
         inactiveReason: m.inactiveReason,
@@ -2656,6 +2694,12 @@ function ensureTabsExist() {
 
   // --- Create new tabs ---
   var tabsToCreate = {
+    'members':                  MEMBER_HEADERS,
+    'logs':                     ['timestamp','level','function','message'],
+    'chore_assignments':        ['assignment_id','member_id','chore_name','group_id','semester','assigned_date'],
+    'submissions':              ['submission_id','member_id','chore_name','week_start','submitted_at','photo_url','photo_hash','exif_date','auto_status','human_status','verified_by','notes'],
+    'fines':                    ['fine_id','member_id','chore_name','week_start','reason','issued_at','issued_by'],
+    'weekly_status':            ['chore_name','members','submitted','auto_statuses','human_statuses'],
     'alumni':                   ALUMNI_HEADERS,
     'AMs':                      MEMBER_HEADERS,
     'new_member_responses':     NEW_MEMBER_FORM_HEADERS,

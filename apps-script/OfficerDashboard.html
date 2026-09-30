@@ -601,6 +601,7 @@
           <table class="data-table" id="mm-ams-table" style="min-width:820px">
             <thead><tr>
               <th>Status</th>
+              <th><?= cfg.labels.label_bid_number ?></th>
               <th>Name</th>
               <th title="Top: % earned among events that have already happened (&quot;to date&quot;). Bottom: % and raw total among ALL active events, past and future — this is what counts toward the 80% threshold.">Att. %</th>
               <th title="Manual bonus points — quiz average, one-off awards, etc.">Bonus</th>
@@ -1067,7 +1068,7 @@
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Status</label>
         <select id="admin-edit-status" class="inline-input" style="width:100%">
           <option value="active">Active (<?= cfg.labels.label_active_member ?>)</option>
-          <option value="associate"><?= cfg.labels.label_new_member ?> (<?= cfg.labels.label_am_short ?>)</option>
+          <option value="associate"><?= cfg.labels.label_new_member ?></option>
           <option value="inactive">Inactive</option>
         </select>
       </div>
@@ -1151,14 +1152,18 @@
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Phone</label>
         <input type="text" id="add-phone" class="inline-input" style="width:100%" placeholder="555-1234" autocorrect="off">
       </div>
-      <div>
+      <div id="add-bid-wrap">
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px"><?= cfg.labels.label_bid_number ?></label>
+        <input type="text" id="add-bid" class="inline-input" inputmode="numeric" placeholder="1" style="width:100%;font-family:monospace;letter-spacing:4px">
+      </div>
+      <div id="add-bk-wrap" style="display:none">
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px"><?= cfg.labels.label_member_id ?> <span id="add-bk-req" style="color:var(--red);display:none">*</span></label>
         <input type="text" id="add-bk" class="inline-input" inputmode="numeric" placeholder="1234" style="width:100%;font-family:monospace;letter-spacing:4px">
       </div>
       <div style="grid-column:span 2">
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Status</label>
         <select id="add-status" class="inline-input" style="width:100%" onchange="onAddStatusChange()">
-          <option value="associate"><?= cfg.labels.label_new_member ?> (<?= cfg.labels.label_am_short ?>)</option>
+          <option value="associate"><?= cfg.labels.label_new_member ?></option>
           <option value="active">Active (<?= cfg.labels.label_active_member ?>)</option>
         </select>
       </div>
@@ -1845,7 +1850,7 @@ var CHAPTER_IDENTITY_LABELS = {
   accent_color:  { label: 'Accent Color',    help: 'Hex color for highlights/badges. Reload page after saving.' },
   logo_url:      { label: 'Logo URL',        help: 'Public image URL shown in page headers. Leave blank for no logo.' }
 };
-var VOCAB_KEYS = ['label_chore','label_fine','label_am_group','label_new_member','label_am_short','label_active_member','label_brotherhood','label_am_officer','label_am_points',
+var VOCAB_KEYS = ['label_chore','label_fine','label_am_group','label_new_member','label_am_short','label_active_member','label_brotherhood','label_bid_number','label_am_officer','label_am_points',
                   'label_pledge_class','label_member_id','label_university_email',
                   'label_suspension','label_probation','label_semester'];
 var VOCAB_KEY_LABELS = {
@@ -1853,8 +1858,9 @@ var VOCAB_KEY_LABELS = {
   label_fine:         { label: 'Fine',                help: 'What a penalty is called. Default: "Fine".' },
   label_am_group:     { label: 'Associate Group',     help: 'What pledges/associates are called. Default: "Associate Members".' },
   label_new_member:   { label: 'Associate (singular)', help: 'One new member. Default: "Associate Member".' },
-  label_am_short:     { label: 'Associate (short)',    help: 'Abbreviation for badges and lists. Default: "AM".' },
+  label_am_short:     { label: 'Associate (short)',    help: 'Short form for badges and tab names. Default: same as the singular name above.' },
   label_active_member:{ label: 'Full Member (singular)', help: 'What an initiated member is called. Default: "Brother".' },
+  label_bid_number:   { label: 'Bid Number',         help: 'Order in which a new member received a bid. Default: "Bid Number".' },
   label_brotherhood:  { label: 'Full Membership',      help: 'What joining fully is called. Default: "Brotherhood".' },
   label_am_officer:   { label: 'AM Officer Title',    help: 'Officer responsible for associates. Default: "High Kappa".' },
   label_am_points:    { label: 'AM Points Label',     help: 'What points are called. Default: "Points".' },
@@ -2157,8 +2163,9 @@ function openAddMemberModal() {
   ['add-legal-first','add-legal-last','add-preferred','add-personal-email','add-gt-email','add-phone','add-bk'].forEach(function(id) {
     document.getElementById(id).value = '';
   });
+  document.getElementById('add-bid').value = '';
   document.getElementById('add-status').value = 'associate';
-  document.getElementById('add-bk-req').style.display = 'none';
+  onAddStatusChange();
   document.getElementById('admin-add-modal').classList.add('open');
   setTimeout(function() { document.getElementById('add-legal-first').focus(); }, 80);
 }
@@ -2168,8 +2175,18 @@ function closeAddMemberModal() {
 }
 
 function onAddStatusChange() {
-  var isActive = document.getElementById('add-status').value === 'active';
-  document.getElementById('add-bk-req').style.display = isActive ? 'inline' : 'none';
+  var status = document.getElementById('add-status').value;
+  var isAssoc = status === 'associate';
+  document.getElementById('add-bk-req').style.display = status === 'active' ? 'inline' : 'none';
+  document.getElementById('add-bk-wrap').style.display = isAssoc ? 'none' : '';
+  document.getElementById('add-bid-wrap').style.display = isAssoc ? '' : 'none';
+  var bidEl = document.getElementById('add-bid');
+  if (isAssoc && !bidEl.value) {
+    google.script.run.withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (r.success && !bidEl.value) bidEl.value = r.bidNumber;
+    }).getNextBidNumber();
+  }
 }
 
 function confirmAddMember() {
@@ -2182,6 +2199,9 @@ function confirmAddMember() {
   var pledge     = ''; // pledge class isn't tracked by the chapter
   var bk         = document.getElementById('add-bk').value.trim();
   var status     = document.getElementById('add-status').value;
+  var bid        = document.getElementById('add-bid').value.trim();
+  if (status === 'associate') bk = '';
+  if (status === 'associate' && bid && !/^\d+$/.test(bid)) { showToast(LBL.label_bid_number + ' must be a number (digits only).'); return; }
   if (!legalFirst || !legalLast) { showToast('Legal first and last name are required.'); return; }
   if (!email) { showToast('Personal email is required.'); return; }
   if (status === 'active' && !bk) { showToast(LBL.label_member_id + ' is required for Active (' + LBL.label_active_member + ') members.'); return; }
@@ -2189,11 +2209,11 @@ function confirmAddMember() {
   google.script.run
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
-      if (r.success) { showToast('Member added!'); loadMemberManager(); }
+      if (r.success) { showToast(status === 'associate' ? 'Added to ' + LBL.label_am_group + ' (see that tab).' : 'Member added!'); loadMemberManager(); }
       else           { showToast('Error: ' + r.error); }
     })
     .withFailureHandler(onError)
-    .addMember(legalFirst, legalLast, preferred, email, gtEmail, phone, pledge, bk || '', status);
+    .addMember(legalFirst, legalLast, preferred, email, gtEmail, phone, pledge, bk || '', status, bid);
 }
 
 // Keep old aliases for backward compat
@@ -3058,7 +3078,7 @@ function renderMMAMs(data) {
   var tbody = document.getElementById('mm-ams-tbody');
   tbody.innerHTML = '';
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No ' + esc(LBL.label_am_group) + ' found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No ' + esc(LBL.label_am_group) + ' found.</td></tr>';
     return;
   }
   data.forEach(function(m) {
@@ -3076,6 +3096,7 @@ function renderMMAMs(data) {
     tbody.insertAdjacentHTML('beforeend',
       '<tr>' +
       '<td>' + _statusBadgeMM(m) + '</td>' +
+      '<td style="text-align:center;font-weight:700">' + esc(m.bidOrder || '—') + '</td>' +
       '<td><strong>' + esc(m.name) + '</strong></td>' +
       '<td style="text-align:center">' + _amPctCellHTML(stats) + '</td>' +
       '<td style="font-weight:700;text-align:center">' + (m.points || 0) + '</td>' +
