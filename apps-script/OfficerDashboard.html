@@ -680,7 +680,49 @@
     </div></div><!-- /sec-members -->
 
     <!-- EVENTS SECTION -->
-    <div class="sec" id="sec-events"><div class="container"><div class="coming-soon"><div class="cs-icon">📅</div><h2>Events &amp; Attendance</h2><p>Unified event tracking and Google Calendar sync — coming in the next update.</p></div></div></div>
+    <div class="sec" id="sec-events"><div class="container">
+      <div class="card">
+        <div class="card-header">
+          <h2>📅 Events</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <div style="display:flex;gap:4px">
+              <button id="evs-btn-calendar" class="action-btn" onclick="setEventsView('calendar')">📅 Calendar</button>
+              <button id="evs-btn-list" class="action-btn" onclick="setEventsView('list')">📋 List</button>
+            </div>
+            <button class="btn-primary" style="padding:6px 14px;font-size:0.8rem" onclick="openEvModal('')">+ Add Event</button>
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="openEvCalModal()">⚙️ Google Calendar</button>
+          </div>
+        </div>
+        <div id="evs-sync-banner" style="display:none;padding:10px 16px;background:var(--yellow-bg);color:var(--yellow);font-size:0.82rem;border-bottom:1px solid var(--border)"></div>
+        <div id="evs-legend" class="am-cal-legend"></div>
+        <div id="evs-loading" style="text-align:center;color:var(--muted);padding:24px 0">Loading events...</div>
+        <div id="evs-calendar" style="display:none;padding:16px"></div>
+        <div id="evs-list-view" style="display:none">
+          <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+            <input type="text" id="evs-list-search" class="inline-input" placeholder="Search title, location..." style="width:240px" oninput="renderEvList()">
+            <select id="evs-list-type" class="inline-input" onchange="renderEvList()"></select>
+            <label style="display:flex;align-items:center;gap:5px;font-size:0.8rem;color:var(--muted);cursor:pointer">
+              <input type="checkbox" id="evs-list-hide-past" checked onchange="renderEvList()"> Hide past
+            </label>
+            <span style="font-size:0.8rem;color:var(--muted);margin-left:auto"><strong id="evs-list-count">0</strong> events</span>
+          </div>
+          <div class="card-body" style="overflow-x:auto;padding:12px 16px">
+            <table class="data-table" style="min-width:860px">
+              <thead><tr>
+                <th style="width:130px">Date</th>
+                <th style="width:150px">Time</th>
+                <th>Title</th>
+                <th style="width:120px">Type</th>
+                <th style="width:160px">Location</th>
+                <th style="width:60px">Cal</th>
+                <th style="width:90px">Actions</th>
+              </tr></thead>
+              <tbody id="evs-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div></div>
     <!-- FINANCE SECTION -->
     <div class="sec" id="sec-finance"><div class="container"><div class="coming-soon"><div class="cs-icon">💰</div><h2>Finance</h2><p>Dues tracker and financial dashboard — coming soon.</p></div></div></div>
     <!-- PHILANTHROPY SECTION -->
@@ -1383,6 +1425,82 @@
   </div>
 </div>
 
+<!-- Events: Add/Edit Modal -->
+<div class="modal-overlay" id="evs-modal">
+  <div class="modal">
+    <h3 id="evs-modal-title">Add Event</h3>
+    <div style="display:flex;flex-direction:column;gap:12px;margin:16px 0">
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Event Title</label>
+        <input type="text" id="evs-f-title" class="inline-input" style="width:100%" placeholder="e.g. Chapter Meeting">
+      </div>
+      <div style="display:flex;gap:10px">
+        <div style="flex:1">
+          <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Type</label>
+          <select id="evs-f-type" class="inline-input" style="width:100%"></select>
+        </div>
+        <div style="flex:1">
+          <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Date</label>
+          <input type="date" id="evs-f-date" class="inline-input" style="width:100%">
+        </div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
+        <input type="checkbox" id="evs-f-allday" style="width:16px;height:16px" onchange="toggleEvAllDay()"> All day
+      </label>
+      <div id="evs-f-times" style="display:flex;gap:10px">
+        <div style="flex:1">
+          <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Start</label>
+          <input type="time" id="evs-f-start" class="inline-input" style="width:100%">
+        </div>
+        <div style="flex:1">
+          <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">End</label>
+          <input type="time" id="evs-f-end" class="inline-input" style="width:100%">
+        </div>
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Location</label>
+        <input type="text" id="evs-f-location" class="inline-input" style="width:100%" placeholder="Optional">
+      </div>
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Description</label>
+        <textarea id="evs-f-desc" class="inline-input" style="width:100%;min-height:70px;resize:vertical" placeholder="Optional"></textarea>
+      </div>
+      <div id="evs-f-syncnote" style="font-size:0.75rem;color:var(--muted)"></div>
+    </div>
+    <div class="modal-btns" style="justify-content:space-between">
+      <button class="btn-outline" id="evs-delete-btn" style="display:none;border-color:var(--red);color:var(--red)" onclick="deleteEvFromModal()">Delete Event</button>
+      <div style="display:flex;gap:10px;margin-left:auto">
+        <button class="btn-outline" onclick="closeEvModal()">Cancel</button>
+        <button class="btn-primary" id="evs-save-btn" onclick="saveEvFromModal()">Save Event</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Events: Google Calendar settings modal -->
+<div class="modal-overlay" id="evs-cal-modal">
+  <div class="modal">
+    <h3>Google Calendar sync</h3>
+    <p style="font-size:0.82rem;color:var(--muted);margin:8px 0 14px">Events you add, edit or delete here are mirrored automatically to the calendar you pick. Edits made directly in Google Calendar are not pulled back.</p>
+    <div id="evs-cal-loading" style="color:var(--muted);font-size:0.85rem">Loading your calendars...</div>
+    <div id="evs-cal-body" style="display:none;flex-direction:column;gap:12px">
+      <div>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Calendar</label>
+        <select id="evs-cal-select" class="inline-input" style="width:100%"></select>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="evs-cal-newname" class="inline-input" style="flex:1" placeholder="Or create a new calendar named...">
+        <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="createEvCalendar()">Create</button>
+      </div>
+      <div id="evs-cal-pending" style="display:none;font-size:0.82rem"></div>
+    </div>
+    <div class="modal-btns" style="margin-top:16px">
+      <button class="btn-outline" onclick="closeEvCalModal()">Close</button>
+      <button class="btn-primary" id="evs-cal-save" onclick="saveEvCalendar()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- AM Event: Mark Attendance Modal -->
 <div class="modal-overlay" id="am-attendance-modal">
   <div class="modal modal-lg">
@@ -1501,6 +1619,7 @@ function showSection(id, btn) {
   var t = document.getElementById('topbar-title');
   if (t) t.textContent = _sectionTitles[id] || id;
   if (id === 'members') initMemberManager();
+  if (id === 'events') loadEvents();
   if (id === 'forms' && !_formsManagerInitialized) formsManagerOnExpand();
 }
 
@@ -3416,6 +3535,326 @@ function saveAttendanceFromModal() {
     })
     .withFailureHandler(onError)
     .saveAMEventAttendance(amAttPending.eventId, memberIds, 'Officer');
+}
+
+// ============================================================
+// EVENTS — chapter-wide events, calendar + list views, Google Calendar sync
+// ============================================================
+var evsData = [];
+var evsTypes = [];
+var evsCalLinked = false;
+var evsView = 'calendar';
+var evsCalendar = null;
+var EVS_COLORS = ['#093D20', '#2563eb', '#b45309', '#7c3aed', '#db2777', '#0891b2', '#16a34a', '#64748b'];
+
+function evsTypeColor(type) {
+  var i = evsTypes.indexOf(type);
+  return i === -1 ? '#475569' : EVS_COLORS[i % EVS_COLORS.length];
+}
+
+function loadEvents() {
+  document.getElementById('evs-loading').style.display = 'block';
+  document.getElementById('evs-calendar').style.display = 'none';
+  document.getElementById('evs-list-view').style.display = 'none';
+  setEventsView(evsView, true);
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      document.getElementById('evs-loading').style.display = 'none';
+      if (!r.success) { showToast('Error: ' + r.error); return; }
+      evsData = r.events;
+      evsTypes = r.types;
+      evsCalLinked = r.calendarLinked;
+      var typeSel = document.getElementById('evs-list-type');
+      var cur = typeSel.value;
+      typeSel.innerHTML = '<option value="">All types</option>' + evsTypes.map(function(t) {
+        return '<option' + (t === cur ? ' selected' : '') + '>' + esc(t) + '</option>';
+      }).join('');
+      renderEvBanner(r.pendingSync);
+      document.getElementById('evs-legend').innerHTML = evsTypes.map(function(t) {
+        return '<span><i style="background:' + evsTypeColor(t) + '"></i>' + esc(t) + '</span>';
+      }).join('');
+      renderCurrentEventsView();
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('evs-loading').style.display = 'none';
+      onError(err);
+    })
+    .getEventsData();
+}
+
+function renderEvBanner(pending) {
+  var b = document.getElementById('evs-sync-banner');
+  if (!evsCalLinked) {
+    b.style.display = 'block';
+    b.innerHTML = 'Not syncing to Google Calendar yet. <a href="#" onclick="openEvCalModal();return false" style="color:inherit;font-weight:600">Link a calendar</a> and new events will be added to it automatically.';
+  } else if (pending > 0) {
+    b.style.display = 'block';
+    b.innerHTML = pending + ' event(s) are not on Google Calendar yet. <a href="#" onclick="openEvCalModal();return false" style="color:inherit;font-weight:600">Sync them</a>';
+  } else {
+    b.style.display = 'none';
+  }
+}
+
+function setEventsView(view, skipRender) {
+  evsView = view;
+  var isCal = view === 'calendar';
+  ['evs-btn-calendar', 'evs-btn-list'].forEach(function(id, idx) {
+    var btn = document.getElementById(id);
+    var on = (idx === 0) === isCal;
+    btn.style.background = on ? 'var(--primary)' : 'transparent';
+    btn.style.color      = on ? 'var(--gold)'    : 'var(--text)';
+    btn.style.border     = on ? 'none'            : '1px solid var(--border)';
+  });
+  if (!skipRender && document.getElementById('evs-loading').style.display === 'none') renderCurrentEventsView();
+}
+
+function renderCurrentEventsView() {
+  if (evsView === 'list') {
+    document.getElementById('evs-calendar').style.display = 'none';
+    document.getElementById('evs-list-view').style.display = 'block';
+    renderEvList();
+  } else {
+    document.getElementById('evs-list-view').style.display = 'none';
+    document.getElementById('evs-calendar').style.display = 'block';
+    renderEvCalendar();
+  }
+}
+
+function evFormatTime(hhmm) {
+  var p = hhmm.split(':'), h = Number(p[0]);
+  return ((h + 11) % 12 + 1) + ':' + p[1] + ' ' + (h < 12 ? 'AM' : 'PM');
+}
+function evTimeLabel(ev) {
+  if (ev.allDay) return 'All day';
+  return evFormatTime(ev.startTime) + (ev.endTime ? ' – ' + evFormatTime(ev.endTime) : '');
+}
+function evDateLabel(d) {
+  var p = d.split('-');
+  var dt = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  var opts = { weekday: 'short', month: 'short', day: 'numeric' };
+  if (p[0] !== SERVER_TODAY.substring(0, 4)) opts.year = 'numeric';
+  return dt.toLocaleDateString('en-US', opts);
+}
+
+function renderEvCalendar() {
+  var el = document.getElementById('evs-calendar');
+  var fcEvents = evsData.map(function(ev) {
+    var color = evsTypeColor(ev.type);
+    var e = { id: ev.eventId, title: ev.title, backgroundColor: color, borderColor: color, textColor: '#fff' };
+    if (ev.allDay) { e.start = ev.date; e.allDay = true; }
+    else { e.start = ev.date + 'T' + ev.startTime; e.end = ev.date + 'T' + (ev.endTime || ev.startTime); }
+    return e;
+  });
+  if (evsCalendar) { evsCalendar.destroy(); }
+  evsCalendar = new FullCalendar.Calendar(el, {
+    initialView: 'dayGridMonth',
+    initialDate: SERVER_TODAY,
+    now: SERVER_TODAY,
+    height: 'auto',
+    headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
+    events: fcEvents,
+    dateClick: function(info) { openEvModal('', info.dateStr); },
+    eventClick: function(info) { openEvModal(info.event.id); }
+  });
+  evsCalendar.render();
+}
+
+function renderEvList() {
+  var q = (document.getElementById('evs-list-search').value || '').toLowerCase();
+  var type = document.getElementById('evs-list-type').value;
+  var hidePast = document.getElementById('evs-list-hide-past').checked;
+  var filtered = evsData.filter(function(ev) {
+    if (hidePast && ev.date < SERVER_TODAY) return false;
+    if (type && ev.type !== type) return false;
+    if (!q) return true;
+    return ev.title.toLowerCase().indexOf(q) !== -1 || ev.location.toLowerCase().indexOf(q) !== -1;
+  });
+  document.getElementById('evs-list-count').textContent = filtered.length;
+  var tbody = document.getElementById('evs-tbody');
+  if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No events found.</td></tr>'; return; }
+  tbody.innerHTML = filtered.map(function(ev) {
+    var past = ev.date < SERVER_TODAY;
+    var sync = !evsCalLinked ? '<span style="color:var(--muted)">—</span>'
+      : ev.gcalEventId ? '<span title="On Google Calendar">✅</span>'
+      : '<span title="Not on Google Calendar yet">⚠️</span>';
+    return '<tr' + (past ? ' style="opacity:0.55"' : '') + '>' +
+      '<td>' + esc(evDateLabel(ev.date)) + '</td>' +
+      '<td>' + esc(evTimeLabel(ev)) + '</td>' +
+      '<td><strong>' + esc(ev.title) + '</strong></td>' +
+      '<td><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:' + evsTypeColor(ev.type) + ';margin-right:6px"></span>' + esc(ev.type) + '</td>' +
+      '<td>' + esc(ev.location) + '</td>' +
+      '<td style="text-align:center">' + sync + '</td>' +
+      '<td style="white-space:nowrap;text-align:right">' +
+        '<button class="qa-btn" title="Edit event" onclick="openEvModal(\'' + ev.eventId + '\')">✏️</button> ' +
+        '<button class="qa-btn" title="Delete event" onclick="deleteEvRow(\'' + ev.eventId + '\')">🗑️</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ---- Add / Edit ----
+function toggleEvAllDay() {
+  document.getElementById('evs-f-times').style.display = document.getElementById('evs-f-allday').checked ? 'none' : 'flex';
+}
+
+function openEvModal(eventId, dateStr) {
+  var ev = eventId ? evsData.filter(function(e) { return e.eventId === eventId; })[0] : null;
+  if (eventId && !ev) return;
+  var modal = document.getElementById('evs-modal');
+  modal.dataset.eventId = eventId || '';
+  document.getElementById('evs-modal-title').textContent = ev ? 'Edit Event' : 'Add Event';
+  document.getElementById('evs-f-type').innerHTML = evsTypes.map(function(t) {
+    return '<option' + (ev && t === ev.type ? ' selected' : '') + '>' + esc(t) + '</option>';
+  }).join('');
+  document.getElementById('evs-f-title').value = ev ? ev.title : '';
+  document.getElementById('evs-f-date').value = ev ? ev.date : (dateStr || SERVER_TODAY);
+  document.getElementById('evs-f-allday').checked = ev ? ev.allDay : false;
+  document.getElementById('evs-f-start').value = ev ? ev.startTime : '19:00';
+  document.getElementById('evs-f-end').value = ev ? ev.endTime : '20:00';
+  document.getElementById('evs-f-location').value = ev ? ev.location : '';
+  document.getElementById('evs-f-desc').value = ev ? ev.description : '';
+  document.getElementById('evs-delete-btn').style.display = ev ? 'inline-block' : 'none';
+  document.getElementById('evs-f-syncnote').textContent = evsCalLinked
+    ? 'Saving also updates Google Calendar.'
+    : 'No Google Calendar linked yet: this event will only be saved here.';
+  document.getElementById('evs-save-btn').disabled = false;
+  toggleEvAllDay();
+  modal.classList.add('open');
+}
+
+function closeEvModal() {
+  document.getElementById('evs-modal').classList.remove('open');
+}
+
+function saveEvFromModal() {
+  var payload = {
+    eventId: document.getElementById('evs-modal').dataset.eventId || '',
+    title: document.getElementById('evs-f-title').value.trim(),
+    type: document.getElementById('evs-f-type').value,
+    date: document.getElementById('evs-f-date').value,
+    allDay: document.getElementById('evs-f-allday').checked,
+    startTime: document.getElementById('evs-f-start').value,
+    endTime: document.getElementById('evs-f-end').value,
+    location: document.getElementById('evs-f-location').value,
+    description: document.getElementById('evs-f-desc').value
+  };
+  if (!payload.title) { showToast('Enter an event title.'); return; }
+  if (!payload.date) { showToast('Pick a date.'); return; }
+  var btn = document.getElementById('evs-save-btn');
+  btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (!r.success) { btn.disabled = false; showToast('Error: ' + r.error); return; }
+      closeEvModal();
+      if (r.calendarError) showToast('Saved, but Google Calendar sync failed: ' + r.calendarError);
+      else showToast(r.message);
+      loadEvents();
+    })
+    .withFailureHandler(function(err) { btn.disabled = false; onError(err); })
+    .saveEvent(JSON.stringify(payload), 'Officer');
+}
+
+function deleteEvFromModal() {
+  var id = document.getElementById('evs-modal').dataset.eventId || '';
+  if (id) deleteEvRow(id, true);
+}
+
+function deleteEvRow(eventId, fromModal) {
+  var ev = evsData.filter(function(e) { return e.eventId === eventId; })[0];
+  if (!ev) return;
+  if (!confirm('Delete "' + ev.title + '"?' + (evsCalLinked ? ' It will also be removed from Google Calendar.' : ''))) return;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (!r.success) { showToast('Error: ' + r.error); return; }
+      if (fromModal) closeEvModal();
+      showToast(r.calendarError ? 'Deleted, but removing it from Google Calendar failed: ' + r.calendarError : r.message);
+      loadEvents();
+    })
+    .withFailureHandler(onError)
+    .deleteEvent(eventId, 'Officer');
+}
+
+// ---- Google Calendar settings ----
+function openEvCalModal() {
+  document.getElementById('evs-cal-modal').classList.add('open');
+  document.getElementById('evs-cal-loading').style.display = 'block';
+  document.getElementById('evs-cal-loading').textContent = 'Loading your calendars...';
+  document.getElementById('evs-cal-body').style.display = 'none';
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      var loading = document.getElementById('evs-cal-loading');
+      if (!r.success) {
+        loading.textContent = 'Could not read your calendars: ' + r.error + '. If this says authorization is required, run authorizeCalendar once from the Apps Script editor.';
+        return;
+      }
+      loading.style.display = 'none';
+      document.getElementById('evs-cal-body').style.display = 'flex';
+      document.getElementById('evs-cal-select').innerHTML =
+        '<option value="">— Not linked —</option>' + r.calendars.map(function(c) {
+          return '<option value="' + esc(c.id) + '"' + (c.id === r.currentId ? ' selected' : '') + '>' + esc(c.name) + (c.owned ? '' : ' (shared)') + '</option>';
+        }).join('');
+      renderEvCalPending();
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('evs-cal-loading').textContent = 'Error: ' + (err.message || err);
+    })
+    .getEventCalendars();
+}
+
+function renderEvCalPending() {
+  var pending = evsData.filter(function(e) { return !e.gcalEventId; }).length;
+  var el = document.getElementById('evs-cal-pending');
+  if (!evsCalLinked || !pending) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = pending + ' event(s) are not on the calendar yet. <button class="btn-outline" style="padding:4px 10px;font-size:0.78rem;margin-left:6px" onclick="syncPendingEv(this)">Sync now</button>';
+}
+
+function closeEvCalModal() {
+  document.getElementById('evs-cal-modal').classList.remove('open');
+}
+
+function saveEvCalendar() {
+  var id = document.getElementById('evs-cal-select').value;
+  var btn = document.getElementById('evs-cal-save');
+  btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      btn.disabled = false;
+      var r = JSON.parse(json);
+      showToast(r.success ? r.message : 'Error: ' + r.error);
+      if (r.success) { closeEvCalModal(); loadEvents(); }
+    })
+    .withFailureHandler(function(err) { btn.disabled = false; onError(err); })
+    .setEventsCalendar(id, 'Officer');
+}
+
+function createEvCalendar() {
+  var name = document.getElementById('evs-cal-newname').value.trim();
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? r.message : 'Error: ' + r.error);
+      if (r.success) { closeEvCalModal(); loadEvents(); }
+    })
+    .withFailureHandler(onError)
+    .createEventsCalendar(name, 'Officer');
+}
+
+function syncPendingEv(btn) {
+  btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      showToast(r.success ? r.message + (r.error ? ' ' + r.error : '') : 'Error: ' + r.error);
+      closeEvCalModal();
+      loadEvents();
+    })
+    .withFailureHandler(function(err) { btn.disabled = false; onError(err); })
+    .syncPendingEvents('Officer');
 }
 
 // ---- Signatures Dashboard -----------------------------------

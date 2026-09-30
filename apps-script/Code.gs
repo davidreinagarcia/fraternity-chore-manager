@@ -1507,6 +1507,7 @@ var OPTIONS_DEFAULTS = {
   meal_plan_options:       'Full,Half',
   officer_role_options:    '',
   am_activity_types:       '',
+  event_types:             'Chapter,Social,Brotherhood,Philanthropy,Recruitment,Other',
   member_status_options:   'active,inactive,alumni,associate',
   inactive_reason_options: 'Co-op,Study Abroad'
 };
