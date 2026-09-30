@@ -512,8 +512,8 @@
     <div class="sec on" id="sec-members"><div class="container">
       <div class="sub-nav">
         <button class="sub-btn active" data-tab="tab-mm" onclick="showTab('tab-mm',this)">Members</button>
-        <button class="sub-btn mod-associates" data-tab="tab-ams" onclick="showTab('tab-ams',this)">🧑‍🎓 <?= cfg.labels.label_am_group ?> <span id="mm-cnt-am"></span></button>
-        <button class="sub-btn" data-tab="tab-alumni" onclick="showTab('tab-alumni',this)">🎓 Alumni <span id="mm-cnt-alumni"></span></button>
+        <button class="sub-btn mod-associates" data-tab="tab-ams" onclick="goToAMsTab()">🧑‍🎓 <?= cfg.labels.label_am_group ?> <span id="mm-cnt-am"></span></button>
+        <button class="sub-btn" data-tab="tab-alumni" onclick="goToAlumniTab()">🎓 Alumni <span id="mm-cnt-alumni"></span></button>
       </div>
     <!-- Tab: Member Manager -->
     <div id="tab-mm" class="sub-pane active">
@@ -597,7 +597,7 @@
       <div class="card">
         <div class="card-header">
           <h2>📸 Signatures Dashboard</h2>
-          <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-ams')">← Back to <?= cfg.labels.label_am_group ?> Manager</button>
+          <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="goToAMsTab()">← Back to <?= cfg.labels.label_am_group ?> Manager</button>
         </div>
         <div class="card-body">
           <div id="sig-dash-loading" style="text-align:center;color:var(--muted);padding:24px 0">Loading signatures...</div>
@@ -617,7 +617,7 @@
               <button id="amv-btn-list" class="action-btn" onclick="setAMEventsView('list')">📋 List</button>
             </div>
             <button class="btn-primary" style="padding:6px 14px;font-size:0.8rem" onclick="openAddEventModal()">+ Add Event</button>
-            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-ams')">← Back to <?= cfg.labels.label_am_group ?> Manager</button>
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="goToAMsTab()">← Back to <?= cfg.labels.label_am_group ?> Manager</button>
           </div>
         </div>
         <div id="am-cal-legend" class="am-cal-legend"></div>
