@@ -423,8 +423,8 @@
       <span class="sb-chapter"><?= cfg.chapter.chapter_name ?></span>
     </div>
     <div class="ng"><div class="nl">MANAGEMENT</div>
-      <button class="ni" data-s="chores" onclick="showSection('chores',this)"><span class="ni-ic">📋</span><span class="ni-lbl">Chores</span></button>
       <button class="ni on" data-s="members" onclick="showSection('members',this)"><span class="ni-ic">👥</span><span class="ni-lbl">Members</span></button>
+      <button class="ni" data-s="chores" onclick="showSection('chores',this)"><span class="ni-ic">📋</span><span class="ni-lbl">Chores</span></button>
       <button class="ni" data-s="events" onclick="showSection('events',this)"><span class="ni-ic">📅</span><span class="ni-lbl">Events</span></button>
     </div>
     <div class="ng"><div class="nl">FINANCE</div>
@@ -528,7 +528,7 @@
         <button class="sub-btn active" data-tab="tab-mm" onclick="showTab('tab-mm',this)">Members</button>
         <button class="sub-btn mod-associates" data-tab="tab-ams" onclick="showTab('tab-ams',this)">🧑‍🎓 <?= cfg.labels.label_am_group ?></button>
         <button class="sub-btn mod-signatures mod-associates" data-tab="tab-signatures" onclick="showTab('tab-signatures',this)">📸 Signatures</button>
-        <button class="sub-btn mod-associates" data-tab="tab-am-events" onclick="showTab('tab-am-events',this)">📅 AM Events</button>
+        <button class="sub-btn mod-associates" data-tab="tab-am-events" onclick="showTab('tab-am-events',this)">📅 <?= cfg.labels.label_am_short ?> Events</button>
         <button class="sub-btn" data-tab="tab-alumni" onclick="showTab('tab-alumni',this)">🎓 Alumni</button>
       </div>
     <!-- Tab: Member Manager -->
@@ -595,7 +595,7 @@
         </div>
         <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center">
           <input type="text" id="ams-search" class="inline-input" placeholder="Search name, email..." style="width:260px" oninput="filterAMsTab()">
-          <span style="font-size:0.8rem;color:var(--muted)"><strong id="ams-count">0</strong> AMs</span>
+          <span style="font-size:0.8rem;color:var(--muted)"><strong id="ams-count">0</strong> <?= cfg.labels.label_am_group ?></span>
         </div>
         <div class="card-body" style="overflow-x:auto">
           <table class="data-table" id="mm-ams-table" style="min-width:820px">
@@ -620,7 +620,7 @@
       <div class="card">
         <div class="card-header">
           <h2>📸 Signatures Dashboard</h2>
-          <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-ams')">← Back to AM Manager</button>
+          <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-ams')">← Back to <?= cfg.labels.label_am_group ?> Manager</button>
         </div>
         <div class="card-body">
           <div id="sig-dash-loading" style="text-align:center;color:var(--muted);padding:24px 0">Loading signatures...</div>
@@ -633,14 +633,14 @@
     <div id="tab-am-events" class="sub-pane">
       <div class="card">
         <div class="card-header">
-          <h2>📅 AM Event Points</h2>
+          <h2>📅 <?= cfg.labels.label_am_short ?> Event <?= cfg.labels.label_am_points ?></h2>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <div style="display:flex;gap:4px">
               <button id="amv-btn-calendar" class="action-btn" onclick="setAMEventsView('calendar')">📅 Calendar</button>
               <button id="amv-btn-list" class="action-btn" onclick="setAMEventsView('list')">📋 List</button>
             </div>
             <button class="btn-primary" style="padding:6px 14px;font-size:0.8rem" onclick="openAddEventModal()">+ Add Event</button>
-            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-ams')">← Back to AM Manager</button>
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-ams')">← Back to <?= cfg.labels.label_am_group ?> Manager</button>
           </div>
         </div>
         <div id="am-cal-legend" class="am-cal-legend"></div>
@@ -1008,17 +1008,17 @@
 <!-- Assign BK Modal -->
 <div class="modal-overlay" id="assign-bk-modal">
   <div class="modal">
-    <h3>Assign BK Number</h3>
+    <h3>Assign <?= cfg.labels.label_member_id ?></h3>
     <p id="assign-bk-sub" style="font-size:0.85rem;color:var(--muted);margin-bottom:16px"></p>
     <div style="margin-bottom:16px">
-      <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">BK Number (4 digits)</label>
-      <input type="text" id="assign-bk-input" class="inline-input" maxlength="4" placeholder="1234"
+      <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px"><?= cfg.labels.label_member_id ?> (numbers only)</label>
+      <input type="text" id="assign-bk-input" class="inline-input" inputmode="numeric" placeholder="1234"
              style="width:100%;font-size:1.4rem;text-align:center;letter-spacing:6px;font-family:monospace"
              onkeydown="if(event.key==='Enter')confirmAssignBk()">
     </div>
     <div class="modal-btns">
       <button class="btn-outline" onclick="closeAssignBkModal()">Cancel</button>
-      <button class="btn-primary" onclick="confirmAssignBk()">Assign BK Number</button>
+      <button class="btn-primary" onclick="confirmAssignBk()">Assign <?= cfg.labels.label_member_id ?></button>
     </div>
   </div>
 </div>
@@ -1028,23 +1028,23 @@
   <div class="modal" style="padding:0;overflow:hidden">
     <div style="background:var(--primary);padding:24px 28px;text-align:center">
       <div style="font-size:2rem;margin-bottom:6px">🎉</div>
-      <h3 style="color:var(--gold);margin-bottom:4px">Cross Into Brotherhood</h3>
+      <h3 style="color:var(--gold);margin-bottom:4px">Cross Into <?= cfg.labels.label_brotherhood ?></h3>
       <p id="cross-member-sub" style="color:rgba(255,255,255,0.75);font-size:0.85rem"></p>
     </div>
     <div style="padding:24px 28px">
       <div style="margin-bottom:12px">
-        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:6px">Next BK Number (auto-assigned)</label>
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:6px">Next <?= cfg.labels.label_member_id ?> (auto-assigned)</label>
         <div id="cross-bk-input" style="width:100%;box-sizing:border-box;font-size:1.6rem;text-align:center;letter-spacing:8px;font-family:monospace;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg)">…</div>
         <p style="font-size:0.72rem;color:var(--muted);margin-top:6px;line-height:1.4">
-          BK numbers auto-assign as the next sequential number in order — so it only lands in points order if you cross AMs top-to-bottom in the AM Manager list (already sorted by points, highest first).
+          <?= cfg.labels.label_member_id ?> values auto-assign as the next sequential number in order — so it only lands in points order if you cross <?= cfg.labels.label_am_group ?> top-to-bottom in the <?= cfg.labels.label_am_group ?> Manager list (already sorted by points, highest first).
         </p>
       </div>
       <p id="cross-tie-warning" style="display:none;font-size:0.75rem;color:#92400e;background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:8px 10px;margin-bottom:12px;line-height:1.4">
-        ⚠️ This AM is tied on points with another associate in the same pledge class. Remember to add a point to whichever one accepted their bid first, so the crossing order is unambiguous.
+        ⚠️ This <?= cfg.labels.label_am_short ?> is tied on points with another <?= cfg.labels.label_new_member ?> in the same <?= cfg.labels.label_pledge_class ?>. Remember to add a point to whichever one accepted their bid first, so the crossing order is unambiguous.
       </p>
       <div class="modal-btns">
         <button class="btn-outline" onclick="closeCrossModal()">Cancel</button>
-        <button style="background:var(--primary);color:var(--gold);border:none;padding:10px 20px;border-radius:8px;font-size:0.95rem;font-weight:700;cursor:pointer" onclick="confirmCross()">Cross Into Brotherhood</button>
+        <button style="background:var(--primary);color:var(--gold);border:none;padding:10px 20px;border-radius:8px;font-size:0.95rem;font-weight:700;cursor:pointer" onclick="confirmCross()">Cross Into <?= cfg.labels.label_brotherhood ?></button>
       </div>
     </div>
   </div>
@@ -1066,8 +1066,8 @@
       <div>
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Status</label>
         <select id="admin-edit-status" class="inline-input" style="width:100%">
-          <option value="active">Active (Brother)</option>
-          <option value="associate">Associate Member (AM)</option>
+          <option value="active">Active (<?= cfg.labels.label_active_member ?>)</option>
+          <option value="associate"><?= cfg.labels.label_new_member ?> (<?= cfg.labels.label_am_short ?>)</option>
           <option value="inactive">Inactive</option>
         </select>
       </div>
@@ -1152,14 +1152,14 @@
         <input type="text" id="add-phone" class="inline-input" style="width:100%" placeholder="555-1234" autocorrect="off">
       </div>
       <div>
-        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">BK Number <span id="add-bk-req" style="color:var(--red);display:none">*</span></label>
-        <input type="text" id="add-bk" class="inline-input" maxlength="4" placeholder="1234" style="width:100%;font-family:monospace;letter-spacing:4px">
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px"><?= cfg.labels.label_member_id ?> <span id="add-bk-req" style="color:var(--red);display:none">*</span></label>
+        <input type="text" id="add-bk" class="inline-input" inputmode="numeric" placeholder="1234" style="width:100%;font-family:monospace;letter-spacing:4px">
       </div>
       <div style="grid-column:span 2">
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Status</label>
         <select id="add-status" class="inline-input" style="width:100%" onchange="onAddStatusChange()">
-          <option value="associate">Associate Member (AM)</option>
-          <option value="active">Active (Brother)</option>
+          <option value="associate"><?= cfg.labels.label_new_member ?> (<?= cfg.labels.label_am_short ?>)</option>
+          <option value="active">Active (<?= cfg.labels.label_active_member ?>)</option>
         </select>
       </div>
     </div>
@@ -1407,7 +1407,7 @@
     </div>
     <p id="am-att-sub" style="font-size:0.85rem;color:var(--muted);margin-bottom:14px"></p>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <input type="text" id="am-att-search" class="inline-input" placeholder="Search AM..." style="width:220px" oninput="filterAttendanceList()">
+      <input type="text" id="am-att-search" class="inline-input" placeholder="Search <?= cfg.labels.label_am_short ?>..." style="width:220px" oninput="filterAttendanceList()">
       <span style="font-size:0.8rem;color:var(--muted)"><strong id="am-att-checked-count">0</strong> checked</span>
     </div>
     <div class="am-att-list" id="am-att-list"></div>
@@ -1453,6 +1453,7 @@
 <script>
 // Chapter config injected at render time — available synchronously before any event fires.
 var CHAPTER_CONFIG = <?!= cfgJson ?>;
+var LBL = CHAPTER_CONFIG.labels;
 
 // ---- Module visibility ------------------------------------
 // Called immediately (before DOMContentLoaded) because modules affect static HTML.
@@ -1545,7 +1546,7 @@ function initDashboard() {
     }
   }).getConfigValue('forms_relinked');
   refreshAll();
-  showSection('chores');
+  showSection('members');
 }
 
 var _mmLoaded = false;
@@ -1844,13 +1845,17 @@ var CHAPTER_IDENTITY_LABELS = {
   accent_color:  { label: 'Accent Color',    help: 'Hex color for highlights/badges. Reload page after saving.' },
   logo_url:      { label: 'Logo URL',        help: 'Public image URL shown in page headers. Leave blank for no logo.' }
 };
-var VOCAB_KEYS = ['label_chore','label_fine','label_am_group','label_am_officer','label_am_points',
+var VOCAB_KEYS = ['label_chore','label_fine','label_am_group','label_new_member','label_am_short','label_active_member','label_brotherhood','label_am_officer','label_am_points',
                   'label_pledge_class','label_member_id','label_university_email',
                   'label_suspension','label_probation','label_semester'];
 var VOCAB_KEY_LABELS = {
   label_chore:        { label: 'Chore',               help: 'What a task is called. Default: "Chore".' },
   label_fine:         { label: 'Fine',                help: 'What a penalty is called. Default: "Fine".' },
   label_am_group:     { label: 'Associate Group',     help: 'What pledges/associates are called. Default: "Associate Members".' },
+  label_new_member:   { label: 'Associate (singular)', help: 'One new member. Default: "Associate Member".' },
+  label_am_short:     { label: 'Associate (short)',    help: 'Abbreviation for badges and lists. Default: "AM".' },
+  label_active_member:{ label: 'Full Member (singular)', help: 'What an initiated member is called. Default: "Brother".' },
+  label_brotherhood:  { label: 'Full Membership',      help: 'What joining fully is called. Default: "Brotherhood".' },
   label_am_officer:   { label: 'AM Officer Title',    help: 'Officer responsible for associates. Default: "High Kappa".' },
   label_am_points:    { label: 'AM Points Label',     help: 'What points are called. Default: "Points".' },
   label_pledge_class: { label: 'Pledge Class',        help: 'Cohort/intake name. Default: "Pledge Class".' },
@@ -2179,7 +2184,7 @@ function confirmAddMember() {
   var status     = document.getElementById('add-status').value;
   if (!legalFirst || !legalLast) { showToast('Legal first and last name are required.'); return; }
   if (!email) { showToast('Personal email is required.'); return; }
-  if (status === 'active' && !bk) { showToast('BK Number is required for Active (Brother) members.'); return; }
+  if (status === 'active' && !bk) { showToast(LBL.label_member_id + ' is required for Active (' + LBL.label_active_member + ') members.'); return; }
   closeAddMemberModal();
   google.script.run
     .withSuccessHandler(function(json) {
@@ -2580,13 +2585,13 @@ function closeAssignBkModal() {
 
 function confirmAssignBk() {
   var bk = document.getElementById('assign-bk-input').value.trim();
-  if (!/^\d{4}$/.test(bk)) { showToast('BK number must be exactly 4 digits.'); return; }
+  if (!/^\d+$/.test(bk)) { showToast(LBL.label_member_id + ' must be a number (digits only).'); return; }
   var memberId = assignBkPending;
   closeAssignBkModal();
   google.script.run
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
-      showToast(r.success ? 'BK number assigned!' : 'Error: ' + r.error);
+      showToast(r.success ? LBL.label_member_id + ' assigned!' : 'Error: ' + r.error);
       if (r.success) loadAdminMembers();
     })
     .withFailureHandler(onError)
@@ -2636,13 +2641,13 @@ function closeCrossModal() {
 
 function confirmCross() {
   var bk = crossMemberPendingBk;
-  if (!bk) { showToast('Still fetching the next BK number — try again in a moment.'); return; }
+  if (!bk) { showToast('Still fetching the next ' + LBL.label_member_id + ' — try again in a moment.'); return; }
   var memberId = crossMemberPending;
   closeCrossModal();
   google.script.run
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
-      showToast(r.success ? 'Member initiated into brotherhood!' : 'Error: ' + r.error);
+      showToast(r.success ? 'Member initiated into ' + LBL.label_brotherhood.toLowerCase() + '!' : 'Error: ' + r.error);
       if (r.success) loadMemberManager();
     })
     .withFailureHandler(onError)
@@ -2784,7 +2789,7 @@ function updateMMCounts() {
         '<span><strong>' + count + '</strong> ' + label + '</span></div>';
     };
     statsEl.innerHTML =
-      chip('mm-stat-green',  '🟢', counts.active, 'active brothers') +
+      chip('mm-stat-green',  '🟢', counts.active, 'active ' + esc(LBL.label_active_member.toLowerCase()) + 's') +
       chip('mm-stat-blue',   '🏠', housing,       'living in the house') +
       chip('mm-stat-gold',   '🍽️', mealFull,      'full meal plan') +
       chip('mm-stat-gold',   '🍽️', mealHalf,      'half meal plan') +
@@ -2860,7 +2865,7 @@ function _statusBadgeMM(m) {
     if (m.probation) return '<span class="badge badge-prob-m">Probation</span>';
     return '<span class="badge badge-active-m">Active</span>';
   }
-  if (m.status === 'associate') return '<span class="badge badge-assoc-m">AM</span>';
+  if (m.status === 'associate') return '<span class="badge badge-assoc-m">' + esc(LBL.label_am_short) + '</span>';
   if (m.status === 'inactive')  return '<span class="badge badge-inactive-m">Inactive</span>';
   if (m.status === 'alumni')    return '<span class="badge badge-alumni-m">Alumni</span>';
   return '<span class="badge badge-pending">' + esc(label) + '</span>';
@@ -3053,7 +3058,7 @@ function renderMMAMs(data) {
   var tbody = document.getElementById('mm-ams-tbody');
   tbody.innerHTML = '';
   if (!data.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No AMs found.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No ' + esc(LBL.label_am_group) + ' found.</td></tr>';
     return;
   }
   data.forEach(function(m) {
@@ -3432,7 +3437,7 @@ function loadSignaturesDashboard() {
 
 function renderSignaturesDashboard(data) {
   var list = document.getElementById('sig-dash-list');
-  if (!data.length) { list.innerHTML = '<div class="empty-state">No AMs found.</div>'; return; }
+  if (!data.length) { list.innerHTML = '<div class="empty-state">No ' + esc(LBL.label_am_group) + ' found.</div>'; return; }
 
   list.innerHTML = data.map(function(am, idx) {
     var body = am.signatures.length
@@ -3482,7 +3487,7 @@ function deleteSignatureRow(sigId) {
 
 function exportMembersCSV() {
   if (!mmData.length) { showToast('No member data loaded.'); return; }
-  var rows = [['BK#','Name','Email','Status','Living in House','Room','Meal Plan','Chore','Fines','Form Completed','Officer Role']];
+  var rows = [[LBL.label_member_id,'Name','Email','Status','Living in House','Room','Meal Plan','Chore','Fines','Form Completed','Officer Role']];
   mmData.forEach(function(m) {
     rows.push([m.bkNumber||'',m.name||'',m.email||'',m.status||'',m.livingInHouse||'',m.roomNumber||'',m.mealPlan||'',m.chore||'',m.fineCount||0,m.formCompleted||'',m.officerRole||'']);
   });
@@ -3618,7 +3623,7 @@ var _actConfigs = {
     ]},
   officer_role:{ title:'Set Officer Role', btnLabel:'Save Role', btnClass:'btn-primary',
     fields:[{ id:'act-role', label:'Role (leave blank to clear)', type:'text', placeholder:'e.g. HC, Steward' }] },
-  points:      { title:'Adjust AM Points', btnLabel:'Save', btnClass:'btn-primary',
+  points:      { title:'Adjust ' + LBL.label_am_short + ' ' + LBL.label_am_points, btnLabel:'Save', btnClass:'btn-primary',
     fields:[
       { id:'act-points-amount', label:'Points (negative to remove) *', type:'text', placeholder:'e.g. 5 or -3' },
       { id:'act-reason', label:'Reason *', type:'textarea' }
@@ -3633,7 +3638,7 @@ function openActModal(action, memberId, memberName) {
   var sub = memberName;
   if (action === 'dissociate') {
     var m = mmData.find(function(x) { return x.memberId === memberId; });
-    if (m && m.isAM) sub += ' — ⚠️ this permanently deletes their AM record (attendance + roster row). Cannot be undone.';
+    if (m && m.isAM) sub += ' — ⚠️ this permanently deletes their ' + LBL.label_am_short + ' record (attendance + roster row). Cannot be undone.';
   }
   document.getElementById('act-sub').textContent = sub;
   var btn = document.getElementById('act-confirm');
@@ -3932,7 +3937,7 @@ function renderProfile(r) {
       pf('Personal Email', p.email) +
       pf(CHAPTER_CONFIG.labels.label_university_email, p.gtEmail) +
       pf('Phone', p.phone) +
-      pf('BK Number', p.bkNumber) +
+      pf(LBL.label_member_id, p.bkNumber) +
       pf('Anticipated Grad', p.anticipatedGraduation) +
     '</div></div>' +
     '<div class="profile-section"><h4>This Semester</h4><div class="profile-grid">' +
@@ -3997,7 +4002,7 @@ function showSemesterSyncResults(r) {
       '<div style="background:#eff6ff;border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#2563eb">' + (r.returningUpdated||0) + '</div><div style="font-size:0.72rem;color:var(--muted)">RETURNING UPDATED</div></div>' +
       '<div style="background:#fffbeb;border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#a16207">' + (r.incompleteCount||0) + '</div><div style="font-size:0.72rem;color:var(--muted)">FORM NOT SUBMITTED</div></div>' +
     '</div>' +
-    _syncListBlock('❗ Unmatched returning forms', r.unmatchedReturning, '#b91c1c', 'Queued in Pending Review — match manually or have them resubmit with the correct BK#.') +
+    _syncListBlock('❗ Unmatched returning forms', r.unmatchedReturning, '#b91c1c', 'Queued in Pending Review — match manually or have them resubmit with the correct ' + LBL.label_member_id + '.') +
     _syncListBlock('🔴 Marked inactive (from form)', r.statusChangedInactive, '#b91c1c', 'Their chore assignments were removed. Reassign at next draft night if they return.') +
     _syncListBlock('🟢 Reactivated (from form)', r.statusChangedActive, 'var(--green)', 'Assign chores at draft night.') +
     _syncListBlock('⚠️ Potential graduates', r.potentialGrads, '#a16207', 'Review in Member Manager and graduate manually — nothing was changed automatically.') +
@@ -4235,7 +4240,7 @@ function loadFormStatus() {
         '<div>' +
         '<div style="font-weight:700;margin-bottom:8px">New Member Form</div>' +
         '<div style="margin-bottom:4px">Responses received: <strong>' + nm.responseCount + '</strong></div>' +
-        '<div style="margin-bottom:4px">Processed as AMs: <strong>' + nm.processedAsAMs + '</strong></div>' +
+        '<div style="margin-bottom:4px">Processed as ' + esc(LBL.label_am_group) + ': <strong>' + nm.processedAsAMs + '</strong></div>' +
         '<div style="margin-bottom:4px">Pending processing: <span style="color:var(--yellow);font-weight:700">' + nm.pendingProcessing + '</span></div>' +
         '<div>Window: <span style="font-weight:700;color:' + (nm.windowOpen ? 'var(--green)' : 'var(--red)') + '">' + (nm.windowOpen ? 'OPEN' : 'CLOSED') + '</span></div>' +
         '</div>' +
@@ -4314,7 +4319,7 @@ function loadPendingReview() {
       var rows = r.entries.map(function(e) {
         return '<tr style="border-bottom:1px solid var(--border)">' +
           '<td style="padding:6px 10px;font-size:0.8rem">' + (e.legalFirst + ' ' + e.legalLast).trim() + '</td>' +
-          '<td style="padding:6px 10px;font-size:0.8rem;color:var(--muted)">' + (e.bkNumber || 'no BK#') + '</td>' +
+          '<td style="padding:6px 10px;font-size:0.8rem;color:var(--muted)">' + (e.bkNumber || 'no ' + esc(LBL.label_member_id)) + '</td>' +
           '<td style="padding:6px 10px;font-size:0.8rem;color:var(--muted)">' + (e.statusRequested || '') + '</td>' +
           '<td style="padding:6px 10px;font-size:0.8rem;color:var(--muted)">' + (e.submittedAt || '').substring(0,16) + '</td>' +
           '<td style="padding:6px 10px"><button class="btn-outline" style="padding:3px 10px;font-size:0.75rem" onclick="doResolvePending(\'' + e.reviewId + '\')">Resolve</button></td>' +
@@ -4322,7 +4327,7 @@ function loadPendingReview() {
       }).join('');
       el.innerHTML =
         '<table style="border-collapse:collapse;width:100%">' +
-        '<tr style="border-bottom:1px solid var(--border)"><th style="padding:6px 10px;text-align:left;font-size:0.75rem">Name</th><th style="padding:6px 10px;text-align:left;font-size:0.75rem">BK#</th><th style="padding:6px 10px;text-align:left;font-size:0.75rem">Status req.</th><th style="padding:6px 10px;text-align:left;font-size:0.75rem">Submitted</th><th></th></tr>' +
+        '<tr style="border-bottom:1px solid var(--border)"><th style="padding:6px 10px;text-align:left;font-size:0.75rem">Name</th><th style="padding:6px 10px;text-align:left;font-size:0.75rem">' + esc(LBL.label_member_id) + '</th><th style="padding:6px 10px;text-align:left;font-size:0.75rem">Status req.</th><th style="padding:6px 10px;text-align:left;font-size:0.75rem">Submitted</th><th></th></tr>' +
         rows + '</table>';
     })
     .withFailureHandler(onError)

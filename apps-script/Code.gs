@@ -1446,7 +1446,10 @@ var LABEL_DEFAULTS = {
   label_am_points:    'Points',
   label_pledge_class: 'Pledge Class',
   label_member_id:    'BK#',
-  label_new_member:   'New Member',
+  label_new_member:   'Associate Member',
+  label_am_short:     'AM',
+  label_active_member:'Brother',
+  label_brotherhood:  'Brotherhood',
   label_university_id:    'University ID',
   label_university_email: 'University Email',
   label_suspension:   'Suspension',
@@ -2145,17 +2148,21 @@ function getOfficerPin() {
 
 // ---- Change 3: BK number management ------------------------
 
-// Assigns a 4-digit BK number to a member. Enforces uniqueness.
+function _memberIdLabel() {
+  return getChapterConfig().labels.label_member_id || 'BK#';
+}
+
+// Assigns a numeric member ID (BK#) to a member. Enforces uniqueness.
 function assignBkNumber(memberId, bkNumber) {
   try {
-    if (!bkNumber || !/^\d{4}$/.test(String(bkNumber))) {
-      return JSON.stringify({ success: false, error: 'BK number must be exactly 4 digits.' });
+    if (!bkNumber || !/^\d+$/.test(String(bkNumber))) {
+      return JSON.stringify({ success: false, error: _memberIdLabel() + ' must be a number (digits only).' });
     }
     var sheet = getSpreadsheet().getSheetByName('members');
     var data = sheet.getDataRange().getValues();
     for (var i = 1; i < data.length; i++) {
       if (String(data[i][1]) === String(bkNumber) && data[i][0] !== memberId) {
-        return JSON.stringify({ success: false, error: 'BK ' + bkNumber + ' is already assigned to another member.' });
+        return JSON.stringify({ success: false, error: _memberIdLabel() + ' ' + bkNumber + ' is already assigned to another member.' });
       }
     }
     for (var i = 1; i < data.length; i++) {
@@ -2174,7 +2181,7 @@ function assignBkNumber(memberId, bkNumber) {
 
 // ---- Change 4: AM crossing ----------------------------------
 
-// Returns the next sequential 4-digit BK number (current max across 'members' + 1).
+// Returns the next sequential BK number (current max across 'members' + 1).
 // Crossing auto-assigns this instead of an officer typing one in, so the only
 // way points order becomes BK order is by crossing AMs top-to-bottom in the AM
 // Manager list (sorted points descending) — see crossMember.
@@ -2190,7 +2197,6 @@ function getNextBkNumber() {
       if (!isNaN(n) && n > max) max = n;
     }
     var next = max + 1;
-    if (next > 9999) return JSON.stringify({ success: false, error: 'BK numbers have run out of 4-digit range — next would be ' + next + '.' });
     return JSON.stringify({ success: true, bkNumber: String(next).padStart(4, '0') });
   } catch (err) { logError('getNextBkNumber', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
@@ -2200,8 +2206,8 @@ function getNextBkNumber() {
 // members→alumni move), assigning their BK number in one step.
 function crossMember(memberId, bkNumber) {
   try {
-    if (!bkNumber || !/^\d{4}$/.test(String(bkNumber))) {
-      return JSON.stringify({ success: false, error: 'BK number must be exactly 4 digits.' });
+    if (!bkNumber || !/^\d+$/.test(String(bkNumber))) {
+      return JSON.stringify({ success: false, error: _memberIdLabel() + ' must be a number (digits only).' });
     }
     var ss = getSpreadsheet();
     var memSheet = ss.getSheetByName('members');
@@ -2210,7 +2216,7 @@ function crossMember(memberId, bkNumber) {
     var bkCol = memCM['BK#'] !== undefined ? memCM['BK#'] : 1;
     for (var i = 1; i < memData.length; i++) {
       if (String(memData[i][bkCol] || '') === String(bkNumber)) {
-        return JSON.stringify({ success: false, error: 'BK ' + bkNumber + ' is already in use.' });
+        return JSON.stringify({ success: false, error: _memberIdLabel() + ' ' + bkNumber + ' is already in use.' });
       }
     }
 
@@ -2239,7 +2245,7 @@ function crossMember(memberId, bkNumber) {
     amSheet.deleteRow(amRowNum);
 
     logInfo('crossMember', memberId + ' crossed → BK ' + bkNumber);
-    return JSON.stringify({ success: true, message: displayName + ' crossed as BK#' + bkNumber + '.' });
+    return JSON.stringify({ success: true, message: displayName + ' crossed as ' + _memberIdLabel() + ' ' + bkNumber + '.' });
   } catch (err) {
     logError('crossMember', err);
     return JSON.stringify({ success: false, error: err.toString() });
@@ -2366,8 +2372,8 @@ function updateMember(memberId, name, email, pledgeClass, bkNumber, status, meal
     });
     if (dupEmail) return JSON.stringify({ success: false, error: 'That email is already used by another member.' });
     if (bkNumber) {
-      if (!/^\d{4}$/.test(String(bkNumber))) return JSON.stringify({ success: false, error: 'BK number must be exactly 4 digits.' });
-      if (dupBk) return JSON.stringify({ success: false, error: 'BK ' + bkNumber + ' is already in use.' });
+      if (!/^\d+$/.test(String(bkNumber))) return JSON.stringify({ success: false, error: _memberIdLabel() + ' must be a number (digits only).' });
+      if (dupBk) return JSON.stringify({ success: false, error: _memberIdLabel() + ' ' + bkNumber + ' is already in use.' });
     }
 
     var i = found.rowNum - 1;
