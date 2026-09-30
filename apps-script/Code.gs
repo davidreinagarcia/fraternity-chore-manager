@@ -2382,7 +2382,7 @@ function getMemberDirectoryData() {
 }
 
 // Edits basic fields for an existing member (name, email, pledgeClass, bkNumber, status).
-function updateMember(memberId, name, email, pledgeClass, bkNumber, status, mealPlan, livingInHouse, roomNumber) {
+function updateMember(memberId, name, email, pledgeClass, bkNumber, status, mealPlan, livingInHouse, roomNumber, bidNumber) {
   try {
     if (!name || !email) return JSON.stringify({ success: false, error: 'Name and email are required.' });
     var found = _findMemberRowAcrossSheets(memberId);
@@ -2414,9 +2414,23 @@ function updateMember(memberId, name, email, pledgeClass, bkNumber, status, meal
       if (dupBk) return JSON.stringify({ success: false, error: _memberIdLabel() + ' ' + bkNumber + ' is already in use.' });
     }
 
+    var writeBid = found.sheetName === 'AMs' && cm['bid_order'] !== undefined && bidNumber !== undefined && bidNumber !== null;
+    if (writeBid) {
+      bidNumber = String(bidNumber).trim();
+      var bidLabel = getChapterConfig().labels.label_bid_number;
+      if (bidNumber) {
+        if (!/^\d+$/.test(bidNumber)) return JSON.stringify({ success: false, error: bidLabel + ' must be a number (digits only).' });
+        for (var b = 1; b < found.data.length; b++) {
+          if (b + 1 === found.rowNum) continue;
+          if (String(found.data[b][cm['bid_order']]).trim() === bidNumber) return JSON.stringify({ success: false, error: bidLabel + ' ' + bidNumber + ' is already taken.' });
+        }
+      }
+    }
+
     var i = found.rowNum - 1;
     var bkColW = cm['BK#'] !== undefined ? cm['BK#'] : 1;
     sheet.getRange(i + 1, bkColW + 1).setValue(bkNumber || '');
+    if (writeBid) sheet.getRange(i + 1, cm['bid_order'] + 1).setValue(bidNumber);
     if (isNewSchema) {
       // Split name into first/last for new schema
       var parts = name.trim().split(' ');

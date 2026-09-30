@@ -3,8 +3,7 @@
 ## What this is
 
 A Google Apps Script web app that chapters install on their own Google account.
-One Sheet, one Script project, no cloud infra, no SaaS. Lambda Chi Alpha at Georgia Tech
-is the live beta; the codebase is generic.
+One Sheet, one Script project, no cloud infra, no SaaS. The codebase is generic.
 
 ## Stack
 
@@ -20,21 +19,19 @@ throwaway shallow clone and deletes it at the end.
 
 1. `gh repo clone davidreinagarcia/fraternity-chore-manager /tmp/frat-chores -- --depth 1`
 2. Create `.clasp.json` (gitignored) for the target: `scriptId`, `parentId`, `rootDir: "apps-script"`
-   (dev IDs below; prod IDs live in Alexandria memory, not in this public repo)
+   (IDs below)
 3. Edit files in `apps-script/`
 4. `clasp push --force`, then `clasp deploy -i <deployment-id> -d "<description>"` for versioned deploys
 5. `git commit` + `git push origin main`
 6. `rm -rf /tmp/frat-chores`
 
-Dev is the default target. **No staging step** on dev: push straight through. Pushing to the
-Lambda Chi prod sheet always needs explicit confirmation from David.
+The dev sheet is the only live target. **No staging step**: push straight through.
 
 ## Active sheets (as of 2026-09-30)
 
 | Sheet | Purpose |
 |---|---|
-| "Fraternity Digitalization Project" `12WifDjeX-FntZOqQrIB2C-HplPKPwYUCoNSVL-7XImE`, scriptId `1AV-RMgKsr97YPk5qnRXL9O5PhkSplgb6cSvjLBex_kbEvaTS7lX_uO9a` | **Dev / unified source sheet**, all future development here |
-| "Chore System Test" `1__vs3wLiVF4FNW2BvuEgyySapb73qCPeaQVn49b5_38` | Lambda Chi production (real data, 98 active + 33 alumni) |
+| "Fraternity Digitalization Project" `12WifDjeX-FntZOqQrIB2C-HplPKPwYUCoNSVL-7XImE`, scriptId `1AV-RMgKsr97YPk5qnRXL9O5PhkSplgb6cSvjLBex_kbEvaTS7lX_uO9a` | Only live sheet, all development here |
 
 ## Architecture
 
@@ -69,7 +66,6 @@ Template vars injected at render time by `doGet`:
 
 ## Security rules (from global CLAUDE.md — repeated here for context)
 
-- No hardcoded Lambda Chi / Georgia Tech references in source code
+- No hardcoded chapter or school references in source code
 - No secrets in any file that could be committed (tokens, API keys, officer PIN)
 - Officer PIN lives only in the `config` Sheet tab, never in code
-- `clasp push` to Lambda Chi prod sheet requires explicit confirmation from David

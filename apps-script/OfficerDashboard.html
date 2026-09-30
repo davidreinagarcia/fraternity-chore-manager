@@ -1064,6 +1064,10 @@
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Email</label>
         <input type="email" id="admin-edit-email" class="inline-input" style="width:100%">
       </div>
+      <div id="admin-edit-bid-wrap" style="display:none">
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px"><?= cfg.labels.label_bid_number ?></label>
+        <input type="text" inputmode="numeric" id="admin-edit-bid" class="inline-input" style="width:100%">
+      </div>
       <div>
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Status</label>
         <select id="admin-edit-status" class="inline-input" style="width:100%">
@@ -2031,6 +2035,9 @@ function openAdminEditModal(memberId) {
   document.getElementById('admin-edit-name').value     = m.name || '';
   document.getElementById('admin-edit-email').value    = m.email || '';
   document.getElementById('admin-edit-status').value   = (m.status === 'alumni') ? 'active' : (m.status || 'active');
+  document.getElementById('admin-edit-bid-wrap').style.display = m.isAM ? '' : 'none';
+  document.getElementById('admin-edit-bid').value = m.bidOrder || '';
+  document.getElementById('admin-edit-status').disabled = !!m.isAM;
   document.getElementById('admin-edit-mealplan').value = m.mealPlan || '';
   document.getElementById('admin-edit-living').value   = m.livingInHouse || '';
   document.getElementById('admin-edit-room').value     = m.roomNumber || '';
@@ -2092,6 +2099,8 @@ function saveAdminEdit() {
   var mealPlan = document.getElementById('admin-edit-mealplan').value;
   var living   = document.getElementById('admin-edit-living').value;
   var room     = document.getElementById('admin-edit-room').value.trim();
+  var bid      = m.isAM ? document.getElementById('admin-edit-bid').value.trim() : null;
+  if (bid && !/^\d+$/.test(bid)) { showToast(LBL.label_bid_number + ' must be a number (digits only).'); return; }
   if (!name || !email) { showToast('Name and email are required.'); return; }
 
   // Collect custom field values
@@ -2121,7 +2130,7 @@ function saveAdminEdit() {
       }
     })
     .withFailureHandler(onError)
-    .updateMember(memberId, name, email, pledge, m.bkNumber || '', status, mealPlan, living, room);
+    .updateMember(memberId, name, email, pledge, m.bkNumber || '', status, mealPlan, living, room, bid);
 }
 
 // ---- Admin Fine History Modal ----------------------------
@@ -3091,6 +3100,7 @@ function renderMMAMs(data) {
     } else if (m.status === 'inactive') {
       actions += '<button class="qa-btn" title="Reactivate" onclick="doReactivate(\'' + m.memberId + '\',\'' + esc(m.name) + '\')">↩️</button> ';
     }
+    actions = '<button class="qa-btn" title="Edit" onclick="openAdminEditModal(\'' + m.memberId + '\')">✏️</button> ' + actions;
     actions += '<button class="qa-btn" title="Dissociate" onclick="openActModal(\'dissociate\',\'' + m.memberId + '\',\'' + esc(m.name) + '\')">🚫</button>';
     var stats = amEventStatsFor(m.memberId);
     tbody.insertAdjacentHTML('beforeend',
