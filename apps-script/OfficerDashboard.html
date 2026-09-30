@@ -279,20 +279,6 @@
   .mm-stat-red    { background: var(--red-bg);    color: var(--red); }
   .mm-stat-yellow { background: var(--yellow-bg); color: var(--yellow); }
 
-  .mm-alumni-banner {
-    width: 100%; padding: 14px 18px; border-radius: 10px; cursor: pointer;
-    background: #fffbeb; color: #b45309; border: 2px solid #fde68a;
-    font-size: 0.95rem; font-weight: 700; text-align: left;
-  }
-  .mm-alumni-banner:hover { background: #fef3c7; }
-
-  .mm-am-banner {
-    width: 100%; padding: 14px 18px; border-radius: 10px; cursor: pointer;
-    background: #eff6ff; color: #2563eb; border: 2px solid #bfdbfe;
-    font-size: 0.95rem; font-weight: 700; text-align: left;
-  }
-  .mm-am-banner:hover { background: #dbeafe; }
-
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ---- Member Manager status badges ---- */
@@ -526,10 +512,8 @@
     <div class="sec on" id="sec-members"><div class="container">
       <div class="sub-nav">
         <button class="sub-btn active" data-tab="tab-mm" onclick="showTab('tab-mm',this)">Members</button>
-        <button class="sub-btn mod-associates" data-tab="tab-ams" onclick="showTab('tab-ams',this)">🧑‍🎓 <?= cfg.labels.label_am_group ?></button>
-        <button class="sub-btn mod-signatures mod-associates" data-tab="tab-signatures" onclick="showTab('tab-signatures',this)">📸 Signatures</button>
-        <button class="sub-btn mod-associates" data-tab="tab-am-events" onclick="showTab('tab-am-events',this)">📅 <?= cfg.labels.label_am_short ?> Events</button>
-        <button class="sub-btn" data-tab="tab-alumni" onclick="showTab('tab-alumni',this)">🎓 Alumni</button>
+        <button class="sub-btn mod-associates" data-tab="tab-ams" onclick="showTab('tab-ams',this)">🧑‍🎓 <?= cfg.labels.label_am_group ?> <span id="mm-cnt-am"></span></button>
+        <button class="sub-btn" data-tab="tab-alumni" onclick="showTab('tab-alumni',this)">🎓 Alumni <span id="mm-cnt-alumni"></span></button>
       </div>
     <!-- Tab: Member Manager -->
     <div id="tab-mm" class="sub-pane active">
@@ -554,14 +538,6 @@
           </div>
         </div>
         <div id="mm-stats" style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:10px"></div>
-        <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
-          <button class="mm-am-banner mod-associates" onclick="goToAMsTab()">
-            🧑‍🎓 <?= cfg.labels.label_am_group ?> Manager <span id="mm-cnt-am"></span> →
-          </button>
-          <button class="mm-alumni-banner" onclick="goToAlumniTab()">
-            🎓 View Alumni <span id="mm-cnt-alumni"></span> →
-          </button>
-        </div>
         <div class="card-body" style="overflow-x:auto">
           <div id="mm-loading" style="text-align:center;padding:30px;color:var(--muted)">Loading members...</div>
           <table class="data-table" id="mm-table" style="display:none;min-width:900px">
@@ -588,9 +564,9 @@
         <div class="card-header">
           <h2>🧑‍🎓 <?= cfg.labels.label_am_group ?> Manager</h2>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="goToAMEventsTab()">📅 Event Points</button>
-            <button class="btn-outline mod-signatures" style="padding:6px 12px;font-size:0.8rem" onclick="goToSignaturesTab()">📸 Signatures Dashboard</button>
-            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showTab('tab-mm')">← Back to Member Manager</button>
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="goToAMEventsTab()">📅 <?= cfg.labels.label_am_short ?> Events</button>
+            <button class="btn-outline mod-signatures" style="padding:6px 12px;font-size:0.8rem" onclick="goToSignaturesTab()">📸 Signatures</button>
+            <button class="btn-primary" style="padding:6px 14px;font-size:0.8rem" onclick="openAddMemberModal()">+ Add Member</button>
           </div>
         </div>
         <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center">
@@ -1790,6 +1766,7 @@ function callImportMembers() {
 }
 
 // ---- Tabs --------------------------------------------------
+var SUBTAB_PARENT = { 'tab-signatures': 'tab-ams', 'tab-am-events': 'tab-ams' };
 function showTab(id, btn) {
   var sec = document.getElementById(id);
   if (!sec) return;
@@ -1800,7 +1777,7 @@ function showTab(id, btn) {
   if (btn) {
     btn.classList.add('active');
   } else {
-    var m = parent.querySelector('.sub-btn[data-tab="' + id + '"]');
+    var m = parent.querySelector('.sub-btn[data-tab="' + (SUBTAB_PARENT[id] || id) + '"]');
     if (m) m.classList.add('active');
   }
 }
