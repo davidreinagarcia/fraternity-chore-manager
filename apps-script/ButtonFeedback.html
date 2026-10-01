@@ -1,0 +1,93 @@
+<!-- Shared click/loading feedback for every button. Included in each web app via <?!= include('ButtonFeedback') ?>.
+     - Pressed state on any button while it is being clicked.
+     - Any google.script.run call started from a click marks that button busy (spinner, no re-clicks) until the server answers.
+     - A thin progress bar at the top of the page while any server call is pending. -->
+<style>
+  button, input[type="button"], input[type="submit"] { transition: transform .08s ease, filter .08s ease, opacity .15s ease; }
+  button:not(:disabled):active, input[type="button"]:not(:disabled):active, input[type="submit"]:not(:disabled):active { transform: scale(.96); filter: brightness(.9); }
+  .bf-busy { pointer-events: none; cursor: progress; opacity: .8; }
+  .bf-busy::before {
+    content: ''; display: inline-block; flex: none; width: .95em; height: .95em; margin-right: .5em; vertical-align: -.15em;
+    border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: bf-spin .7s linear infinite;
+  }
+  @keyframes bf-spin { to { transform: rotate(360deg); } }
+  #bf-bar { position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 99999; pointer-events: none; opacity: 0;
+    background: linear-gradient(90deg, rgba(255,255,255,0), #d4a017, #fff3c4); transition: width .4s ease, opacity .25s ease; }
+  #bf-bar.on { opacity: 1; width: 85%; transition: width 8s cubic-bezier(.1,.7,.2,1), opacity .1s ease; }
+  #bf-bar.done { opacity: 0; width: 100%; transition: width .15s ease, opacity .35s ease .1s; }
+</style>
+<script>
+(function () {
+  var BTN_SEL = 'button, input[type="button"], input[type="submit"], [role="button"]';
+  var clicked = null, pending = 0, bar = null, origRun = null;
+
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest(BTN_SEL) : null;
+    if (!b || b.disabled) return;
+    clicked = b;
+    setTimeout(function () { if (clicked === b) clicked = null; }, 0);
+  }, true);
+
+  function barOn() {
+    if (!bar) { bar = document.createElement('div'); bar.id = 'bf-bar'; document.body.appendChild(bar); }
+    bar.className = '';
+    void bar.offsetWidth;
+    bar.className = 'on';
+  }
+  function barOff() { if (bar) bar.className = 'done'; }
+
+  function start(btn) {
+    pending++;
+    if (pending === 1 && document.body) barOn();
+    if (btn) { btn.__bf = (btn.__bf || 0) + 1; btn.classList.add('bf-busy'); }
+    var finished = false;
+    function finish() {
+      if (finished) return;
+      finished = true;
+      pending = Math.max(0, pending - 1);
+      if (!pending) barOff();
+      if (btn) { btn.__bf = Math.max(0, (btn.__bf || 1) - 1); if (!btn.__bf) btn.classList.remove('bf-busy'); }
+    }
+    setTimeout(finish, 120000);
+    return finish;
+  }
+
+  function runner(state) {
+    return new Proxy({}, {
+      get: function (_, name) {
+        if (typeof name !== 'string') return undefined;
+        if (name === 'withSuccessHandler') return function (f) { return runner({ sh: f, fh: state.fh, uo: state.uo, hasUo: state.hasUo }); };
+        if (name === 'withFailureHandler') return function (f) { return runner({ sh: state.sh, fh: f, uo: state.uo, hasUo: state.hasUo }); };
+        if (name === 'withUserObject') return function (o) { return runner({ sh: state.sh, fh: state.fh, uo: o, hasUo: true }); };
+        return function () {
+          var finish = start(clicked);
+          var r = origRun
+            .withSuccessHandler(function () { finish(); if (state.sh) return state.sh.apply(this, arguments); })
+            .withFailureHandler(function () {
+              finish();
+              if (state.fh) return state.fh.apply(this, arguments);
+              if (window.console) console.error.apply(console, arguments);
+            });
+          if (state.hasUo) r = r.withUserObject(state.uo);
+          try { return r[name].apply(r, arguments); }
+          catch (err) { finish(); throw err; }
+        };
+      }
+    });
+  }
+
+  function install() {
+    try {
+      if (window.__bfInstalled || !window.google || !google.script || !google.script.run) return;
+      window.__bfInstalled = true;
+      origRun = google.script.run;
+      var proxy = runner({});
+      try { google.script.run = proxy; } catch (_) {}
+      if (google.script.run !== proxy) Object.defineProperty(google.script, 'run', { configurable: true, get: function () { return proxy; } });
+    } catch (err) { if (window.console) console.warn('ButtonFeedback not installed', err); }
+  }
+
+  install();
+  document.addEventListener('DOMContentLoaded', install);
+})();
+</script>

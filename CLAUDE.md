@@ -70,3 +70,9 @@ Template vars injected at render time by `doGet`:
 - No hardcoded chapter or school references in source code
 - No secrets in any file that could be committed (tokens, API keys, officer PIN)
 - Officer PIN lives only in the `config` Sheet tab, never in code
+
+## UI rules
+
+- **No chapter vocabulary in UI text**: anything a chapter names differently (new members, active members, AM group, school, chapter) must come from `CHAPTER_CONFIG.labels` / `getChapterConfig()`, including confirms, toasts, notes and empty states. Internal keys and column names are fine.
+- **Every button gives feedback**: `ButtonFeedback.html` (included in every interactive app via `<?!= include('ButtonFeedback') ?>`) adds a pressed state, a spinner on the clicked button while its `google.script.run` call is pending, and a top progress bar. Any new HTML app must include it; new buttons get it for free.
+- **Dates/times in sheets are plain text** (`@` format, `yyyy-MM-dd` / `HH:mm`). Never write Date objects for events (timezone shifts moved an event a day); `saveEvent` verifies the saved date by reading it back.

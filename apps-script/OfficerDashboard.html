@@ -332,6 +332,27 @@
 
   /* ---- Large modal variants ---- */
   .modal-lg { width:640px; max-width:96vw; max-height:88vh; overflow-y:auto; }
+  .modal-ev { width:820px; max-width:96vw; max-height:92vh; padding:0; display:flex; flex-direction:column; overflow:hidden; }
+  .ev-head { padding:22px 28px 14px; }
+  .ev-head h3 { margin:0; font-size:1.2rem; }
+  .ev-body { padding:4px 28px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; }
+  .ev-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .ev-card { background:#fafcfa; border:1px solid var(--border); border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:12px; }
+  .ev-card-title { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); }
+  .ev-lbl { font-size:0.75rem; font-weight:600; display:block; margin-bottom:4px; }
+  .ev-row { display:flex; gap:12px; }
+  .ev-row > div { flex:1; min-width:0; }
+  .ev-card textarea.inline-input { flex:1; min-height:120px; resize:vertical; margin:0; }
+  .ev-seg { display:flex; flex-wrap:wrap; gap:8px; }
+  .ev-seg button { background:white; color:var(--text); border:2px solid var(--border); border-radius:999px; padding:8px 16px; font-size:0.82rem; font-weight:600; cursor:pointer; }
+  .ev-seg button:hover { border-color:var(--primary); }
+  .ev-seg button.active { background:var(--primary); border-color:var(--primary); color:var(--gold); }
+  .ev-foot { padding:16px 28px; border-top:1px solid var(--border); background:#fafcfa; display:flex; flex-direction:column; gap:10px; }
+  .ev-foot-btns { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .ev-foot-btns button { padding:10px 22px; white-space:nowrap; }
+  .ev-foot-btns .btn-primary { border:2px solid var(--primary); }
+  .ev-foot-btns .spacer { flex:1; }
+  @media (max-width:720px) { .ev-grid { grid-template-columns:1fr; } .ev-foot-btns .spacer { display:none; } }
   .modal-xl { width:760px; max-width:96vw; max-height:90vh; overflow-y:auto; }
   .profile-section { margin-bottom:20px; }
   .profile-section h4 { font-size:0.85rem; font-weight:700; color:var(--primary); border-bottom:1px solid var(--border); padding-bottom:6px; margin-bottom:10px; }
@@ -381,6 +402,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.8/index.global.min.js"></script>
+<?!= include('ButtonFeedback') ?>
 </head>
 <body>
 
@@ -1428,66 +1450,74 @@
 
 <!-- Events: Add/Edit Modal -->
 <div class="modal-overlay" id="evs-modal">
-  <div class="modal">
-    <h3 id="evs-modal-title">Add Event</h3>
-    <div style="display:flex;flex-direction:column;gap:12px;margin:16px 0">
-      <div>
-        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Event Title</label>
-        <input type="text" id="evs-f-title" class="inline-input" style="width:100%" placeholder="e.g. Chapter Meeting">
-      </div>
-      <div style="display:flex;gap:10px">
-        <div style="flex:1">
-          <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Type</label>
-          <select id="evs-f-type" class="inline-input" style="width:100%"></select>
+  <div class="modal modal-ev">
+    <div class="ev-head"><h3 id="evs-modal-title">Add Event</h3></div>
+    <div class="ev-body">
+      <div class="ev-grid">
+        <div class="ev-card">
+          <div class="ev-card-title">Details</div>
+          <div>
+            <label class="ev-lbl">Event Title</label>
+            <input type="text" id="evs-f-title" class="inline-input" style="width:100%" placeholder="e.g. Chapter Meeting">
+          </div>
+          <div class="ev-row">
+            <div>
+              <label class="ev-lbl">Type</label>
+              <select id="evs-f-type" class="inline-input" style="width:100%"></select>
+            </div>
+            <div>
+              <label class="ev-lbl">Date</label>
+              <input type="date" id="evs-f-date" class="inline-input" style="width:100%">
+            </div>
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
+            <input type="checkbox" id="evs-f-allday" style="width:16px;height:16px" onchange="toggleEvAllDay()"> All day
+          </label>
+          <div id="evs-f-times" class="ev-row">
+            <div>
+              <label class="ev-lbl">Start</label>
+              <input type="time" id="evs-f-start" class="inline-input" style="width:100%">
+            </div>
+            <div>
+              <label class="ev-lbl">End</label>
+              <input type="time" id="evs-f-end" class="inline-input" style="width:100%">
+            </div>
+          </div>
         </div>
-        <div style="flex:1">
-          <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Date</label>
-          <input type="date" id="evs-f-date" class="inline-input" style="width:100%">
-        </div>
-      </div>
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
-        <input type="checkbox" id="evs-f-allday" style="width:16px;height:16px" onchange="toggleEvAllDay()"> All day
-      </label>
-      <div id="evs-f-times" style="display:flex;gap:10px">
-        <div style="flex:1">
-          <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Start</label>
-          <input type="time" id="evs-f-start" class="inline-input" style="width:100%">
-        </div>
-        <div style="flex:1">
-          <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">End</label>
-          <input type="time" id="evs-f-end" class="inline-input" style="width:100%">
-        </div>
-      </div>
-      <div>
-        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Location</label>
-        <input type="text" id="evs-f-location" class="inline-input" style="width:100%" placeholder="Optional">
-      </div>
-      <div>
-        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Description</label>
-        <textarea id="evs-f-desc" class="inline-input" style="width:100%;min-height:70px;resize:vertical" placeholder="Optional"></textarea>
-      </div>
-      <div style="border-top:1px solid var(--border);padding-top:12px">
-        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Mandatory attendance</label>
-        <select id="evs-f-attendance" class="inline-input" style="width:100%" onchange="toggleEvAttendanceFields()"></select>
-        <div id="evs-f-att-note" style="font-size:0.72rem;color:var(--muted);margin-top:4px"></div>
-      </div>
-      <div id="evs-f-novato-wrap" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
-          <input type="checkbox" id="evs-f-counts" style="width:16px;height:16px" onchange="toggleEvAttendanceFields()"> Counts toward the <span id="evs-f-counts-lbl"></span> attendance %
-        </label>
-        <div id="evs-f-points-wrap" style="display:none;margin-top:8px;align-items:center;gap:8px;font-size:0.8rem">
-          <span>Weight (points)</span>
-          <input type="number" id="evs-f-points" class="inline-input" style="width:80px" min="0" step="1" value="1">
+        <div class="ev-card">
+          <div class="ev-card-title">Place &amp; notes</div>
+          <div>
+            <label class="ev-lbl">Location</label>
+            <input type="text" id="evs-f-location" class="inline-input" style="width:100%" placeholder="Optional">
+          </div>
+          <div style="display:flex;flex-direction:column;flex:1">
+            <label class="ev-lbl">Description</label>
+            <textarea id="evs-f-desc" class="inline-input" style="width:100%" placeholder="Optional"></textarea>
+          </div>
         </div>
       </div>
-      <div id="evs-f-syncnote" style="font-size:0.75rem;color:var(--muted)"></div>
+      <div class="ev-card">
+        <div class="ev-card-title">Mandatory attendance</div>
+        <select id="evs-f-attendance" style="display:none"></select>
+        <div class="ev-seg" id="evs-f-att-seg"></div>
+        <div id="evs-f-att-note" style="font-size:0.78rem;color:var(--muted)"></div>
+        <div id="evs-f-novato-wrap" style="display:none;background:white;border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
+            <input type="checkbox" id="evs-f-counts" style="width:16px;height:16px" onchange="toggleEvAttendanceFields()"> <span>Counts toward the <strong id="evs-f-counts-lbl"></strong> attendance %</span>
+          </label>
+          <div id="evs-f-points-wrap" style="display:none;margin-top:10px;align-items:center;gap:8px;font-size:0.8rem">
+            <span>Weight (points)</span>
+            <input type="number" id="evs-f-points" class="inline-input" style="width:80px" min="0" step="1" value="1">
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="modal-btns" style="justify-content:space-between">
-      <div style="display:flex;gap:8px">
+    <div class="ev-foot">
+      <div id="evs-f-syncnote" style="font-size:0.75rem;color:var(--muted)"></div>
+      <div class="ev-foot-btns">
         <button class="btn-outline" id="evs-delete-btn" style="display:none;border-color:var(--red);color:var(--red)" onclick="deleteEvFromModal()">Delete Event</button>
         <button class="btn-outline" id="evs-att-btn" style="display:none" onclick="takeAttendanceFromModal()">📋 Take attendance</button>
-      </div>
-      <div style="display:flex;gap:10px;margin-left:auto">
+        <span class="spacer"></span>
         <button class="btn-outline" onclick="closeEvModal()">Cancel</button>
         <button class="btn-primary" id="evs-save-btn" onclick="saveEvFromModal()">Save Event</button>
       </div>
@@ -3763,9 +3793,18 @@ function toggleEvAttendanceFields() {
     everyone: 'Roll call lists active ' + evAudienceLabels().brothers.replace(' only', '').toLowerCase() + ' and ' + CHAPTER_CONFIG.labels.label_am_group.toLowerCase() + ' together.'
   };
   document.getElementById('evs-f-att-note').textContent = notes[mode] || '';
+  var labels = evAudienceLabels();
+  document.getElementById('evs-f-att-seg').innerHTML = Object.keys(labels).map(function(k) {
+    return '<button type="button" class="' + (k === mode ? 'active' : '') + '" onclick="setEvAttendance(\'' + k + '\')">' + esc(labels[k]) + '</button>';
+  }).join('');
   var novatoRelevant = mode === 'novatos' || mode === 'everyone';
   document.getElementById('evs-f-novato-wrap').style.display = novatoRelevant ? 'block' : 'none';
   document.getElementById('evs-f-points-wrap').style.display = novatoRelevant && document.getElementById('evs-f-counts').checked ? 'flex' : 'none';
+}
+
+function setEvAttendance(mode) {
+  document.getElementById('evs-f-attendance').value = mode;
+  toggleEvAttendanceFields();
 }
 
 function takeAttendanceFromModal() {

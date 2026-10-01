@@ -34,7 +34,7 @@ function _getEventsSheet(ss) {
     sheet = ss.insertSheet('events');
     sheet.appendRow(EVENT_HEADERS);
     sheet.setFrozenRows(1);
-    sheet.getRange(1, 5, sheet.getMaxRows(), 2).setNumberFormat('@');
+    sheet.getRange(1, 4, sheet.getMaxRows(), 3).setNumberFormat('@');
   }
   // Older installs created the tab before attendance existed: add any missing columns.
   var headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0].map(String);
@@ -44,7 +44,20 @@ function _getEventsSheet(ss) {
     sheet.getRange(1, headers.length + 1).setValue(h);
     headers.push(h);
   });
+  _ensureTextDateColumn(sheet, headers);
   return sheet;
+}
+
+// event_date is stored as plain 'yyyy-MM-dd' text. Real Date cells go through the
+// script/spreadsheet/config timezones twice (write and read) and can land on the
+// neighbouring day; text can't. Converts older tabs that still hold Date cells.
+function _ensureTextDateColumn(sheet, headers) {
+  var col = headers.indexOf('event_date') + 1;
+  if (!col || sheet.getRange(1, col).getNumberFormat() === '@') return;
+  var last = sheet.getLastRow();
+  var texts = last > 1 ? sheet.getRange(2, col, last - 1, 1).getValues().map(function(r) { return [_normDate(r[0])]; }) : [];
+  sheet.getRange(1, col, sheet.getMaxRows(), 1).setNumberFormat('@');
+  if (texts.length) sheet.getRange(2, col, texts.length, 1).setValues(texts);
 }
 
 function _getEventAttendanceSheet(ss) {
@@ -197,7 +210,7 @@ function saveEvent(payloadJson, performedBy) {
 
     var eventId = p.eventId || 'EV' + Utilities.getUuid().replace(/-/g, '').substring(0, 8).toUpperCase();
     var values = {
-      event_id: eventId, title: title, event_type: type, event_date: _parseAMEventDate(date),
+      event_id: eventId, title: title, event_type: type, event_date: date,
       start_time: startTime, end_time: endTime, all_day: allDay, location: ev.location,
       description: ev.description, updated_at: now,
       attendance: mode, counts_for_novatos: countsForNovatos, points: points
@@ -206,12 +219,20 @@ function saveEvent(payloadJson, performedBy) {
       values.created_by = who;
       values.created_at = now;
       values.gcal_event_id = '';
-      sheet.appendRow(EVENT_HEADERS.map(function(h) { return values[h] !== undefined ? values[h] : ''; }));
-      rowNum = sheet.getLastRow();
+      rowNum = sheet.getLastRow() + 1;
+      if (rowNum > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), 50);
+      ['event_date', 'start_time', 'end_time'].forEach(function(k) { sheet.getRange(rowNum, cm[k] + 1).setNumberFormat('@'); });
+      sheet.getRange(rowNum, 1, 1, EVENT_HEADERS.length).setValues([EVENT_HEADERS.map(function(h) { return values[h] !== undefined ? values[h] : ''; })]);
     } else {
+      ['event_date', 'start_time', 'end_time'].forEach(function(k) { sheet.getRange(rowNum, cm[k] + 1).setNumberFormat('@'); });
       Object.keys(values).forEach(function(k) {
         if (cm[k] !== undefined) sheet.getRange(rowNum, cm[k] + 1).setValue(values[k]);
       });
+    }
+    var savedDate = _normDate(sheet.getRange(rowNum, cm['event_date'] + 1).getValue());
+    if (savedDate !== date) {
+      logError('saveEvent', 'date mismatch after save: wrote ' + date + ', read ' + savedDate);
+      return JSON.stringify({ success: false, error: 'The date did not save correctly (wrote ' + date + ', sheet has ' + savedDate + '). Nothing was synced to Google Calendar.' });
     }
 
     // Narrowing the audience drops the recorded attendance of the excluded group.
