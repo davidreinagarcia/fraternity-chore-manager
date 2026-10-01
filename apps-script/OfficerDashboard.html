@@ -723,6 +723,7 @@
               <button id="evs-btn-list" class="action-btn" onclick="setEventsView('list')">📋 List</button>
             </div>
             <button class="btn-primary" style="padding:6px 14px;font-size:0.8rem" onclick="openEvModal('')">+ Add Event</button>
+            <button id="evs-btn-sync" class="btn-outline" style="padding:6px 12px;font-size:0.8rem;display:none" onclick="manualEvSync(this)" title="Send your changes to Google Calendar and bring in the changes made there">↻ Sync</button>
             <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="openEvCalModal()">⚙️ Google Calendar</button>
           </div>
         </div>
@@ -1586,7 +1587,7 @@
 <div class="modal-overlay" id="evs-cal-modal">
   <div class="modal">
     <h3>Google Calendar sync</h3>
-    <p style="font-size:0.82rem;color:var(--muted);margin:8px 0 14px">Events you add, edit or delete here are mirrored automatically to the calendar you pick. Edits made directly in Google Calendar are not pulled back.</p>
+    <p style="font-size:0.82rem;color:var(--muted);margin:8px 0 14px">Events you add, edit or delete here are mirrored automatically to the calendar you pick, and changes made directly in Google Calendar come back here too.</p>
     <div id="evs-cal-loading" style="color:var(--muted);font-size:0.85rem">Loading your calendars...</div>
     <div id="evs-cal-body" style="display:none;flex-direction:column;gap:12px">
       <div>
@@ -1598,6 +1599,16 @@
         <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="createEvCalendar()">Create</button>
       </div>
       <div id="evs-cal-pending" style="display:none;font-size:0.82rem"></div>
+      <div id="evs-tw" style="display:none;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:0.82rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div>
+            <div style="font-weight:700" id="evs-tw-title">Two-way sync</div>
+            <div id="evs-tw-text" style="color:var(--muted);margin-top:3px;line-height:1.45"></div>
+          </div>
+          <button class="btn-outline" id="evs-tw-btn" style="padding:6px 12px;font-size:0.8rem;flex:none" onclick="toggleEvTwoWay(this)">Turn off</button>
+        </div>
+        <ul id="evs-tw-notes" style="display:none;margin:10px 0 0 18px;padding:0;color:var(--muted);line-height:1.45"></ul>
+      </div>
     </div>
     <div class="modal-btns" style="margin-top:16px">
       <button class="btn-outline" onclick="closeEvCalModal()">Close</button>
@@ -3668,6 +3679,12 @@ var evsSeries = {};
 var evsPending = 0;
 var evsSyncing = false;
 var evsAutoSynced = false;
+var evsTwoWay = { enabled: false, userOff: false };
+var evsTwoWayTried = false;
+var evsPulling = false;
+var evsPullError = '';
+var evsPullNotes = [];
+var evsPollTimer = null;
 var EVS_COLORS = ['#093D20', '#2563eb', '#b45309', '#7c3aed', '#db2777', '#0891b2', '#16a34a', '#64748b'];
 
 function evsTypeColor(type) {
@@ -3675,7 +3692,7 @@ function evsTypeColor(type) {
   return i === -1 ? '#475569' : EVS_COLORS[i % EVS_COLORS.length];
 }
 
-function loadEvents(quiet, autoSync) {
+function loadEvents(quiet, autoSync, noPull) {
   if (!quiet) {
     document.getElementById('evs-loading').style.display = 'block';
     document.getElementById('evs-calendar').style.display = 'none';
@@ -3692,6 +3709,8 @@ function loadEvents(quiet, autoSync) {
       evsCalLinked = r.calendarLinked;
       evsSeries = r.series || {};
       evsPending = r.pendingSync;
+      evsTwoWay = r.twoWay || { enabled: false, userOff: false };
+      document.getElementById('evs-btn-sync').style.display = evsCalLinked ? '' : 'none';
       var typeSel = document.getElementById('evs-list-type');
       var cur = typeSel.value;
       typeSel.innerHTML = '<option value="">All types</option>' + evsTypes.map(function(t) {
@@ -3702,7 +3721,11 @@ function loadEvents(quiet, autoSync) {
         return '<span><i style="background:' + evsTypeColor(t) + '"></i>' + esc(t) + '</span>';
       }).join('');
       renderCurrentEventsView();
-      if (evsCalLinked && evsPending > 0 && (autoSync || (!quiet && !evsAutoSynced))) { evsAutoSynced = true; runEvSync(); }
+      if (!evsCalLinked) { stopEvPoll(); return; }
+      startEvPoll();
+      if (!evsTwoWay.enabled && !evsTwoWay.userOff && !evsTwoWayTried) { evsTwoWayTried = true; setEvTwoWay(true, true); return; }
+      if (evsPending > 0 && (autoSync || (!quiet && !evsAutoSynced))) { evsAutoSynced = true; runEvSync(); return; }
+      if (!noPull && evsTwoWay.enabled && !evsSyncing) runEvPull(false);
     })
     .withFailureHandler(function(err) {
       document.getElementById('evs-loading').style.display = 'none';
@@ -3722,6 +3745,9 @@ function renderEvBanner() {
   } else if (evsPending > 0) {
     b.style.display = 'block';
     b.innerHTML = evsPending + ' change(s) are not on Google Calendar yet. <a href="#" onclick="runEvSync();return false" style="color:inherit;font-weight:600">Sync now</a>';
+  } else if (evsPullError) {
+    b.style.display = 'block';
+    b.innerHTML = 'Could not check Google Calendar for changes: ' + esc(evsPullError) + ' <a href="#" onclick="runEvPull(true);return false" style="color:inherit;font-weight:600">Try again</a>';
   } else {
     b.style.display = 'none';
   }
@@ -3729,14 +3755,15 @@ function renderEvBanner() {
 
 // Pushes pending changes to Google Calendar in server-side batches (each call is
 // time-limited) until nothing is left or a batch makes no progress.
-function runEvSync() {
-  if (evsSyncing || !evsCalLinked) return;
+function runEvSync(done) {
+  if (evsSyncing || !evsCalLinked) { if (done) done(); return; }
   evsSyncing = true;
   renderEvBanner();
   function finish(msg) {
     evsSyncing = false;
     if (msg) showToast(msg);
-    loadEvents(true);
+    loadEvents(true, false, !!done);
+    if (done) done();
   }
   function step() {
     google.script.run
@@ -3751,6 +3778,113 @@ function runEvSync() {
       .syncPendingEvents('Officer');
   }
   step();
+}
+
+// Brings in what changed inside Google Calendar (edits, moves, deletions, new events).
+function runEvPull(manual, done) {
+  function end() { if (done) done(); }
+  if (evsPulling || !evsCalLinked) { end(); return; }
+  evsPulling = true;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      evsPulling = false;
+      var r = JSON.parse(json);
+      if (!r.success) {
+        evsPullError = r.error || 'unknown error';
+        renderEvBanner();
+        if (manual) showToast('Google Calendar check failed: ' + evsPullError);
+        end();
+        return;
+      }
+      evsPullError = '';
+      evsPullNotes = r.notes || [];
+      renderEvBanner();
+      renderEvTwoWay();
+      if (r.busy) { if (manual) showToast('Another sync is running, try again in a moment.'); end(); return; }
+      if (r.changed) {
+        showToast(r.message);
+        loadEvents(true, false, true);
+      } else if (manual) {
+        showToast(evsPullNotes.length ? evsPullNotes[0] : 'Everything is up to date with Google Calendar.');
+      }
+      end();
+    })
+    .withFailureHandler(function(err) {
+      evsPulling = false;
+      evsPullError = (err && err.message) || String(err);
+      renderEvBanner();
+      if (manual) showToast('Google Calendar check failed: ' + evsPullError);
+      end();
+    })
+    .pullCalendarChanges('Officer');
+}
+
+function manualEvSync(btn) {
+  window.bfBusy(btn, true);
+  function finish() { window.bfBusy(btn, false); }
+  if (evsPending > 0) runEvSync(function() { runEvPull(true, finish); });
+  else runEvPull(true, finish);
+}
+
+function startEvPoll() {
+  if (evsPollTimer) return;
+  evsPollTimer = setInterval(function() {
+    var sec = document.getElementById('sec-events');
+    if (!sec || !sec.classList.contains('on') || document.hidden) return;
+    if (!evsCalLinked || !evsTwoWay.enabled || evsSyncing || evsPulling) return;
+    if (document.querySelector('.modal-overlay.open')) return;
+    if (evsPending > 0) { runEvSync(); return; }
+    runEvPull(false);
+  }, 60000);
+}
+
+function stopEvPoll() {
+  if (evsPollTimer) { clearInterval(evsPollTimer); evsPollTimer = null; }
+}
+
+function renderEvTwoWay() {
+  var box = document.getElementById('evs-tw');
+  if (!box) return;
+  if (!evsCalLinked) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  var on = evsTwoWay.enabled;
+  document.getElementById('evs-tw-title').textContent = on ? 'Two-way sync is on' : 'Two-way sync is off';
+  document.getElementById('evs-tw-text').textContent = on
+    ? 'Changes made in Google Calendar (edits, moves, deletions and new events) show up here within a few minutes. If both sides change the same event, the most recent edit wins. Events created in Google Calendar arrive with the default type and no attendance tracking, so edit them here to change that.'
+    : 'Only changes made here go to Google Calendar. Turn this on to also bring in changes made in Google Calendar.';
+  var btn = document.getElementById('evs-tw-btn');
+  btn.textContent = on ? 'Turn off' : 'Turn on';
+  var ul = document.getElementById('evs-tw-notes');
+  ul.style.display = on && evsPullNotes.length ? 'block' : 'none';
+  ul.innerHTML = evsPullNotes.map(function(n) { return '<li>' + esc(n) + '</li>'; }).join('');
+}
+
+function toggleEvTwoWay(btn) {
+  setEvTwoWay(!evsTwoWay.enabled, false, btn);
+}
+
+function setEvTwoWay(on, auto, btn) {
+  if (btn) btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      if (btn) btn.disabled = false;
+      var r = JSON.parse(json);
+      if (!r.success) {
+        if (!auto) showToast('Error: ' + r.error);
+        else { evsPullError = r.error; renderEvBanner(); }
+        return;
+      }
+      evsTwoWay = { enabled: !!r.enabled, userOff: !r.enabled };
+      renderEvTwoWay();
+      showToast(auto ? 'Two-way sync with Google Calendar is now on: changes made there will show up here.' : r.message);
+      if (r.enabled) runEvPull(false);
+    })
+    .withFailureHandler(function(err) {
+      if (btn) btn.disabled = false;
+      if (auto) { evsPullError = (err && err.message) || String(err); renderEvBanner(); }
+      else onError(err);
+    })
+    .setCalendarTwoWay(on, 'Officer');
 }
 
 function setEventsView(view, skipRender) {
@@ -4396,6 +4530,7 @@ function openEvCalModal() {
           return '<option value="' + esc(c.id) + '"' + (c.id === r.currentId ? ' selected' : '') + '>' + esc(c.name) + (c.owned ? '' : ' (shared)') + '</option>';
         }).join('');
       renderEvCalPending();
+      renderEvTwoWay();
     })
     .withFailureHandler(function(err) {
       document.getElementById('evs-cal-loading').textContent = 'Error: ' + (err.message || err);

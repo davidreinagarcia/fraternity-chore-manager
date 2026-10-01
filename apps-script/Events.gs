@@ -173,7 +173,7 @@ function getEventsData() {
     var queued = ss.getSheetByName('event_gcal_deletes');
     if (queued && queued.getLastRow() > 1) pending += queued.getLastRow() - 1;
     var calId = String(getConfigValue('events_calendar_id') || '').trim();
-    return JSON.stringify({ success: true, events: events, types: _getEventTypes(), calendarLinked: !!calId, pendingSync: pending, series: series });
+    return JSON.stringify({ success: true, events: events, types: _getEventTypes(), calendarLinked: !!calId, pendingSync: pending, series: series, twoWay: calId ? _twoWayInfo() : { enabled: false, userOff: false } });
   } catch (err) { logError('getEventsData', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
 
@@ -370,7 +370,7 @@ function _updateEventRec(rec, f, date, now, gcalQueue) {
 }
 
 function _recForCalendar(rec) {
-  return { title: rec.title, location: rec.location, description: rec.description, date: rec.event_date, allDay: rec.all_day, startTime: rec.start_time, endTime: rec.end_time };
+  return { eventId: rec.event_id, title: rec.title, location: rec.location, description: rec.description, date: rec.event_date, allDay: rec.all_day, startTime: rec.start_time, endTime: rec.end_time };
 }
 
 // plan: { eventId: [member types to keep] } ([] removes every entry). Returns how many
@@ -894,6 +894,8 @@ function _syncEventToCalendar(ev, oldGcalId, oldAllDay) {
       return { ok: true, gcalId: existing.getId() };
     }
     var created = ev.allDay ? cal.createAllDayEvent(ev.title, start, opts) : cal.createEvent(ev.title, start, end, opts);
+    // Lets the two-way pull recognise our own entries even before the row has stored their id.
+    if (ev.eventId) { try { created.setTag('frat_event_id', ev.eventId); } catch (_) {} }
     return { ok: true, gcalId: created.getId() };
   } catch (err) {
     logError('_syncEventToCalendar', err);
@@ -979,19 +981,54 @@ function getEventCalendars() {
   } catch (err) { logError('getEventCalendars', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
 
+// Points the dashboard at another calendar. Calendar ids stored in the rows belong to the
+// old calendar, so they are cleared (the rows then count as pending and get copied to the
+// new calendar, the old one keeps its copies) and the two-way triggers follow the new
+// calendar. Returns true when existing events were detached from an old calendar.
+function _switchEventsCalendar(newId) {
+  var oldId = String(getConfigValue('events_calendar_id') || '').trim() || String(getConfigValue('events_calendar_last') || '').trim();
+  var detached = false;
+  if (oldId && oldId !== newId) {
+    var lock = LockService.getScriptLock();
+    if (!lock.tryLock(20000)) throw new Error('The events sheet is busy right now. Try again in a few seconds.');
+    try {
+      var ss = getSpreadsheet();
+      var sheet = ss.getSheetByName('events');
+      if (sheet && sheet.getLastRow() > 1) {
+        var tbl = _loadEventTable(sheet);
+        tbl.recs.forEach(function(r) { if (r.gcal_event_id) { r.gcal_event_id = ''; detached = true; } });
+        _writeEventTable(sheet, tbl);
+      }
+      var q = ss.getSheetByName('event_gcal_deletes');
+      if (q && q.getLastRow() > 1) q.getRange(2, 1, q.getLastRow() - 1, 1).clearContent();
+      setConfigValue('events_calendar_id', newId);
+    } finally { lock.releaseLock(); }
+  } else {
+    setConfigValue('events_calendar_id', newId);
+  }
+  setConfigValue('events_calendar_last', '');
+  try {
+    if (String(getConfigValue('events_twoway') || '').toLowerCase() !== 'off') _installTwoWayTriggers();
+  } catch (e) { logError('_switchEventsCalendar', e); }
+  return detached;
+}
+
 function setEventsCalendar(calendarId, performedBy) {
   try {
     calendarId = String(calendarId || '').trim();
     if (!calendarId) {
+      var prevCal = String(getConfigValue('events_calendar_id') || '').trim();
+      if (prevCal) setConfigValue('events_calendar_last', prevCal);
       setConfigValue('events_calendar_id', '');
+      try { _removeTwoWayTriggers(); } catch (e) { logError('setEventsCalendar', e); }
       _logAudit('setEventsCalendar', '', '', performedBy || 'Officer', 'unlinked');
       return JSON.stringify({ success: true, name: '', message: 'Google Calendar unlinked. Events stay in the sheet only.' });
     }
     var cal = CalendarApp.getCalendarById(calendarId);
     if (!cal) return JSON.stringify({ success: false, error: 'Calendar not found or no access.' });
-    setConfigValue('events_calendar_id', calendarId);
+    var changedCal = _switchEventsCalendar(calendarId);
     _logAudit('setEventsCalendar', '', cal.getName(), performedBy || 'Officer', 'linked');
-    return JSON.stringify({ success: true, name: cal.getName(), message: 'Linked to "' + cal.getName() + '".' });
+    return JSON.stringify({ success: true, name: cal.getName(), message: 'Linked to "' + cal.getName() + '".' + (changedCal ? ' Your events will be copied to it.' : '') });
   } catch (err) { logError('setEventsCalendar', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
 
@@ -999,7 +1036,7 @@ function createEventsCalendar(name, performedBy) {
   try {
     name = String(name || '').trim() || (getChapterConfig().chapter.chapter_name + ' Events');
     var cal = CalendarApp.createCalendar(name);
-    setConfigValue('events_calendar_id', cal.getId());
+    _switchEventsCalendar(cal.getId());
     _logAudit('createEventsCalendar', '', name, performedBy || 'Officer', 'created and linked');
     return JSON.stringify({ success: true, id: cal.getId(), name: name, message: 'Created and linked "' + name + '".' });
   } catch (err) { logError('createEventsCalendar', err); return JSON.stringify({ success: false, error: err.toString() }); }
