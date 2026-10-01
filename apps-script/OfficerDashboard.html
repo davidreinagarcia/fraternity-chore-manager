@@ -3760,7 +3760,7 @@ function toggleEvAttendanceFields() {
     none: 'Nobody is expected to be marked present.',
     brothers: 'Roll call lists active ' + evAudienceLabels().brothers.replace(' only', '').toLowerCase() + '.',
     novatos: 'Roll call lists ' + CHAPTER_CONFIG.labels.label_am_group.toLowerCase() + ' (including inactive ones).',
-    everyone: 'Roll call lists active brothers and associate members together.'
+    everyone: 'Roll call lists active ' + evAudienceLabels().brothers.replace(' only', '').toLowerCase() + ' and ' + CHAPTER_CONFIG.labels.label_am_group.toLowerCase() + ' together.'
   };
   document.getElementById('evs-f-att-note').textContent = notes[mode] || '';
   var novatoRelevant = mode === 'novatos' || mode === 'everyone';
