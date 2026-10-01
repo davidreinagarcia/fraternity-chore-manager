@@ -53,7 +53,8 @@ function getAMPointsData() {
     }
     events.sort(function(a, b) { return a.date.localeCompare(b.date); });
 
-    return JSON.stringify({ success: true, events: events, categories: AM_EVENT_CATEGORIES });
+    // countedEvents: chapter Events (Events.gs) flagged to count toward novato attendance.
+    return JSON.stringify({ success: true, events: events, categories: AM_EVENT_CATEGORIES, countedEvents: _getNovatoCountedEvents() });
   } catch (err) { logError('getAMPointsData', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
 
@@ -174,6 +175,16 @@ function saveAMEventAttendance(eventId, memberIds, performedBy) {
 // merely-inactive AM (leave of absence, co-op, etc.), since that's
 // meant to be temporary and their history should stay intact.
 function _removeAMAttendance(ss, memberId) {
+  var evAtSheet = ss.getSheetByName('event_attendance');
+  if (evAtSheet) {
+    var evData = evAtSheet.getDataRange().getValues();
+    if (evData.length > 1) {
+      var evCM = _buildColMap(evData[0]);
+      for (var k = evData.length - 1; k >= 1; k--) {
+        if (String(evData[k][evCM['member_id']]) === String(memberId) && String(evData[k][evCM['member_type']]) === 'novato') evAtSheet.deleteRow(k + 1);
+      }
+    }
+  }
   var atSheet = ss.getSheetByName('am_attendance');
   if (!atSheet) return;
   var data = atSheet.getDataRange().getValues();

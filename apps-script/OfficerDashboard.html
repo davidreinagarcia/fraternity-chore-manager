@@ -707,13 +707,14 @@
             <span style="font-size:0.8rem;color:var(--muted);margin-left:auto"><strong id="evs-list-count">0</strong> events</span>
           </div>
           <div class="card-body" style="overflow-x:auto;padding:12px 16px">
-            <table class="data-table" style="min-width:860px">
+            <table class="data-table" style="min-width:1000px">
               <thead><tr>
                 <th style="width:130px">Date</th>
                 <th style="width:150px">Time</th>
                 <th>Title</th>
                 <th style="width:120px">Type</th>
-                <th style="width:160px">Location</th>
+                <th style="width:150px">Location</th>
+                <th style="width:170px">Attendance</th>
                 <th style="width:60px">Cal</th>
                 <th style="width:90px">Actions</th>
               </tr></thead>
@@ -1465,14 +1466,55 @@
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Description</label>
         <textarea id="evs-f-desc" class="inline-input" style="width:100%;min-height:70px;resize:vertical" placeholder="Optional"></textarea>
       </div>
+      <div style="border-top:1px solid var(--border);padding-top:12px">
+        <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Mandatory attendance</label>
+        <select id="evs-f-attendance" class="inline-input" style="width:100%" onchange="toggleEvAttendanceFields()"></select>
+        <div id="evs-f-att-note" style="font-size:0.72rem;color:var(--muted);margin-top:4px"></div>
+      </div>
+      <div id="evs-f-novato-wrap" style="display:none;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
+          <input type="checkbox" id="evs-f-counts" style="width:16px;height:16px" onchange="toggleEvAttendanceFields()"> Counts toward the <span id="evs-f-counts-lbl"></span> attendance %
+        </label>
+        <div id="evs-f-points-wrap" style="display:none;margin-top:8px;align-items:center;gap:8px;font-size:0.8rem">
+          <span>Weight (points)</span>
+          <input type="number" id="evs-f-points" class="inline-input" style="width:80px" min="0" step="1" value="1">
+        </div>
+      </div>
       <div id="evs-f-syncnote" style="font-size:0.75rem;color:var(--muted)"></div>
     </div>
     <div class="modal-btns" style="justify-content:space-between">
-      <button class="btn-outline" id="evs-delete-btn" style="display:none;border-color:var(--red);color:var(--red)" onclick="deleteEvFromModal()">Delete Event</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-outline" id="evs-delete-btn" style="display:none;border-color:var(--red);color:var(--red)" onclick="deleteEvFromModal()">Delete Event</button>
+        <button class="btn-outline" id="evs-att-btn" style="display:none" onclick="takeAttendanceFromModal()">📋 Take attendance</button>
+      </div>
       <div style="display:flex;gap:10px;margin-left:auto">
         <button class="btn-outline" onclick="closeEvModal()">Cancel</button>
         <button class="btn-primary" id="evs-save-btn" onclick="saveEvFromModal()">Save Event</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Events: Roll call modal -->
+<div class="modal-overlay" id="evs-att-modal">
+  <div class="modal modal-lg">
+    <h3 id="evs-att-title">Take attendance</h3>
+    <p id="evs-att-sub" style="font-size:0.85rem;color:var(--muted);margin-bottom:14px"></p>
+    <div id="evs-att-loading" style="color:var(--muted);font-size:0.85rem;padding:12px 0">Loading roster...</div>
+    <div id="evs-att-body" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <input type="text" id="evs-att-search" class="inline-input" placeholder="Search name..." style="width:220px" oninput="filterEvAtt()">
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn-outline" style="padding:4px 10px;font-size:0.75rem" onclick="evAttSelectVisible(true)">Check shown</button>
+          <button class="btn-outline" style="padding:4px 10px;font-size:0.75rem" onclick="evAttSelectVisible(false)">Clear shown</button>
+          <span style="font-size:0.8rem;color:var(--muted)"><strong id="evs-att-count">0</strong> present</span>
+        </div>
+      </div>
+      <div class="am-att-list" id="evs-att-list"></div>
+    </div>
+    <div class="modal-btns" style="margin-top:16px">
+      <button class="btn-outline" onclick="closeEvAttModal()">Cancel</button>
+      <button class="btn-primary" id="evs-att-save" onclick="saveEvAtt()" disabled>Save Attendance</button>
     </div>
   </div>
 </div>
@@ -2850,6 +2892,7 @@ function confirmFlagFraud() {
 var mmData = [];
 var mmFilter = 'all';
 var amEventsData = [];
+var amCountedEvents = []; // chapter Events flagged to count toward novato attendance %
 var amEventsLoaded = false;
 var amEventCategories = ['Kappa', 'Beta', 'Rho', 'Epsilon', 'Theta', 'Phi', 'Semi', 'Misc'];
 // Server-rendered 'yyyy-MM-dd' (America/New_York) — used instead of the
@@ -3152,7 +3195,7 @@ function filterAlumniTab() {
 // Separate from m.points (manual/bonus — quiz average, one-off awards, signatures).
 function amEventStatsFor(memberId) {
   var earned = 0, available = 0, toDateEarned = 0, toDateAvailable = 0;
-  amEventsData.forEach(function(ev) {
+  amEventsData.concat(amCountedEvents).forEach(function(ev) {
     if (!ev.active) return;
     var attended = ev.attendees.indexOf(memberId) !== -1;
     available += ev.points;
@@ -3246,7 +3289,7 @@ function ensureAMEventsLoaded(cb) {
   google.script.run
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
-      if (r.success) { amEventsData = r.events; amEventCategories = r.categories || amEventCategories; amEventsLoaded = true; }
+      if (r.success) { amEventsData = r.events; amCountedEvents = r.countedEvents || []; amEventCategories = r.categories || amEventCategories; amEventsLoaded = true; }
       cb();
     })
     .withFailureHandler(function(err) { onError(err); cb(); })
@@ -3672,7 +3715,7 @@ function renderEvList() {
   });
   document.getElementById('evs-list-count').textContent = filtered.length;
   var tbody = document.getElementById('evs-tbody');
-  if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No events found.</td></tr>'; return; }
+  if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No events found.</td></tr>'; return; }
   tbody.innerHTML = filtered.map(function(ev) {
     var past = ev.date < SERVER_TODAY;
     var sync = !evsCalLinked ? '<span style="color:var(--muted)">—</span>'
@@ -3684,6 +3727,7 @@ function renderEvList() {
       '<td><strong>' + esc(ev.title) + '</strong></td>' +
       '<td><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:' + evsTypeColor(ev.type) + ';margin-right:6px"></span>' + esc(ev.type) + '</td>' +
       '<td>' + esc(ev.location) + '</td>' +
+      '<td>' + evAttendanceCell(ev) + '</td>' +
       '<td style="text-align:center">' + sync + '</td>' +
       '<td style="white-space:nowrap;text-align:right">' +
         '<button class="qa-btn" title="Edit event" onclick="openEvModal(\'' + ev.eventId + '\')">✏️</button> ' +
@@ -3691,6 +3735,141 @@ function renderEvList() {
       '</td>' +
     '</tr>';
   }).join('');
+}
+
+function evAudienceLabels() {
+  var L = CHAPTER_CONFIG.labels;
+  var bros = (L.label_active_member || 'Brother') + 's';
+  var novs = L.label_am_group || 'Associate Members';
+  return { none: 'No mandatory attendance', brothers: bros + ' only', novatos: novs + ' only', everyone: 'Everyone (' + bros + ' & ' + novs + ')' };
+}
+
+function evAttendanceCell(ev) {
+  if (ev.attendance === 'none') return '<span style="color:var(--muted);font-size:0.8rem">Not tracked</span>';
+  var L = CHAPTER_CONFIG.labels;
+  var bits = [];
+  if (ev.attendance !== 'novatos') bits.push(ev.brothersAttended + ' ' + (L.label_active_member || 'Brother').toLowerCase() + 's');
+  if (ev.attendance !== 'brothers') bits.push(ev.novatosAttended + ' ' + L.label_am_short.toLowerCase());
+  return '<button class="qa-btn" title="Take attendance" onclick="openEvAttModal(\'' + ev.eventId + '\')">📋 ' + esc(bits.join(' · ')) + '</button>' +
+    '<div style="font-size:0.7rem;color:var(--muted)">' + esc(evAudienceLabels()[ev.attendance]) + (ev.countsForNovatos ? ' · counts for %' : '') + '</div>';
+}
+
+function toggleEvAttendanceFields() {
+  var mode = document.getElementById('evs-f-attendance').value;
+  var notes = {
+    none: 'Nobody is expected to be marked present.',
+    brothers: 'Roll call lists active ' + evAudienceLabels().brothers.replace(' only', '').toLowerCase() + '.',
+    novatos: 'Roll call lists ' + CHAPTER_CONFIG.labels.label_am_group.toLowerCase() + ' (including inactive ones).',
+    everyone: 'Roll call lists active brothers and associate members together.'
+  };
+  document.getElementById('evs-f-att-note').textContent = notes[mode] || '';
+  var novatoRelevant = mode === 'novatos' || mode === 'everyone';
+  document.getElementById('evs-f-novato-wrap').style.display = novatoRelevant ? 'block' : 'none';
+  document.getElementById('evs-f-points-wrap').style.display = novatoRelevant && document.getElementById('evs-f-counts').checked ? 'flex' : 'none';
+}
+
+function takeAttendanceFromModal() {
+  var id = document.getElementById('evs-modal').dataset.eventId || '';
+  if (!id) return;
+  closeEvModal();
+  openEvAttModal(id);
+}
+
+// ---- Roll call ----
+var evsAttPending = null;
+var evsAttRoster = [];
+
+function openEvAttModal(eventId) {
+  evsAttPending = eventId;
+  var ev = evsData.filter(function(e) { return e.eventId === eventId; })[0];
+  document.getElementById('evs-att-title').textContent = ev ? ev.title : 'Take attendance';
+  document.getElementById('evs-att-sub').textContent = ev ? evDateLabel(ev.date) + ' · ' + evAudienceLabels()[ev.attendance] : '';
+  document.getElementById('evs-att-loading').style.display = 'block';
+  document.getElementById('evs-att-body').style.display = 'none';
+  document.getElementById('evs-att-save').disabled = true;
+  document.getElementById('evs-att-search').value = '';
+  document.getElementById('evs-att-modal').classList.add('open');
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (!r.success) { document.getElementById('evs-att-loading').textContent = 'Error: ' + r.error; return; }
+      evsAttRoster = r.roster;
+      var present = {};
+      r.attendees.forEach(function(k) { present[k] = true; });
+      renderEvAttList(present);
+      document.getElementById('evs-att-loading').style.display = 'none';
+      document.getElementById('evs-att-body').style.display = 'block';
+      document.getElementById('evs-att-save').disabled = false;
+    })
+    .withFailureHandler(function(err) { document.getElementById('evs-att-loading').textContent = 'Error: ' + (err.message || err); })
+    .getEventAttendanceData(eventId);
+}
+
+function renderEvAttList(present) {
+  var L = CHAPTER_CONFIG.labels;
+  var groups = [
+    { type: 'brother', title: (L.label_active_member || 'Brother') + 's' },
+    { type: 'novato', title: L.label_am_group }
+  ];
+  var html = '';
+  groups.forEach(function(g) {
+    var members = evsAttRoster.filter(function(m) { return m.type === g.type; });
+    if (!members.length) return;
+    html += '<div class="evs-att-group" style="padding:7px 14px;background:var(--bg);font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;color:var(--muted);border-bottom:1px solid var(--border)">' + esc(g.title) + ' (' + members.length + ')</div>';
+    members.forEach(function(m) {
+      var key = m.type + ':' + m.memberId;
+      var tag = m.former ? ' <span style="color:var(--muted);font-size:0.75rem">(no longer on roster)</span>'
+        : m.inactive ? ' <span style="color:var(--muted);font-size:0.75rem">(inactive)</span>' : '';
+      html += '<label class="am-att-row" data-name="' + esc(m.name.toLowerCase()) + '">' +
+        '<input type="checkbox" data-key="' + esc(key) + '"' + (present[key] ? ' checked' : '') + ' onchange="updateEvAttCount()">' +
+        '<span>' + esc(m.name) + tag + '</span></label>';
+    });
+  });
+  document.getElementById('evs-att-list').innerHTML = html || '<div class="empty-state" style="padding:20px">No one on the roster for this event yet.</div>';
+  updateEvAttCount();
+}
+
+function filterEvAtt() {
+  var q = (document.getElementById('evs-att-search').value || '').toLowerCase();
+  document.querySelectorAll('#evs-att-list .am-att-row').forEach(function(row) {
+    row.style.display = row.dataset.name.indexOf(q) !== -1 ? 'flex' : 'none';
+  });
+}
+
+function evAttSelectVisible(on) {
+  document.querySelectorAll('#evs-att-list .am-att-row').forEach(function(row) {
+    if (row.style.display !== 'none') row.querySelector('input').checked = on;
+  });
+  updateEvAttCount();
+}
+
+function updateEvAttCount() {
+  document.getElementById('evs-att-count').textContent = document.querySelectorAll('#evs-att-list input[type=checkbox]:checked').length;
+}
+
+function closeEvAttModal() {
+  document.getElementById('evs-att-modal').classList.remove('open');
+  evsAttPending = null;
+}
+
+function saveEvAtt() {
+  if (!evsAttPending) return;
+  var attendees = Array.from(document.querySelectorAll('#evs-att-list input[type=checkbox]:checked')).map(function(cb) {
+    var parts = cb.dataset.key.split(':');
+    return { type: parts[0], memberId: parts.slice(1).join(':') };
+  });
+  var btn = document.getElementById('evs-att-save');
+  btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (!r.success) { btn.disabled = false; showToast('Error: ' + r.error); return; }
+      showToast(r.message);
+      closeEvAttModal();
+      loadEvents();
+    })
+    .withFailureHandler(function(err) { btn.disabled = false; onError(err); })
+    .saveEventAttendance(evsAttPending, JSON.stringify(attendees), 'Officer');
 }
 
 // ---- Add / Edit ----
@@ -3714,6 +3893,15 @@ function openEvModal(eventId, dateStr) {
   document.getElementById('evs-f-end').value = ev ? ev.endTime : '20:00';
   document.getElementById('evs-f-location').value = ev ? ev.location : '';
   document.getElementById('evs-f-desc').value = ev ? ev.description : '';
+  var audLabels = evAudienceLabels();
+  document.getElementById('evs-f-attendance').innerHTML = Object.keys(audLabels).map(function(k) {
+    return '<option value="' + k + '"' + (ev && ev.attendance === k ? ' selected' : '') + '>' + esc(audLabels[k]) + '</option>';
+  }).join('');
+  document.getElementById('evs-f-counts-lbl').textContent = CHAPTER_CONFIG.labels.label_am_short;
+  document.getElementById('evs-f-counts').checked = ev ? ev.countsForNovatos : false;
+  document.getElementById('evs-f-points').value = ev ? ev.points : 1;
+  document.getElementById('evs-att-btn').style.display = ev && ev.attendance !== 'none' ? 'inline-block' : 'none';
+  toggleEvAttendanceFields();
   document.getElementById('evs-delete-btn').style.display = ev ? 'inline-block' : 'none';
   document.getElementById('evs-f-syncnote').textContent = evsCalLinked
     ? 'Saving also updates Google Calendar.'
@@ -3737,10 +3925,19 @@ function saveEvFromModal() {
     startTime: document.getElementById('evs-f-start').value,
     endTime: document.getElementById('evs-f-end').value,
     location: document.getElementById('evs-f-location').value,
-    description: document.getElementById('evs-f-desc').value
+    description: document.getElementById('evs-f-desc').value,
+    attendance: document.getElementById('evs-f-attendance').value,
+    countsForNovatos: document.getElementById('evs-f-counts').checked,
+    points: document.getElementById('evs-f-points').value
   };
   if (!payload.title) { showToast('Enter an event title.'); return; }
   if (!payload.date) { showToast('Pick a date.'); return; }
+  var prev = payload.eventId ? evsData.filter(function(e) { return e.eventId === payload.eventId; })[0] : null;
+  if (prev) {
+    var keep = { none: [], brothers: ['brother'], novatos: ['novato'], everyone: ['brother', 'novato'] }[payload.attendance];
+    var lost = (keep.indexOf('brother') === -1 ? prev.brothersAttended : 0) + (keep.indexOf('novato') === -1 ? prev.novatosAttended : 0);
+    if (lost > 0 && !confirm('Changing who this event is for deletes ' + lost + ' recorded attendance entr' + (lost === 1 ? 'y' : 'ies') + ' of the excluded group. Continue?')) return;
+  }
   var btn = document.getElementById('evs-save-btn');
   btn.disabled = true;
   google.script.run

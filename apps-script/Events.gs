@@ -8,8 +8,17 @@
 // Separate from AM Events (AMEvents.gs), which stays as its own point system.
 // ============================================================
 
-var EVENT_HEADERS = ['event_id', 'title', 'event_type', 'event_date', 'start_time', 'end_time', 'all_day', 'location', 'description', 'gcal_event_id', 'created_by', 'created_at', 'updated_at'];
+// attendance: 'none' | 'brothers' | 'novatos' | 'everyone' (who is expected;
+// anything but 'none' means a roll call is taken). counts_for_novatos feeds the
+// event into the novato attendance % (AM Manager) with `points` weight.
+var EVENT_HEADERS = ['event_id', 'title', 'event_type', 'event_date', 'start_time', 'end_time', 'all_day', 'location', 'description', 'gcal_event_id', 'created_by', 'created_at', 'updated_at', 'attendance', 'counts_for_novatos', 'points'];
+var EVENT_ATTENDANCE_HEADERS = ['event_id', 'member_id', 'member_name', 'member_type', 'marked_by', 'marked_at'];
+var EVENT_ATTENDANCE_MODES = ['none', 'brothers', 'novatos', 'everyone'];
 var EVENT_TYPES_DEFAULT = 'Chapter,Social,Brotherhood,Philanthropy,Recruitment,Other';
+
+function _audienceTypes(mode) {
+  return { brothers: ['brother'], novatos: ['novato'], everyone: ['brother', 'novato'] }[mode] || [];
+}
 
 function _getEventTypes() {
   var raw = String(getChapterConfig().options.event_types || EVENT_TYPES_DEFAULT);
@@ -27,7 +36,54 @@ function _getEventsSheet(ss) {
     sheet.setFrozenRows(1);
     sheet.getRange(1, 5, sheet.getMaxRows(), 2).setNumberFormat('@');
   }
+  // Older installs created the tab before attendance existed: add any missing columns.
+  var headers = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0].map(String);
+  EVENT_HEADERS.forEach(function(h) {
+    if (headers.indexOf(h) !== -1) return;
+    if (sheet.getMaxColumns() < headers.length + 1) sheet.insertColumnAfter(sheet.getMaxColumns());
+    sheet.getRange(1, headers.length + 1).setValue(h);
+    headers.push(h);
+  });
   return sheet;
+}
+
+function _getEventAttendanceSheet(ss) {
+  var sheet = ss.getSheetByName('event_attendance');
+  if (!sheet) {
+    sheet = ss.insertSheet('event_attendance');
+    sheet.appendRow(EVENT_ATTENDANCE_HEADERS);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+// Attendance rows grouped by event: { eventId: [{ memberId, name, type }] }
+function _readEventAttendance(ss) {
+  var sheet = ss.getSheetByName('event_attendance');
+  var out = {};
+  if (!sheet) return out;
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return out;
+  var cm = _buildColMap(data[0]);
+  for (var i = 1; i < data.length; i++) {
+    var eid = String(data[i][cm['event_id']]);
+    if (!eid) continue;
+    if (!out[eid]) out[eid] = [];
+    out[eid].push({ memberId: String(data[i][cm['member_id']]), name: String(data[i][cm['member_name']] || ''), type: String(data[i][cm['member_type']]) });
+  }
+  return out;
+}
+
+// Deletes this event's attendance rows except those whose member_type is in keepTypes.
+function _pruneEventAttendance(ss, eventId, keepTypes) {
+  var sheet = ss.getSheetByName('event_attendance');
+  if (!sheet) return;
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return;
+  var cm = _buildColMap(data[0]);
+  for (var i = data.length - 1; i >= 1; i--) {
+    if (String(data[i][cm['event_id']]) === String(eventId) && keepTypes.indexOf(String(data[i][cm['member_type']])) === -1) sheet.deleteRow(i + 1);
+  }
 }
 
 function _normTime(v) {
@@ -39,7 +95,14 @@ function _normTime(v) {
 
 function _eventFromRow(r, cm) {
   var allDayRaw = r[cm['all_day']];
+  var mode = String(r[cm['attendance']] || 'none').toLowerCase();
+  if (EVENT_ATTENDANCE_MODES.indexOf(mode) === -1) mode = 'none';
+  var countsRaw = r[cm['counts_for_novatos']];
+  var pointsRaw = r[cm['points']];
   return {
+    attendance: mode,
+    countsForNovatos: countsRaw === true || String(countsRaw).toUpperCase() === 'TRUE',
+    points: (pointsRaw === '' || pointsRaw === undefined) ? 1 : (Number(pointsRaw) || 0),
     eventId: String(r[cm['event_id']]),
     title: String(r[cm['title']] || ''),
     type: String(r[cm['event_type']] || ''),
@@ -62,15 +125,19 @@ function _addOneHour(hhmm) {
 function getEventsData() {
   try {
     var ss = getSpreadsheet();
-    var sheet = ss.getSheetByName('events');
+    var sheet = ss.getSheetByName('events') ? _getEventsSheet(ss) : null;
     var data = sheet ? sheet.getDataRange().getValues() : [];
     var cm = data.length ? _buildColMap(data[0]) : {};
+    var attByEvent = _readEventAttendance(ss);
     var events = [];
     var pending = 0;
     for (var i = 1; i < data.length; i++) {
       if (!data[i].join('').trim()) continue;
       var ev = _eventFromRow(data[i], cm);
       if (!ev.gcalEventId) pending++;
+      var att = attByEvent[ev.eventId] || [];
+      ev.brothersAttended = att.filter(function(a) { return a.type === 'brother'; }).length;
+      ev.novatosAttended = att.filter(function(a) { return a.type === 'novato'; }).length;
       events.push(ev);
     }
     events.sort(function(a, b) { return (a.date + (a.startTime || '00:00')).localeCompare(b.date + (b.startTime || '00:00')); });
@@ -104,6 +171,11 @@ function saveEvent(payloadJson, performedBy) {
     var data = sheet.getDataRange().getValues();
     var cm = _buildColMap(data[0]);
     var now = new Date().toISOString();
+    var mode = String(p.attendance || 'none').toLowerCase();
+    if (EVENT_ATTENDANCE_MODES.indexOf(mode) === -1) mode = 'none';
+    var countsForNovatos = (mode === 'novatos' || mode === 'everyone') && !!p.countsForNovatos;
+    var points = p.points === '' || p.points === undefined || p.points === null ? 1 : Number(p.points);
+    if (isNaN(points) || points < 0) return JSON.stringify({ success: false, error: 'Points must be a non-negative number.' });
     var ev = {
       title: title, type: type, date: date, startTime: startTime, endTime: endTime, allDay: allDay,
       location: String(p.location || '').trim(), description: String(p.description || '').trim()
@@ -127,7 +199,8 @@ function saveEvent(payloadJson, performedBy) {
     var values = {
       event_id: eventId, title: title, event_type: type, event_date: _parseAMEventDate(date),
       start_time: startTime, end_time: endTime, all_day: allDay, location: ev.location,
-      description: ev.description, updated_at: now
+      description: ev.description, updated_at: now,
+      attendance: mode, counts_for_novatos: countsForNovatos, points: points
     };
     if (rowNum === -1) {
       values.created_by = who;
@@ -140,6 +213,9 @@ function saveEvent(payloadJson, performedBy) {
         if (cm[k] !== undefined) sheet.getRange(rowNum, cm[k] + 1).setValue(values[k]);
       });
     }
+
+    // Narrowing the audience drops the recorded attendance of the excluded group.
+    if (p.eventId) _pruneEventAttendance(ss, eventId, _audienceTypes(mode));
 
     var sync = _syncEventToCalendar(ev, oldGcalId, oldAllDay);
     if (sync.gcalId !== undefined && sync.gcalId !== oldGcalId) {
@@ -172,11 +248,131 @@ function deleteEvent(eventId, performedBy) {
         } catch (e) { calendarError = e.toString(); logError('deleteEvent.calendar', e); }
       }
       sheet.deleteRow(i + 1);
+      _pruneEventAttendance(ss, eventId, []);
       _logAudit('deleteEvent', eventId, ev.title, performedBy || 'Officer', 'deleted' + (calendarError ? ' [calendar delete failed]' : ''));
       return JSON.stringify({ success: true, message: 'Event deleted.', calendarError: calendarError });
     }
     return JSON.stringify({ success: false, error: 'Event not found.' });
   } catch (err) { logError('deleteEvent', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// ---- Attendance ------------------------------------------------
+
+function _findEvent(ss, eventId) {
+  var sheet = ss.getSheetByName('events');
+  if (!sheet) return null;
+  var data = sheet.getDataRange().getValues();
+  if (!data.length) return null;
+  var cm = _buildColMap(data[0]);
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][cm['event_id']]) === String(eventId)) return _eventFromRow(data[i], cm);
+  }
+  return null;
+}
+
+// Who can be marked for an event: active brothers and/or novatos (associate or
+// inactive, same as AM Events), limited to the event's audience.
+function _eventRoster(mode) {
+  var types = _audienceTypes(mode);
+  var roster = [];
+  if (types.indexOf('brother') !== -1) {
+    _getMembersStructured().forEach(function(m) {
+      if (m.status.toLowerCase() === 'active') roster.push({ memberId: m.memberId, name: m.name, type: 'brother' });
+    });
+  }
+  if (types.indexOf('novato') !== -1) {
+    _getMembersStructured('AMs').forEach(function(m) {
+      var st = m.status.toLowerCase();
+      if (st === 'associate' || st === 'inactive') roster.push({ memberId: m.memberId, name: m.name, type: 'novato', inactive: st === 'inactive' });
+    });
+  }
+  roster.sort(function(a, b) { return a.name.localeCompare(b.name); });
+  return roster;
+}
+
+// Roster for the roll-call modal plus the saved attendee keys ('type:memberId').
+// Attendees who have since left the roster (alumni, dissociated, status change)
+// are appended as `former` so they stay visible and are not silently dropped on save.
+function getEventAttendanceData(eventId) {
+  try {
+    var ss = getSpreadsheet();
+    var ev = _findEvent(ss, eventId);
+    if (!ev) return JSON.stringify({ success: false, error: 'Event not found.' });
+    if (ev.attendance === 'none') return JSON.stringify({ success: false, error: 'This event has no attendance requirement.' });
+    var roster = _eventRoster(ev.attendance);
+    var attendees = (_readEventAttendance(ss)[eventId] || []);
+    var inRoster = {};
+    roster.forEach(function(m) { inRoster[m.type + ':' + m.memberId] = true; });
+    attendees.forEach(function(a) {
+      if (!inRoster[a.type + ':' + a.memberId]) roster.push({ memberId: a.memberId, name: a.name || a.memberId, type: a.type, former: true });
+    });
+    return JSON.stringify({
+      success: true,
+      event: { eventId: ev.eventId, title: ev.title, date: ev.date, attendance: ev.attendance, countsForNovatos: ev.countsForNovatos },
+      roster: roster,
+      attendees: attendees.map(function(a) { return a.type + ':' + a.memberId; })
+    });
+  } catch (err) { logError('getEventAttendanceData', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// Replaces the full attendee list for one event. attendeesJson: [{ memberId, type }].
+// Each row snapshots the member's name so the record stays readable if they leave the roster.
+function saveEventAttendance(eventId, attendeesJson, performedBy) {
+  try {
+    var ss = getSpreadsheet();
+    var ev = _findEvent(ss, eventId);
+    if (!ev) return JSON.stringify({ success: false, error: 'Event not found.' });
+    var allowed = _audienceTypes(ev.attendance);
+    if (!allowed.length) return JSON.stringify({ success: false, error: 'This event has no attendance requirement.' });
+
+    var names = {};
+    _getMembersStructured().forEach(function(m) { names['brother:' + m.memberId] = m.name; });
+    _getMembersStructured('AMs').forEach(function(m) { names['novato:' + m.memberId] = m.name; });
+    var previous = _readEventAttendance(ss)[eventId] || [];
+    previous.forEach(function(a) { if (!names[a.type + ':' + a.memberId]) names[a.type + ':' + a.memberId] = a.name; });
+
+    var who = performedBy || 'Officer';
+    var now = new Date().toISOString();
+    var seen = {}, rows = [];
+    JSON.parse(attendeesJson || '[]').forEach(function(a) {
+      var key = a.type + ':' + a.memberId;
+      if (allowed.indexOf(a.type) === -1 || seen[key]) return;
+      seen[key] = true;
+      rows.push([eventId, String(a.memberId), names[key] || '', a.type, who, now]);
+    });
+
+    var sheet = _getEventAttendanceSheet(ss);
+    _pruneEventAttendance(ss, eventId, []);
+    if (rows.length) sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, EVENT_ATTENDANCE_HEADERS.length).setValues(rows);
+
+    _logAudit('saveEventAttendance', eventId, ev.title, who, rows.length + ' attendee(s)');
+    return JSON.stringify({ success: true, message: 'Attendance saved: ' + rows.length + ' present.' });
+  } catch (err) { logError('saveEventAttendance', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// Events flagged "counts toward novato attendance", shaped like the AM Events
+// entries so the AM Manager's Att.% can sum them with the category events.
+function _getNovatoCountedEvents() {
+  try {
+    var ss = getSpreadsheet();
+    var sheet = ss.getSheetByName('events');
+    if (!sheet) return [];
+    var data = sheet.getDataRange().getValues();
+    if (data.length < 2) return [];
+    var cm = _buildColMap(data[0]);
+    var attByEvent = _readEventAttendance(ss);
+    var out = [];
+    for (var i = 1; i < data.length; i++) {
+      if (!data[i].join('').trim()) continue;
+      var ev = _eventFromRow(data[i], cm);
+      if (!ev.countsForNovatos || (ev.attendance !== 'novatos' && ev.attendance !== 'everyone')) continue;
+      out.push({
+        eventId: ev.eventId, title: ev.title, date: ev.date, points: ev.points, active: true,
+        attendees: (attByEvent[ev.eventId] || []).filter(function(a) { return a.type === 'novato'; }).map(function(a) { return a.memberId; })
+      });
+    }
+    return out;
+  } catch (err) { logError('_getNovatoCountedEvents', err); return []; }
 }
 
 // ---- Google Calendar -------------------------------------------
