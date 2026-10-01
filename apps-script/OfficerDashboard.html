@@ -342,7 +342,16 @@
   .ev-lbl { font-size:0.75rem; font-weight:600; display:block; margin-bottom:4px; }
   .ev-row { display:flex; gap:12px; }
   .ev-row > div { flex:1; min-width:0; }
-  .ev-card textarea.inline-input { flex:1; min-height:120px; resize:vertical; margin:0; }
+  .ev-card textarea.inline-input { flex:1; min-height:70px; resize:vertical; margin:0; }
+  .ev-rep { background:white; border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:10px; font-size:0.82rem; }
+  .ev-rep-line { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .ev-rep-line label.opt { display:flex; align-items:center; gap:6px; cursor:pointer; }
+  .ev-dow { display:flex; gap:6px; }
+  .ev-dow button { width:32px; height:32px; border-radius:50%; border:2px solid var(--border); background:white; color:var(--text); font-size:0.75rem; font-weight:700; cursor:pointer; padding:0; }
+  .ev-dow button.on { background:var(--primary); border-color:var(--primary); color:var(--gold); }
+  .ev-rep-sum { font-size:0.75rem; color:var(--muted); }
+  .ev-scope-opt { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; cursor:pointer; font-size:0.88rem; margin-bottom:8px; }
+  .ev-scope-opt:has(input:checked) { border-color:var(--primary); background:#f1f7f3; }
   .ev-seg { display:flex; flex-wrap:wrap; gap:8px; }
   .ev-seg button { background:white; color:var(--text); border:2px solid var(--border); border-radius:999px; padding:8px 16px; font-size:0.82rem; font-weight:600; cursor:pointer; }
   .ev-seg button:hover { border-color:var(--primary); }
@@ -389,6 +398,8 @@
   .am-att-row:last-child { border-bottom:none; }
   .am-att-row input { width:16px; height:16px; cursor:pointer; }
   .fc-event { cursor:pointer; }
+  #evs-calendar { --fc-today-bg-color: transparent; }
+  #evs-calendar .fc-day-today .fc-daygrid-day-number { background:var(--primary); color:var(--gold); border-radius:999px; min-width:26px; text-align:center; padding:2px 6px; margin:4px; }
   .fc-event-retired { opacity:0.45; }
   @media (max-width: 768px) {
     .container { padding: 12px 10px; }
@@ -1467,7 +1478,7 @@
             </div>
             <div>
               <label class="ev-lbl">Date</label>
-              <input type="date" id="evs-f-date" class="inline-input" style="width:100%">
+              <input type="date" id="evs-f-date" class="inline-input" style="width:100%" onchange="onEvDateChange()">
             </div>
           </div>
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
@@ -1489,6 +1500,28 @@
           <div>
             <label class="ev-lbl">Location</label>
             <input type="text" id="evs-f-location" class="inline-input" style="width:100%" placeholder="Optional">
+          </div>
+          <div>
+            <label class="ev-lbl">Repeat</label>
+            <select id="evs-f-repeat" class="inline-input" style="width:100%" onchange="onEvRepeatChange()"></select>
+            <div class="ev-rep-sum" id="evs-f-rep-sum" style="display:none;margin-top:4px"></div>
+          </div>
+          <div id="evs-f-rep-custom" class="ev-rep" style="display:none">
+            <div class="ev-rep-line">
+              <span>Repeat every</span>
+              <input type="number" id="evs-f-rep-int" class="inline-input" min="1" max="99" value="1" style="width:64px" oninput="updateEvRepSummary()">
+              <select id="evs-f-rep-unit" class="inline-input" onchange="onEvRepUnitChange()">
+                <option value="daily">day(s)</option><option value="weekly">week(s)</option><option value="monthly">month(s)</option><option value="yearly">year(s)</option>
+              </select>
+            </div>
+            <div id="evs-f-rep-dow-wrap" class="ev-rep-line"><span>On</span><div class="ev-dow" id="evs-f-rep-dow"></div></div>
+            <div id="evs-f-rep-month-wrap" class="ev-rep-line"><select id="evs-f-rep-month" class="inline-input" style="width:100%" onchange="updateEvRepSummary()"></select></div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <span style="font-weight:600">Ends</span>
+              <label class="opt ev-rep-line"><input type="radio" name="evs-rep-ends" value="never" checked onchange="updateEvRepSummary()"> Never</label>
+              <label class="opt ev-rep-line"><input type="radio" name="evs-rep-ends" value="date" onchange="updateEvRepSummary()"> On <input type="date" id="evs-f-rep-until" class="inline-input" onchange="document.querySelector('input[name=evs-rep-ends][value=date]').checked=true;updateEvRepSummary()"></label>
+              <label class="opt ev-rep-line"><input type="radio" name="evs-rep-ends" value="count" onchange="updateEvRepSummary()"> After <input type="number" id="evs-f-rep-count" class="inline-input" min="1" max="500" value="10" style="width:72px" oninput="document.querySelector('input[name=evs-rep-ends][value=count]').checked=true;updateEvRepSummary()"> occurrences</label>
+            </div>
           </div>
           <div style="display:flex;flex-direction:column;flex:1">
             <label class="ev-lbl">Description</label>
@@ -1569,6 +1602,19 @@
     <div class="modal-btns" style="margin-top:16px">
       <button class="btn-outline" onclick="closeEvCalModal()">Close</button>
       <button class="btn-primary" id="evs-cal-save" onclick="saveEvCalendar()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Events: scope picker for repeating events -->
+<div class="modal-overlay" id="evs-scope-modal">
+  <div class="modal" style="width:400px;max-width:94vw">
+    <h3 id="evs-scope-title">Repeating event</h3>
+    <p id="evs-scope-note" style="font-size:0.8rem;color:var(--muted);margin-top:6px"></p>
+    <div id="evs-scope-opts" style="margin-top:12px"></div>
+    <div class="modal-btns" style="margin-top:12px">
+      <button class="btn-outline" onclick="closeEvScope()">Cancel</button>
+      <button class="btn-primary" id="evs-scope-ok" onclick="confirmEvScope()">OK</button>
     </div>
   </div>
 </div>
@@ -3618,6 +3664,10 @@ var evsTypes = [];
 var evsCalLinked = false;
 var evsView = 'calendar';
 var evsCalendar = null;
+var evsSeries = {};
+var evsPending = 0;
+var evsSyncing = false;
+var evsAutoSynced = false;
 var EVS_COLORS = ['#093D20', '#2563eb', '#b45309', '#7c3aed', '#db2777', '#0891b2', '#16a34a', '#64748b'];
 
 function evsTypeColor(type) {
@@ -3625,11 +3675,13 @@ function evsTypeColor(type) {
   return i === -1 ? '#475569' : EVS_COLORS[i % EVS_COLORS.length];
 }
 
-function loadEvents() {
-  document.getElementById('evs-loading').style.display = 'block';
-  document.getElementById('evs-calendar').style.display = 'none';
-  document.getElementById('evs-list-view').style.display = 'none';
-  setEventsView(evsView, true);
+function loadEvents(quiet, autoSync) {
+  if (!quiet) {
+    document.getElementById('evs-loading').style.display = 'block';
+    document.getElementById('evs-calendar').style.display = 'none';
+    document.getElementById('evs-list-view').style.display = 'none';
+    setEventsView(evsView, true);
+  }
   google.script.run
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
@@ -3638,16 +3690,19 @@ function loadEvents() {
       evsData = r.events;
       evsTypes = r.types;
       evsCalLinked = r.calendarLinked;
+      evsSeries = r.series || {};
+      evsPending = r.pendingSync;
       var typeSel = document.getElementById('evs-list-type');
       var cur = typeSel.value;
       typeSel.innerHTML = '<option value="">All types</option>' + evsTypes.map(function(t) {
         return '<option' + (t === cur ? ' selected' : '') + '>' + esc(t) + '</option>';
       }).join('');
-      renderEvBanner(r.pendingSync);
+      renderEvBanner();
       document.getElementById('evs-legend').innerHTML = evsTypes.map(function(t) {
         return '<span><i style="background:' + evsTypeColor(t) + '"></i>' + esc(t) + '</span>';
       }).join('');
       renderCurrentEventsView();
+      if (evsCalLinked && evsPending > 0 && (autoSync || (!quiet && !evsAutoSynced))) { evsAutoSynced = true; runEvSync(); }
     })
     .withFailureHandler(function(err) {
       document.getElementById('evs-loading').style.display = 'none';
@@ -3656,17 +3711,46 @@ function loadEvents() {
     .getEventsData();
 }
 
-function renderEvBanner(pending) {
+function renderEvBanner() {
   var b = document.getElementById('evs-sync-banner');
   if (!evsCalLinked) {
     b.style.display = 'block';
     b.innerHTML = 'Not syncing to Google Calendar yet. <a href="#" onclick="openEvCalModal();return false" style="color:inherit;font-weight:600">Link a calendar</a> and new events will be added to it automatically.';
-  } else if (pending > 0) {
+  } else if (evsSyncing) {
     b.style.display = 'block';
-    b.innerHTML = pending + ' event(s) are not on Google Calendar yet. <a href="#" onclick="openEvCalModal();return false" style="color:inherit;font-weight:600">Sync them</a>';
+    b.textContent = 'Updating Google Calendar' + (evsPending > 0 ? ' (' + evsPending + ' left)' : '') + '... you can keep working.';
+  } else if (evsPending > 0) {
+    b.style.display = 'block';
+    b.innerHTML = evsPending + ' change(s) are not on Google Calendar yet. <a href="#" onclick="runEvSync();return false" style="color:inherit;font-weight:600">Sync now</a>';
   } else {
     b.style.display = 'none';
   }
+}
+
+// Pushes pending changes to Google Calendar in server-side batches (each call is
+// time-limited) until nothing is left or a batch makes no progress.
+function runEvSync() {
+  if (evsSyncing || !evsCalLinked) return;
+  evsSyncing = true;
+  renderEvBanner();
+  function finish(msg) {
+    evsSyncing = false;
+    if (msg) showToast(msg);
+    loadEvents(true);
+  }
+  function step() {
+    google.script.run
+      .withSuccessHandler(function(json) {
+        var r = JSON.parse(json);
+        if (!r.success) { finish('Google Calendar sync error: ' + r.error); return; }
+        var progress = r.synced + r.deleted;
+        if (r.remaining > 0 && progress > 0) { evsPending = r.remaining; renderEvBanner(); step(); return; }
+        finish(r.remaining > 0 ? r.remaining + ' change(s) could not reach Google Calendar yet' + (r.error ? ': ' + r.error : '') + '.' : '');
+      })
+      .withFailureHandler(function(err) { finish('Google Calendar sync error: ' + ((err && err.message) || err)); })
+      .syncPendingEvents('Officer');
+  }
+  step();
 }
 
 function setEventsView(view, skipRender) {
@@ -3714,7 +3798,7 @@ function renderEvCalendar() {
   var el = document.getElementById('evs-calendar');
   var fcEvents = evsData.map(function(ev) {
     var color = evsTypeColor(ev.type);
-    var e = { id: ev.eventId, title: ev.title, backgroundColor: color, borderColor: color, textColor: '#fff' };
+    var e = { id: ev.eventId, title: (ev.seriesId ? '\u21bb ' : '') + ev.title, backgroundColor: color, borderColor: color, textColor: '#fff' };
     if (ev.allDay) { e.start = ev.date; e.allDay = true; }
     else { e.start = ev.date + 'T' + ev.startTime; e.end = ev.date + 'T' + (ev.endTime || ev.startTime); }
     return e;
@@ -3725,6 +3809,7 @@ function renderEvCalendar() {
     initialDate: SERVER_TODAY,
     now: SERVER_TODAY,
     height: 'auto',
+    eventDisplay: 'block',
     headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
     events: fcEvents,
     dateClick: function(info) { openEvModal('', info.dateStr); },
@@ -3754,7 +3839,7 @@ function renderEvList() {
     return '<tr' + (past ? ' style="opacity:0.55"' : '') + '>' +
       '<td>' + esc(evDateLabel(ev.date)) + '</td>' +
       '<td>' + esc(evTimeLabel(ev)) + '</td>' +
-      '<td><strong>' + esc(ev.title) + '</strong></td>' +
+      '<td><strong>' + esc(ev.title) + '</strong>' + (ev.seriesId ? ' <span title="' + esc(evRuleSummary(evsSeries[ev.seriesId])) + '" style="color:var(--muted)">\u21bb</span>' : '') + '</td>' +
       '<td><span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:' + evsTypeColor(ev.type) + ';margin-right:6px"></span>' + esc(ev.type) + '</td>' +
       '<td>' + esc(ev.location) + '</td>' +
       '<td>' + evAttendanceCell(ev) + '</td>' +
@@ -3911,11 +3996,240 @@ function saveEvAtt() {
     .saveEventAttendance(evsAttPending, JSON.stringify(attendees), 'Officer');
 }
 
-// ---- Add / Edit ----
 function toggleEvAllDay() {
   document.getElementById('evs-f-times').style.display = document.getElementById('evs-f-allday').checked ? 'none' : 'flex';
 }
 
+// ---- Repeat (Google Calendar style) ----
+var EV_DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+var EV_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+var EV_NTH = ['first', 'second', 'third', 'fourth', 'fifth'];
+var evsLastDow = 0;
+
+function evDow(dateStr) {
+  var p = dateStr.split('-');
+  return new Date(Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2]))).getUTCDay();
+}
+function evIsLastWeekday(dateStr) {
+  var p = dateStr.split('-').map(Number);
+  return p[2] + 7 > new Date(Date.UTC(p[0], p[1], 0)).getUTCDate();
+}
+function evDateLong(dateStr) {
+  var p = dateStr.split('-').map(Number);
+  return EV_MONTHS[p[1] - 1] + ' ' + p[2] + ', ' + p[0];
+}
+
+function evMonthOptions(dateStr) {
+  var day = Number(dateStr.substring(8)), name = EV_DOW[evDow(dateStr)];
+  var out = [['dom', 'Monthly on day ' + day]];
+  if (day <= 28) out.push(['nth', 'Monthly on the ' + EV_NTH[Math.ceil(day / 7) - 1] + ' ' + name]);
+  if (evIsLastWeekday(dateStr)) out.push(['last', 'Monthly on the last ' + name]);
+  return out;
+}
+
+function evRepeatOptions(dateStr) {
+  var p = dateStr.split('-').map(Number);
+  var opts = [['none', 'Does not repeat'], ['daily', 'Daily'], ['weekly', 'Weekly on ' + EV_DOW[evDow(dateStr)]]];
+  evMonthOptions(dateStr).forEach(function(o) { opts.push(['monthly-' + o[0], o[1]]); });
+  opts.push(['yearly', 'Annually on ' + EV_MONTHS[p[1] - 1] + ' ' + p[2]]);
+  opts.push(['weekdays', 'Every weekday (Monday to Friday)']);
+  opts.push(['custom', 'Custom...']);
+  return opts;
+}
+
+function evFillRepeatSelect(dateStr, keep) {
+  var sel = document.getElementById('evs-f-repeat');
+  var opts = evRepeatOptions(dateStr);
+  sel.innerHTML = opts.map(function(o) { return '<option value="' + o[0] + '">' + esc(o[1]) + '</option>'; }).join('');
+  var ok = opts.some(function(o) { return o[0] === keep; });
+  sel.value = ok ? keep : (keep && keep.indexOf('monthly') === 0 ? 'monthly-dom' : 'none');
+}
+
+function evFillMonthSelect(dateStr, keep) {
+  var sel = document.getElementById('evs-f-rep-month');
+  var opts = evMonthOptions(dateStr);
+  sel.innerHTML = opts.map(function(o) { return '<option value="' + o[0] + '">' + esc(o[1]) + '</option>'; }).join('');
+  sel.value = opts.some(function(o) { return o[0] === keep; }) ? keep : 'dom';
+}
+
+function evBuildDowPills(selected) {
+  var letters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  document.getElementById('evs-f-rep-dow').innerHTML = letters.map(function(l, i) {
+    return '<button type="button" data-d="' + i + '" title="' + EV_DOW[i] + '" class="' + (selected.indexOf(i) !== -1 ? 'on' : '') + '" onclick="toggleEvDow(this)">' + l + '</button>';
+  }).join('');
+}
+
+function evSelectedDows() {
+  return Array.prototype.map.call(document.querySelectorAll('#evs-f-rep-dow button.on'), function(b) { return Number(b.dataset.d); });
+}
+
+function toggleEvDow(btn) {
+  btn.classList.toggle('on');
+  updateEvRepSummary();
+}
+
+function evEndsValue() {
+  var r = document.querySelector('input[name=evs-rep-ends]:checked');
+  return r ? r.value : 'never';
+}
+
+function onEvRepUnitChange() {
+  var unit = document.getElementById('evs-f-rep-unit').value;
+  document.getElementById('evs-f-rep-dow-wrap').style.display = unit === 'weekly' ? 'flex' : 'none';
+  document.getElementById('evs-f-rep-month-wrap').style.display = unit === 'monthly' ? 'flex' : 'none';
+  updateEvRepSummary();
+}
+
+function resetEvRepCustom() {
+  var date = document.getElementById('evs-f-date').value || SERVER_TODAY;
+  document.getElementById('evs-f-rep-int').value = 1;
+  document.getElementById('evs-f-rep-unit').value = 'weekly';
+  evBuildDowPills([evDow(date)]);
+  evFillMonthSelect(date, 'dom');
+  document.querySelector('input[name=evs-rep-ends][value=never]').checked = true;
+  document.getElementById('evs-f-rep-until').value = '';
+  document.getElementById('evs-f-rep-count').value = 10;
+  onEvRepUnitChange();
+}
+
+function onEvRepeatChange() {
+  var custom = document.getElementById('evs-f-rep-custom');
+  var wantCustom = document.getElementById('evs-f-repeat').value === 'custom';
+  if (wantCustom && custom.style.display === 'none') resetEvRepCustom();
+  custom.style.display = wantCustom ? 'flex' : 'none';
+  updateEvRepSummary();
+}
+
+function onEvDateChange() {
+  var d = document.getElementById('evs-f-date').value;
+  if (!d) return;
+  var newDow = evDow(d);
+  evFillRepeatSelect(d, document.getElementById('evs-f-repeat').value);
+  var pills = evSelectedDows();
+  if (pills.length === 1 && pills[0] === evsLastDow) evBuildDowPills([newDow]);
+  evFillMonthSelect(d, document.getElementById('evs-f-rep-month').value);
+  evsLastDow = newDow;
+  document.getElementById('evs-f-rep-custom').style.display = document.getElementById('evs-f-repeat').value === 'custom' ? 'flex' : 'none';
+  updateEvRepSummary();
+}
+
+// Form -> rule object (null = does not repeat). Validation happens on save.
+function buildEvRule() {
+  var v = document.getElementById('evs-f-repeat').value;
+  if (v === 'none') return null;
+  if (v === 'daily') return { freq: 'daily', interval: 1, ends: 'never' };
+  if (v === 'weekly') return { freq: 'weekly', interval: 1, byDay: [evDow(document.getElementById('evs-f-date').value || SERVER_TODAY)], ends: 'never' };
+  if (v === 'weekdays') return { freq: 'weekly', interval: 1, byDay: [1, 2, 3, 4, 5], ends: 'never' };
+  if (v === 'yearly') return { freq: 'yearly', interval: 1, ends: 'never' };
+  if (v.indexOf('monthly-') === 0) return { freq: 'monthly', interval: 1, monthMode: v.substring(8), ends: 'never' };
+  var rule = {
+    freq: document.getElementById('evs-f-rep-unit').value,
+    interval: Math.max(1, parseInt(document.getElementById('evs-f-rep-int').value, 10) || 1),
+    ends: evEndsValue()
+  };
+  if (rule.freq === 'weekly') rule.byDay = evSelectedDows();
+  if (rule.freq === 'monthly') rule.monthMode = document.getElementById('evs-f-rep-month').value;
+  if (rule.ends === 'date') rule.until = document.getElementById('evs-f-rep-until').value;
+  if (rule.ends === 'count') rule.count = parseInt(document.getElementById('evs-f-rep-count').value, 10) || 0;
+  return rule;
+}
+
+// Rule -> form. Falls back to Custom when the rule is not one of the simple presets.
+function loadEvRuleIntoForm(rule, dateStr) {
+  evFillRepeatSelect(dateStr, 'none');
+  var custom = document.getElementById('evs-f-rep-custom');
+  custom.style.display = 'none';
+  if (!rule) { updateEvRepSummary(); return; }
+  var preset = null;
+  if (rule.ends === 'never' && rule.interval === 1) {
+    if (rule.freq === 'daily') preset = 'daily';
+    else if (rule.freq === 'yearly') preset = 'yearly';
+    else if (rule.freq === 'monthly') preset = 'monthly-' + rule.monthMode;
+    else if (rule.freq === 'weekly') {
+      var days = (rule.byDay || []).join(',');
+      if (days === String(evDow(dateStr))) preset = 'weekly';
+      else if (days === '1,2,3,4,5') preset = 'weekdays';
+    }
+  }
+  var sel = document.getElementById('evs-f-repeat');
+  if (preset && Array.prototype.some.call(sel.options, function(o) { return o.value === preset; })) {
+    sel.value = preset;
+  } else {
+    sel.value = 'custom';
+    custom.style.display = 'flex';
+    document.getElementById('evs-f-rep-int').value = rule.interval || 1;
+    document.getElementById('evs-f-rep-unit').value = rule.freq;
+    evBuildDowPills(rule.byDay || [evDow(dateStr)]);
+    evFillMonthSelect(dateStr, rule.monthMode || 'dom');
+    document.querySelector('input[name=evs-rep-ends][value=' + (rule.ends || 'never') + ']').checked = true;
+    document.getElementById('evs-f-rep-until').value = rule.until || '';
+    document.getElementById('evs-f-rep-count').value = rule.count || 10;
+    onEvRepUnitChange();
+  }
+  updateEvRepSummary();
+}
+
+function evRuleSummary(r, dateStr) {
+  if (!r) return '';
+  var d = dateStr || r.anchor || SERVER_TODAY;
+  var n = r.interval || 1, s;
+  if (r.freq === 'daily') s = n > 1 ? 'Every ' + n + ' days' : 'Daily';
+  else if (r.freq === 'weekly') {
+    var days = (r.byDay && r.byDay.length ? r.byDay : [evDow(d)]).slice().sort();
+    if (n === 1 && days.join(',') === '1,2,3,4,5') s = 'Every weekday';
+    else s = (n > 1 ? 'Every ' + n + ' weeks' : 'Weekly') + ' on ' + days.map(function(i) { return EV_DOW[i].substring(0, 3); }).join(', ');
+  } else if (r.freq === 'monthly') {
+    var day = Number(d.substring(8)), name = EV_DOW[evDow(d)];
+    s = (n > 1 ? 'Every ' + n + ' months' : 'Monthly') + (r.monthMode === 'nth' ? ' on the ' + EV_NTH[Math.ceil(day / 7) - 1] + ' ' + name
+      : r.monthMode === 'last' ? ' on the last ' + name : ' on day ' + day);
+  } else {
+    var p = d.split('-').map(Number);
+    s = (n > 1 ? 'Every ' + n + ' years' : 'Annually') + ' on ' + EV_MONTHS[p[1] - 1] + ' ' + p[2];
+  }
+  if (r.ends === 'date' && r.until) s += ', until ' + evDateLong(r.until);
+  else if (r.ends === 'count' && r.count) s += ', ' + r.count + (r.count === 1 ? ' time' : ' times');
+  return s;
+}
+
+function updateEvRepSummary() {
+  var el = document.getElementById('evs-f-rep-sum');
+  var rule = buildEvRule();
+  var txt = rule ? evRuleSummary(rule, document.getElementById('evs-f-date').value || SERVER_TODAY) : '';
+  el.textContent = txt;
+  el.style.display = txt ? 'block' : 'none';
+}
+
+// ---- Scope picker for repeating events ----
+var evsScopeCb = null;
+
+function askEvScope(kind, noThis, cb) {
+  evsScopeCb = cb;
+  var opts = [['this', 'This event'], ['following', 'This and following events'], ['all', 'All events']];
+  if (noThis) opts.shift();
+  document.getElementById('evs-scope-title').textContent = (kind === 'delete' ? 'Delete' : 'Edit') + ' repeating event';
+  document.getElementById('evs-scope-note').textContent = noThis ? 'Changing how the event repeats affects more than one event.' : '';
+  document.getElementById('evs-scope-opts').innerHTML = opts.map(function(o, i) {
+    return '<label class="ev-scope-opt"><input type="radio" name="evs-scope" value="' + o[0] + '"' + (i === 0 ? ' checked' : '') + '> ' + o[1] + '</label>';
+  }).join('');
+  var ok = document.getElementById('evs-scope-ok');
+  ok.textContent = kind === 'delete' ? 'Delete' : 'OK';
+  document.getElementById('evs-scope-modal').classList.add('open');
+}
+
+function closeEvScope() {
+  document.getElementById('evs-scope-modal').classList.remove('open');
+  evsScopeCb = null;
+}
+
+function confirmEvScope() {
+  var r = document.querySelector('input[name=evs-scope]:checked');
+  var cb = evsScopeCb;
+  var v = r ? r.value : 'this';
+  closeEvScope();
+  if (cb) cb(v);
+}
+
+// ---- Add / Edit ----
 function openEvModal(eventId, dateStr) {
   var ev = eventId ? evsData.filter(function(e) { return e.eventId === eventId; })[0] : null;
   if (eventId && !ev) return;
@@ -3925,8 +4239,9 @@ function openEvModal(eventId, dateStr) {
   document.getElementById('evs-f-type').innerHTML = evsTypes.map(function(t) {
     return '<option' + (ev && t === ev.type ? ' selected' : '') + '>' + esc(t) + '</option>';
   }).join('');
+  var date = ev ? ev.date : (dateStr || SERVER_TODAY);
   document.getElementById('evs-f-title').value = ev ? ev.title : '';
-  document.getElementById('evs-f-date').value = ev ? ev.date : (dateStr || SERVER_TODAY);
+  document.getElementById('evs-f-date').value = date;
   document.getElementById('evs-f-allday').checked = ev ? ev.allDay : false;
   document.getElementById('evs-f-start').value = ev ? ev.startTime : '19:00';
   document.getElementById('evs-f-end').value = ev ? ev.endTime : '20:00';
@@ -3941,10 +4256,19 @@ function openEvModal(eventId, dateStr) {
   document.getElementById('evs-f-points').value = ev ? ev.points : 1;
   document.getElementById('evs-att-btn').style.display = ev && ev.attendance !== 'none' ? 'inline-block' : 'none';
   toggleEvAttendanceFields();
+  evsLastDow = evDow(date);
+  evBuildDowPills([evsLastDow]);
+  evFillMonthSelect(date, 'dom');
+  document.querySelector('input[name=evs-rep-ends][value=never]').checked = true;
+  document.getElementById('evs-f-rep-until').value = '';
+  document.getElementById('evs-f-rep-count').value = 10;
+  loadEvRuleIntoForm(ev && ev.seriesId ? (evsSeries[ev.seriesId] || null) : null, date);
+  modal.dataset.ruleSig = JSON.stringify(buildEvRule());
   document.getElementById('evs-delete-btn').style.display = ev ? 'inline-block' : 'none';
   document.getElementById('evs-f-syncnote').textContent = evsCalLinked
     ? 'Saving also updates Google Calendar.'
     : 'No Google Calendar linked yet: this event will only be saved here.';
+  window.bfBusy(document.getElementById('evs-save-btn'), false);
   document.getElementById('evs-save-btn').disabled = false;
   toggleEvAllDay();
   modal.classList.add('open');
@@ -3955,8 +4279,9 @@ function closeEvModal() {
 }
 
 function saveEvFromModal() {
+  var modal = document.getElementById('evs-modal');
   var payload = {
-    eventId: document.getElementById('evs-modal').dataset.eventId || '',
+    eventId: modal.dataset.eventId || '',
     title: document.getElementById('evs-f-title').value.trim(),
     type: document.getElementById('evs-f-type').value,
     date: document.getElementById('evs-f-date').value,
@@ -3967,28 +4292,49 @@ function saveEvFromModal() {
     description: document.getElementById('evs-f-desc').value,
     attendance: document.getElementById('evs-f-attendance').value,
     countsForNovatos: document.getElementById('evs-f-counts').checked,
-    points: document.getElementById('evs-f-points').value
+    points: document.getElementById('evs-f-points').value,
+    rule: buildEvRule()
   };
   if (!payload.title) { showToast('Enter an event title.'); return; }
   if (!payload.date) { showToast('Pick a date.'); return; }
+  var rule = payload.rule;
+  if (rule && rule.freq === 'weekly' && !rule.byDay.length) { showToast('Pick at least one weekday to repeat on.'); return; }
+  if (rule && rule.ends === 'date' && (!rule.until || rule.until < payload.date)) { showToast('Pick a repeat end date on or after the event date.'); return; }
+  if (rule && rule.ends === 'count' && rule.count < 1) { showToast('Enter how many times the event repeats.'); return; }
   var prev = payload.eventId ? evsData.filter(function(e) { return e.eventId === payload.eventId; })[0] : null;
-  if (prev) {
-    var keep = { none: [], brothers: ['brother'], novatos: ['novato'], everyone: ['brother', 'novato'] }[payload.attendance];
-    var lost = (keep.indexOf('brother') === -1 ? prev.brothersAttended : 0) + (keep.indexOf('novato') === -1 ? prev.novatosAttended : 0);
-    if (lost > 0 && !confirm('Changing who this event is for deletes ' + lost + ' recorded attendance entr' + (lost === 1 ? 'y' : 'ies') + ' of the excluded group. Continue?')) return;
+  if (prev && prev.seriesId) {
+    var ruleChanged = JSON.stringify(rule) !== modal.dataset.ruleSig;
+    askEvScope('edit', ruleChanged, function(scope) { payload.scope = scope; submitEvSave(payload); });
+  } else {
+    submitEvSave(payload);
   }
+}
+
+function submitEvSave(payload) {
   var btn = document.getElementById('evs-save-btn');
   btn.disabled = true;
+  window.bfBusy(btn, true);
+  function release() { btn.disabled = false; window.bfBusy(btn, false); }
   google.script.run
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
-      if (!r.success) { btn.disabled = false; showToast('Error: ' + r.error); return; }
+      if (r.needsConfirm) {
+        release();
+        if (confirm('This change deletes ' + r.lost + ' recorded attendance entr' + (r.lost === 1 ? 'y' : 'ies') + ' (a group that is no longer included, or events being removed). Continue?')) {
+          payload.confirmLoss = true;
+          submitEvSave(payload);
+        }
+        return;
+      }
+      release();
+      if (!r.success) { showToast('Error: ' + r.error); return; }
       closeEvModal();
       if (r.calendarError) showToast('Saved, but Google Calendar sync failed: ' + r.calendarError);
       else showToast(r.message);
-      loadEvents();
+      evsPending = r.pendingSync || 0;
+      loadEvents(false, true);
     })
-    .withFailureHandler(function(err) { btn.disabled = false; onError(err); })
+    .withFailureHandler(function(err) { release(); onError(err); })
     .saveEvent(JSON.stringify(payload), 'Officer');
 }
 
@@ -4000,17 +4346,33 @@ function deleteEvFromModal() {
 function deleteEvRow(eventId, fromModal) {
   var ev = evsData.filter(function(e) { return e.eventId === eventId; })[0];
   if (!ev) return;
+  if (ev.seriesId) {
+    askEvScope('delete', false, function(scope) { submitEvDelete(eventId, scope, fromModal, false); });
+    return;
+  }
   if (!confirm('Delete "' + ev.title + '"?' + (evsCalLinked ? ' It will also be removed from Google Calendar.' : ''))) return;
+  submitEvDelete(eventId, 'this', fromModal, false);
+}
+
+function submitEvDelete(eventId, scope, fromModal, confirmLoss) {
+  var btn = fromModal ? document.getElementById('evs-delete-btn') : null;
+  window.bfBusy(btn, true);
   google.script.run
     .withSuccessHandler(function(json) {
+      window.bfBusy(btn, false);
       var r = JSON.parse(json);
+      if (r.needsConfirm) {
+        if (confirm('Deleting this removes ' + r.lost + ' recorded attendance entr' + (r.lost === 1 ? 'y' : 'ies') + '. Continue?')) submitEvDelete(eventId, scope, fromModal, true);
+        return;
+      }
       if (!r.success) { showToast('Error: ' + r.error); return; }
       if (fromModal) closeEvModal();
-      showToast(r.calendarError ? 'Deleted, but removing it from Google Calendar failed: ' + r.calendarError : r.message);
-      loadEvents();
+      showToast(r.message);
+      evsPending = r.pendingSync || 0;
+      loadEvents(false, true);
     })
-    .withFailureHandler(onError)
-    .deleteEvent(eventId, 'Officer');
+    .withFailureHandler(function(err) { window.bfBusy(btn, false); onError(err); })
+    .deleteEvent(eventId, 'Officer', scope, !!confirmLoss);
 }
 
 // ---- Google Calendar settings ----
@@ -4042,11 +4404,11 @@ function openEvCalModal() {
 }
 
 function renderEvCalPending() {
-  var pending = evsData.filter(function(e) { return !e.gcalEventId; }).length;
+  var pending = evsPending;
   var el = document.getElementById('evs-cal-pending');
   if (!evsCalLinked || !pending) { el.style.display = 'none'; return; }
   el.style.display = 'block';
-  el.innerHTML = pending + ' event(s) are not on the calendar yet. <button class="btn-outline" style="padding:4px 10px;font-size:0.78rem;margin-left:6px" onclick="syncPendingEv(this)">Sync now</button>';
+  el.innerHTML = pending + ' change(s) are not on the calendar yet. <button class="btn-outline" style="padding:4px 10px;font-size:0.78rem;margin-left:6px" onclick="syncPendingEv(this)">Sync now</button>';
 }
 
 function closeEvCalModal() {
@@ -4080,17 +4442,9 @@ function createEvCalendar() {
     .createEventsCalendar(name, 'Officer');
 }
 
-function syncPendingEv(btn) {
-  btn.disabled = true;
-  google.script.run
-    .withSuccessHandler(function(json) {
-      var r = JSON.parse(json);
-      showToast(r.success ? r.message + (r.error ? ' ' + r.error : '') : 'Error: ' + r.error);
-      closeEvCalModal();
-      loadEvents();
-    })
-    .withFailureHandler(function(err) { btn.disabled = false; onError(err); })
-    .syncPendingEvents('Officer');
+function syncPendingEv() {
+  closeEvCalModal();
+  runEvSync();
 }
 
 // ---- Signatures Dashboard -----------------------------------

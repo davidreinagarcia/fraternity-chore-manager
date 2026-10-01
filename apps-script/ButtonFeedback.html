@@ -46,11 +46,19 @@
       finished = true;
       pending = Math.max(0, pending - 1);
       if (!pending) barOff();
-      if (btn) { btn.__bf = Math.max(0, (btn.__bf || 1) - 1); if (!btn.__bf) btn.classList.remove('bf-busy'); }
+      if (btn) { btn.__bf = Math.max(0, (btn.__bf || 1) - 1); if (!btn.__bf && !btn.__bfx) btn.classList.remove('bf-busy'); }
     }
     setTimeout(finish, 120000);
     return finish;
   }
+
+  // Explicit busy state for flows whose server call starts after a dialog, not straight from the click.
+  window.bfBusy = function (btn, on) {
+    if (!btn) return;
+    btn.__bfx = !!on;
+    if (on) btn.classList.add('bf-busy');
+    else if (!btn.__bf) btn.classList.remove('bf-busy');
+  };
 
   function runner(state) {
     return new Proxy({}, {
