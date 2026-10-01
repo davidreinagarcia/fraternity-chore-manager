@@ -1,0 +1,15 @@
+#!/bin/bash
+# Enforces docs/systems/ parity: if apps-script/ files are staged, at least one
+# docs/systems/ file must also be staged. Bypass with git commit --no-verify.
+
+gs_changed=$(git diff --cached --name-only | grep -c "^apps-script/")
+docs_changed=$(git diff --cached --name-only | grep -c "^docs/systems/")
+
+if [ "$gs_changed" -gt 0 ] && [ "$docs_changed" -eq 0 ]; then
+  echo ""
+  echo "  apps-script/ files staged but no docs/systems/ file updated."
+  echo "  Update (or create) the relevant system doc and stage it."
+  echo "  Skip only if the change is a typo/whitespace: git commit --no-verify"
+  echo ""
+  exit 1
+fi
