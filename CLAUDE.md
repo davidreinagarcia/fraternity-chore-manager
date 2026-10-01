@@ -1,79 +1,77 @@
 # frat-chores — CLAUDE.md
 
-## What this is
+## Qué es este proyecto
 
-A Google Apps Script web app that chapters install on their own Google account.
-One Sheet, one Script project, no cloud infra, no SaaS. The codebase is generic.
+Google Apps Script web app que chapters instalan en su propia cuenta de Google.
+Una Sheet, un Script project, sin infra cloud ni SaaS. El código es genérico y configurable por chapter.
 
 ## Stack
 
 - Google Apps Script (HTML Service + `.gs` files)
-- Google Sheets as the database
-- `clasp` for push/deploy; `git` for version control
-- Local source: `/home/david/projects/frat-chores/` → GitHub `davidreinagarcia/fraternity-chore-manager`
+- Google Sheets como base de datos
+- `clasp` para push/deploy; `git` para version control
+- GitHub: `davidreinagarcia/fraternity-chore-manager`
+
+## Cómo trabajar aquí
+
+Lee en este orden antes de proponer o escribir nada:
+
+1. `docs/systems/Index.md` — qué sistemas existen, en qué archivo vive cada uno y su estado actual. **Antes de tocar cualquier sistema, pasa por aquí.** Si el sistema ya tiene fichero en `docs/systems/`, entra directo en vez de reconstruir contexto.
+2. El fichero del sistema concreto en `docs/systems/` — tiene el detalle vivo: lógica, datos, casos borde, decisiones abiertas.
+
+Al terminar de tocar un sistema: actualiza su fichero en el mismo commit. Si creaste un sistema nuevo: créale fichero desde `docs/systems/_template.md` y añade su fila en el Index.
 
 ## Dev workflow
 
-GitHub is the source of truth. There is no permanent local checkout: each session works in a
-throwaway shallow clone and deletes it at the end.
+Checkout permanente en `/home/david/projects/fraternity-chore-manager/`.
 
-1. `gh repo clone davidreinagarcia/fraternity-chore-manager /tmp/frat-chores -- --depth 1`
-2. Create `.clasp.json` (gitignored) for the target: `scriptId`, `parentId`, `rootDir: "apps-script"`
-   (IDs below)
-3. Edit files in `apps-script/`
-4. `clasp push --force`, then `clasp deploy -i <deployment-id> -d "<description>"` for versioned deploys
-5. `git commit` + `git push origin main`
-6. `rm -rf /tmp/frat-chores`
+Al inicio de sesión:
+```
+git pull
+```
 
-The dev sheet is the only live target. **No staging step**: push straight through.
+Para desplegar:
+```
+clasp push --force
+clasp deploy -i <deployment-id> -d "<descripción>"   # versioned deploy
+git commit -am "..." && git push origin main
+```
 
-## Active sheets (as of 2026-09-30)
+`.clasp.json` es gitignored y vive permanentemente en el checkout local (no recrear cada sesión).
+Dev sheet es el único target. No hay staging: push directo.
 
-| Sheet | Purpose |
+## Sheets activos
+
+| Sheet | IDs |
 |---|---|
-| "Fraternity Digitalization Project" `12WifDjeX-FntZOqQrIB2C-HplPKPwYUCoNSVL-7XImE`, scriptId `1AV-RMgKsr97YPk5qnRXL9O5PhkSplgb6cSvjLBex_kbEvaTS7lX_uO9a` | Only live sheet, all development here |
+| "Fraternity Digitalization Project" (dev + live) | Spreadsheet: `12WifDjeX-FntZOqQrIB2C-HplPKPwYUCoNSVL-7XImE` · scriptId: `1AV-RMgKsr97YPk5qnRXL9O5PhkSplgb6cSvjLBex_kbEvaTS7lX_uO9a` |
 
-## Architecture
+Deployment activo (redeploy aquí tras cada push): `AKfycbzdDhGPmAQi5NFvMBto-iI1C4-0Xfsp1wHaAqZtBTZTeqLX74rGWSL0VwrCj-y01prS`
 
-- `Code.gs` — core logic: chores, fines, member CRUD, config, semester tools
-- `AMEvents.gs` — associate member events and attendance
-- `Events.gs` — chapter-wide events (`events` tab) with auto-sync to Google Calendar (config key `events_calendar_id`; needs the `calendar` OAuth scope: fresh installs get it in the first-run consent prompt, older installs authorize via sheet menu "Setup: Authorize Google Calendar"). Also per-event attendance: audience (none/brothers/novatos/everyone), roll call stored in `event_attendance` tab, and a `counts_for_novatos` flag that feeds events into the AM Att.% (`_getNovatoCountedEvents` → `getAMPointsData.countedEvents`). Recurring events (Google Calendar style): one row per occurrence in `events`, tied by `series_id`; the rule JSON lives in the `event_series` tab and occurrences are materialized to a rolling horizon, topped up by `_extendSeries` on every `getEventsData`. Edit/delete scopes `this` / `following` / `all` (rows matched by shifted date so ids, attendance and gcal ids survive; attendance loss needs `confirmLoss`). Calendar sync is queue based: rows with blank `gcal_event_id` or `gcal_dirty='Y'` are pending, deletions go through the `event_gcal_deletes` tab, and `syncPendingEvents` is time budgeted and looped by the client (`runEvSync`). Event dates/times are stored as text ('@' format) so Sheets never shifts them
-- `EventsTwoWay.gs` — Google Calendar to dashboard pull (two-way sync). `pullCalendarChanges` is a stateless content reconcile using the Calendar advanced service v3 (enabled in `appsscript.json`): list with singleEvents over today-90d..+1100d, match rows by stored gcal id (`iCalUID`, API id = id minus `@google.com`) or by private extended property `frat_event_id` (set with `setTag` when `_syncEventToCalendar` creates the event). Conflicts: most recent edit wins (`item.updated` vs row `updated_at` when `gcal_dirty='Y'`). Google-side delete removes the row unless it has attendance (then it is kept and re-created in Google); a mass-deletion guard blocks bulk removals (e.g. after switching calendars). Events created in Google import as type Other with no attendance; recurring-in-Google and multi-day events are ignored with a note. Triggers: 5-minute time trigger plus `forUserCalendar(id).onEventUpdated()`, both calling `calendarTwoWayTick` (debounced 20 s); config keys `events_twoway` ('off' = user disabled it) and `events_calendar_last`. The dashboard auto-enables it for linked calendars, polls every 60 s while the Events tab is open, and has a Sync button plus a toggle in the Google Calendar modal
-- `Signatures.gs` — AM signature submissions and dashboard
-- `CustomForms.gs` — custom NM/RM forms, reminders, response tracking
-- `BigQuerySync.gs` — BigQuery archival (inactive, hidden in Config Editor)
-- `PhotoCheck.gs` — Google Vision photo validation for chore submissions
+Link de acceso: `?app=officer` (el dashboard que David usa).
 
-HTML apps (routed via `?app=` query param):
-- `OfficerDashboard.html` — main officer UI, PIN-gated (`?app=officer`)
-- `HomeApp.html` — 4-link nav hub (`?app=home`)
-- `MemberView.html` — individual member view (`?app=member`)
-- `SubmitApp.html` — chore photo submission (`?app=submit`)
-- `SignatureApp.html` — AM signature self-service (`?app=signature`)
-- `SetupApp.html` — setup wizard for new installs (`?app=setup`)
-- `DraftApp.html` — draft night board (`?app=draft`)
-- `MemberDirectory.html` — redirects to officer dashboard
+`.clasp.json.prod` en el repo apunta a la old prod sheet — abandonada, no usar.
 
-## Config system
+## Routing
 
-Everything customizable lives in the `config` Sheet tab via `getChapterConfig()`:
-- **Vocabulary**: `label_chore`, `label_fine`, `label_am_group`, etc.
-- **Module flags**: `module_housing`, `module_associates`, `module_signatures`, etc.
-- **Free-text options**: `meal_plan_options`, `officer_role_options`, etc.
+`doGet()` en `Code.gs` enruta por `?app=`:
 
-Template vars injected at render time by `doGet`:
-- `<?= cfg.chapter.primary_color ?>` — CSS brand color
-- `<?!= cfgJson ?>` → `var CHAPTER_CONFIG = ...;` — full config for client JS
-- `<?= baseUrl ?>`, `<?= todayDate ?>`
+| param | app | notas |
+|---|---|---|
+| `officer` | OfficerDashboard | lo que David usa, PIN-gated |
+| `home` | HomeApp | 4 links estáticos, stale |
+| `member` | MemberView | vista individual |
+| `submit` | SubmitApp | photo submission de chores |
+| `signature` | SignatureApp | AM signature self-service |
+| `setup` | SetupApp | setup wizard nuevas instalaciones |
+| `draft` | DraftApp | Draft Night board |
 
-## Security rules (from global CLAUDE.md — repeated here for context)
+## Reglas de código
 
-- No hardcoded chapter or school references in source code
-- No secrets in any file that could be committed (tokens, API keys, officer PIN)
-- Officer PIN lives only in the `config` Sheet tab, never in code
+**Vocabulario**: nada de texto de chapter hardcodeado (new members, brothers, school, BK#...). Siempre desde `CHAPTER_CONFIG.labels` / `getChapterConfig()`, incluyendo confirms, toasts y estados vacíos. Claves internas y nombres de columna: libres.
 
-## UI rules
+**UI feedback**: `ButtonFeedback.html` se incluye en todo app interactivo via `<?!= include('ButtonFeedback') ?>`. Pressed state + spinner automático por botón. Todo nuevo HTML app debe incluirlo; si el server call arranca tras un dialog, wrappear con `window.bfBusy(btn, true/false)`.
 
-- **No chapter vocabulary in UI text**: anything a chapter names differently (new members, active members, AM group, school, chapter) must come from `CHAPTER_CONFIG.labels` / `getChapterConfig()`, including confirms, toasts, notes and empty states. Internal keys and column names are fine.
-- **Every button gives feedback**: `ButtonFeedback.html` (included in every interactive app via `<?!= include('ButtonFeedback') ?>`) adds a pressed state, a spinner on the clicked button while its `google.script.run` call is pending, and a top progress bar. Any new HTML app must include it; new buttons get it for free. If a server call starts after a dialog instead of straight from the click, wrap it with `window.bfBusy(btn, true/false)`.
-- **Dates/times in sheets are plain text** (`@` format, `yyyy-MM-dd` / `HH:mm`). Never write Date objects for events (timezone shifts moved an event a day); `saveEvent` verifies the saved date by reading it back.
+**Fechas en Sheets**: siempre texto plano (formato `@`, `yyyy-MM-dd` / `HH:mm`), nunca objetos Date. Sheets desplaza fechas en round-trips entre timezones del script y de la spreadsheet.
+
+**Secrets**: tokens y API keys nunca en código comprometido. Officer PIN solo en el tab `config` de la Sheet (clave `officer_pin`), nunca en código.
