@@ -21,9 +21,24 @@ Ratios de distribución en `config/chore_ratios.json` (fuera del Apps Script, so
 
 `PhotoCheck.gs` — llama a Google Cloud Vision para validar que la foto muestra la tarea completada. Si falla la validación, la submission queda en estado pendiente para revisión manual.
 
+### Modo de completado (`chore_completion_mode`)
+
+Config key con dos valores, editable en Admin → Config Editor → Key Settings:
+- `all` (default): todos los asignados al grupo (la chore) tienen que hacerla. Falta uno → la chore sale roja "Not done".
+- `one`: basta con que una persona del grupo la haga. Quien la hace sale en verde, la chore pasa a "Done" y el resto queda como "Not needed". Si nadie la hace, se multa a todo el grupo.
+
+"Cuenta como hecha" = `(auto_status==='passed' && human_status!=='failed') || human_status==='verified'` (`_isCountedSubmission`). `_getChoreMode()` lee la key.
+
+`getWeeklyStatus()` devuelve `mode` y, por chore, `state` (`done`/`review`/`missing`), `doneCount`, `total`; por miembro, `counted` y `state` (`done`/`review`/`failed`/`missing`).
+
+### Pestaña Chores del dashboard
+
+"This Week" muestra una fila por chore (tipo "chore: lista de gente"): nombre y estado a la izquierda, miembros a la derecha con su estado y acciones (Photo/Verify/Fail/Fraud/Mark Complete). Borde y fondo rojo/amarillo/verde según `state` de la chore. Botón "Manage chores" abre Admin → Chore Manager (`openAdminPage('admin-chores')`). Fine Preview y los stats usan la misma regla que `runMondayReset`. My Compliance (`MemberView.html`) usa `state` de la chore para tarjetas, ribbon, filtros y resumen.
+
 ### Fine enforcement
 
 `issueFines()` en `Code.gs` aplica multas a miembros que no completaron su chore. Config keys relevantes: `fine_amount`.
+`runMondayReset()` respeta el modo: en `one`, una chore con alguna submission contada no genera multas; si no, se multa a todos los activos del grupo.
 El officer puede overridear una multa desde OfficerDashboard → Admin (fine override accordion).
 
 ## Relacionado con

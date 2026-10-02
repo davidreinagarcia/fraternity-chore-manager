@@ -19,7 +19,7 @@ Devuelve un objeto con tres secciones:
 ### Config Editor (officer UI)
 
 `OfficerDashboard.html` → Admin → Config Editor. Muestra:
-- **Key Settings** (4 claves con label amigable): `semester`, `week_start`, `officer_emails`, `fine_amount`.
+- **Key Settings**: selector "How a chore counts as done" (`chore_completion_mode`, ver [chores-fines.md](./chores-fines.md)) y 4 claves con label amigable: `semester`, `week_start`, `officer_emails`, `fine_amount`.
 - **Advanced settings** (colapsado): resto de claves, incluidas las de BigQuery (inactivas).
 
 `officer_pin` está excluido del Config Editor (`getConfig()` no lo devuelve, `saveConfig()` lo rechaza). Solo se cambia via Officer Handoff → Change PIN (exige PIN actual).

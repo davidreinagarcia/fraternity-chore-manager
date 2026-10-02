@@ -257,6 +257,35 @@
   .config-key { min-width: 170px; }
   .config-key-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 3px; }
   .config-help { font-size: 0.75rem; color: var(--muted); max-width: 260px; line-height: 1.4; }
+  .grp { display: flex; gap: 16px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--border); border-left-width: 4px; border-radius: 8px; margin-bottom: 8px; background: #fff; }
+  .grp-head { flex: 0 0 200px; min-width: 0; }
+  .grp-name { font-weight: 500; font-size: 0.95rem; word-break: break-word; }
+  .grp-meta { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .grp-badge { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 500; }
+  .grp.st-done { border-left-color: var(--green); }
+  .grp.st-done .grp-badge { background: var(--green-bg); color: var(--green); }
+  .grp.st-review { border-left-color: var(--yellow); }
+  .grp.st-review .grp-badge { background: var(--yellow-bg); color: var(--yellow); }
+  .grp.st-missing { border-left-color: var(--red); background: color-mix(in srgb, var(--red-bg) 45%, #fff); }
+  .grp.st-missing .grp-badge { background: var(--red-bg); color: var(--red); }
+  .grp-members { flex: 1; display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+  .gm { display: flex; flex-direction: column; gap: 6px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: #fff; font-size: 0.85rem; }
+  .gm-top { display: flex; align-items: center; gap: 6px; }
+  .gm-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .gm-state { font-size: 0.72rem; color: var(--muted); }
+  .gm.done { background: var(--green-bg); border-color: #ceead6; }
+  .gm.done .gm-dot { background: var(--green); } .gm.done .gm-state { color: var(--green); }
+  .gm.review { background: var(--yellow-bg); border-color: #fbe3a6; }
+  .gm.review .gm-dot { background: var(--yellow); } .gm.review .gm-state { color: var(--yellow); }
+  .gm.failed, .gm.missing.need { background: var(--red-bg); border-color: #f6c5c0; }
+  .gm.failed .gm-dot, .gm.missing.need .gm-dot { background: var(--red); }
+  .gm.failed .gm-state, .gm.missing.need .gm-state { color: var(--red); }
+  .gm-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+  @media (max-width: 700px) { .grp { flex-direction: column; gap: 8px; } .grp-head { flex-basis: auto; } }
+  .mode-opt { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
+  .mode-opt:hover { background: var(--hover); }
+  .mode-opt.on { border-color: var(--primary); background: var(--tint); }
+  .mode-opt input { margin-top: 3px; }
   .config-group-label {
     font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
     color: var(--muted); margin-bottom: 6px;
@@ -499,7 +528,7 @@
     <div class="sec" id="sec-chores"><div class="container">
       <div class="stats-row" id="stats-row">
         <div class="stat-card"><div class="label">Total <?= cfg.labels.label_chore ?>s</div><div class="value" id="stat-total-chores">—</div></div>
-        <div class="stat-card"><div class="label">Submitted</div><div class="value" id="stat-submitted">—</div></div>
+        <div class="stat-card"><div class="label">Completed</div><div class="value" id="stat-submitted">—</div></div>
         <div class="stat-card"><div class="label">Flagged</div><div class="value" id="stat-flagged" style="color:var(--yellow)">—</div></div>
         <div class="stat-card"><div class="label">Pending <?= cfg.labels.label_fine ?>s</div><div class="value" id="stat-pending-fines" style="color:var(--red)">—</div></div>
       </div>
@@ -518,27 +547,14 @@
                    oninput="filterStatusTable()">
             <div style="display:flex;gap:4px">
               <button class="btn-filter active" id="sf-all"          onclick="setStatusFilter('all')">All</button>
-              <button class="btn-filter"         id="sf-not-submitted" onclick="setStatusFilter('not-submitted')">Not Submitted</button>
+              <button class="btn-filter"         id="sf-not-submitted" onclick="setStatusFilter('not-submitted')">Not Done</button>
               <button class="btn-filter"         id="sf-flagged"      onclick="setStatusFilter('flagged')">Flagged</button>
             </div>
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.85rem" onclick="openAdminPage('admin-chores')">Manage <?= cfg.labels.label_chore ?>s</button>
           </div>
         </div>
-        <div class="card-body" style="overflow-x:auto">
-          <table class="data-table" id="status-table">
-            <thead>
-              <tr>
-                <th onclick="sortTable('status-table',0)"><?= cfg.labels.label_chore ?></th>
-                <th onclick="sortTable('status-table',1)">Assigned Members</th>
-                <th onclick="sortTable('status-table',2)">Submitted</th>
-                <th onclick="sortTable('status-table',3)">Auto Status</th>
-                <th onclick="sortTable('status-table',4)">Human Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="status-tbody">
-              <tr class="loading-row"><td colspan="6">Loading...</td></tr>
-            </tbody>
-          </table>
+        <div class="card-body" id="status-list">
+          <div class="loading-row" style="padding:20px;text-align:center;color:var(--muted)">Loading...</div>
         </div>
       </div>
     </div>
@@ -1982,76 +1998,82 @@ function onWeeklyStatus(json) {
   weeklyData = JSON.parse(json);
   if (weeklyData.error) { showToast('Error: ' + weeklyData.error); return; }
 
-  const tbody = document.getElementById('status-tbody');
+  const mode = weeklyData.mode === 'one' ? 'one' : 'all';
+  const list = document.getElementById('status-list');
   const fineTbody = document.getElementById('fine-preview-tbody');
-  tbody.innerHTML = '';
+  list.innerHTML = '';
   fineTbody.innerHTML = '';
+  document.getElementById('week-label').textContent = 'Week of ' + (weeklyData.weekStart || '—');
 
-  let totalChores = 0, submitted = 0, flagged = 0, pendingFines = 0;
+  let completed = 0, flagged = 0, pendingFines = 0;
+  const stateText = { done: 'Done', review: 'In review', missing: 'Not done' };
 
   for (const chore of weeklyData.status) {
-    totalChores++;
-    const anySubmitted = chore.members.some(m => m.submitted);
-    if (anySubmitted) submitted++;
+    if (chore.state === 'done') completed++;
+    const isFlagged = chore.members.some(m => m.autoStatus === 'flagged' || m.autoStatus === 'rejected' || m.humanStatus === 'failed');
+    chore.members.forEach(m => { if (m.autoStatus === 'flagged') flagged++; });
 
-    chore.members.forEach(m => {
-      if (m.autoStatus === 'flagged') flagged++;
-      if (!m.submitted || (m.humanStatus !== 'verified' && m.autoStatus !== 'passed')) {
-        // potential fine — show in fine preview for non-submitted only
-      }
-    });
+    const total = chore.members.length;
+    const doneBy = chore.members.filter(m => m.counted).map(m => m.memberName);
+    let meta;
+    if (mode === 'one') meta = chore.state === 'done' ? 'Done by ' + doneBy.join(', ') : 'Needs 1 of ' + total;
+    else meta = chore.doneCount + ' of ' + total + ' done';
 
-    // Determine row class
-    let rowClass = '';
-    const anyFlagged = chore.members.some(m => m.autoStatus === 'flagged' || m.autoStatus === 'rejected');
-    const allVerified = chore.members.every(m => m.humanStatus === 'verified');
-    if (allVerified) rowClass = 'row-verified';
-    else if (anyFlagged) rowClass = 'row-flagged';
-
-    const memberCells = chore.members.map(m => {
-      const autoB = m.autoStatus ? `<span class="badge badge-${m.autoStatus}">${m.autoStatus}</span>` : '<span class="badge-none">—</span>';
-      const humanB = `<span class="badge badge-${m.humanStatus || 'pending'}">${m.humanStatus || 'pending'}</span>`;
+    const chips = chore.members.map(m => {
+      const covered = mode === 'one' && chore.state === 'done' && !m.counted;
+      const cls = m.state + (m.state === 'missing' && !covered ? ' need' : '');
+      const label = covered ? 'Not needed' : ({ done: 'Done', review: 'In review', failed: 'Failed', missing: 'Not done' })[m.state];
+      const nm = esc(m.memberName), cn = esc(chore.choreName);
       const actions = m.submitted ? `
         <button class="action-btn btn-photo" onclick="viewPhoto('${m.submissionId}')">Photo</button>
-        <button class="action-btn btn-verify" onclick="openVerify('${m.submissionId}','${esc(m.memberName)}','${esc(chore.choreName)}','verified')">✓ Verify</button>
-        <button class="action-btn btn-fail" onclick="openVerify('${m.submissionId}','${esc(m.memberName)}','${esc(chore.choreName)}','failed')">✗ Fail</button>
-        <button class="action-btn" style="background:var(--red-bg);color:var(--red);border:1px solid #fecaca" onclick="openFlagFraudModal('${m.submissionId}','${esc(m.memberName)}','${esc(chore.choreName)}')">🚩 Fraud</button>
-      ` : `<button class="action-btn btn-verify" onclick="openMarkCompleteModal('${m.memberId||''}','${esc(m.memberName)}','${esc(chore.choreName)}')">✓ Mark Complete</button>`;
-
-      if (!m.submitted) pendingFines++;
-
-      return `
-        <tr class="${rowClass}">
-          <td>${esc(chore.choreName)}</td>
-          <td>${esc(m.memberName)}</td>
-          <td>${m.submitted ? '<span style="color:var(--green)">Yes</span>' : '<span style="color:var(--red)">No</span>'}</td>
-          <td>${autoB}</td>
-          <td>${humanB}</td>
-          <td>${actions}</td>
-        </tr>`;
+        <button class="action-btn btn-verify" onclick="openVerify('${m.submissionId}','${nm}','${cn}','verified')">✓ Verify</button>
+        <button class="action-btn btn-fail" onclick="openVerify('${m.submissionId}','${nm}','${cn}','failed')">✗ Fail</button>
+        <button class="action-btn" style="background:var(--red-bg);color:var(--red);border:1px solid #fecaca" onclick="openFlagFraudModal('${m.submissionId}','${nm}','${cn}')">🚩 Fraud</button>
+      ` : `<button class="action-btn btn-verify" onclick="openMarkCompleteModal('${m.memberId||''}','${nm}','${cn}')">✓ Mark Complete</button>`;
+      return `<div class="gm ${cls}">
+          <div class="gm-top"><span class="gm-dot"></span><span>${nm}</span><span class="gm-state">${label}</span></div>
+          <div class="gm-actions">${actions}</div>
+        </div>`;
     }).join('');
-    tbody.insertAdjacentHTML('beforeend', memberCells);
 
-    // Fine preview rows (not submitted)
-    chore.members.filter(m => !m.submitted).forEach(m => {
+    list.insertAdjacentHTML('beforeend', `
+      <div class="grp st-${chore.state}" data-state="${chore.state}" data-flagged="${isFlagged ? 1 : 0}">
+        <div class="grp-head">
+          <div class="grp-name">${esc(chore.choreName)}</div>
+          <div class="grp-meta">${esc(meta)}</div>
+          <span class="grp-badge">${stateText[chore.state]}</span>
+        </div>
+        <div class="grp-members">${chips}</div>
+      </div>`);
+
+    // Fine preview: mirrors runMondayReset (one mode fines the whole group only if nobody's submission counts)
+    const fined = mode === 'one'
+      ? (doneBy.length ? [] : chore.members)
+      : chore.members.filter(m => !m.counted);
+    fined.forEach(m => {
+      pendingFines++;
       fineTbody.insertAdjacentHTML('beforeend', `
         <tr>
           <td>${esc(m.memberName)}</td>
           <td>${esc(chore.choreName)}</td>
           <td>${esc(weeklyData.weekStart || '')}</td>
-          <td>Missed submission</td>
+          <td>${mode === 'one' ? 'Nobody in the group completed it' : 'Missed submission'}</td>
         </tr>`);
     });
   }
 
+  if (!weeklyData.status.length) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted)">No ' + esc(CHAPTER_CONFIG.labels.label_chore.toLowerCase()) + 's assigned this semester.</div>';
+  }
   if (!fineTbody.children.length) {
-    fineTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--green)">No pending fines — everyone submitted!</td></tr>';
+    fineTbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--green)">No pending fines. All covered!</td></tr>';
   }
 
-  document.getElementById('stat-total-chores').textContent = totalChores;
-  document.getElementById('stat-submitted').textContent = submitted;
+  document.getElementById('stat-total-chores').textContent = weeklyData.status.length;
+  document.getElementById('stat-submitted').textContent = completed;
   document.getElementById('stat-flagged').textContent = flagged;
   document.getElementById('stat-pending-fines').textContent = pendingFines;
+  filterStatusTable();
 }
 
 // ---- Member Stats tab --------------------------------------
@@ -2069,17 +2091,12 @@ function setStatusFilter(mode) {
 
 function filterStatusTable() {
   var q = document.getElementById('status-search').value.toLowerCase();
-  var rows = document.querySelectorAll('#status-tbody tr');
-  rows.forEach(function(r) {
-    var text = r.textContent.toLowerCase();
-    var matchSearch = !q || text.includes(q);
-    var matchFilter = true;
-    if (_statusFilterMode === 'not-submitted') {
-      matchFilter = text.includes('not submitted') || text.includes('missing');
-    } else if (_statusFilterMode === 'flagged') {
-      matchFilter = text.includes('failed') || text.includes('flagged');
-    }
-    r.style.display = (matchSearch && matchFilter) ? '' : 'none';
+  document.querySelectorAll('#status-list .grp').forEach(function(g) {
+    var matchSearch = !q || g.textContent.toLowerCase().includes(q);
+    var matchFilter = _statusFilterMode === 'all' ||
+      (_statusFilterMode === 'not-submitted' && g.dataset.state !== 'done') ||
+      (_statusFilterMode === 'flagged' && g.dataset.flagged === '1');
+    g.style.display = (matchSearch && matchFilter) ? '' : 'none';
   });
 }
 
@@ -2788,6 +2805,25 @@ function renderConfigEditor() {
     }
   });
 
+  // Completion mode (how a chore counts as done for its group)
+  var lc = (CHAPTER_CONFIG.labels.label_chore || 'Chore').toLowerCase();
+  var curMode = String(configMap.chore_completion_mode || '').trim() === 'one' ? 'one' : 'all';
+  var modeOpt = function(val, title, desc) {
+    return '<label class="mode-opt' + (curMode === val ? ' on' : '') + '">' +
+      '<input type="radio" name="chore-mode" value="' + val + '"' + (curMode === val ? ' checked' : '') +
+      ' onchange="saveChoreMode(this.value)">' +
+      '<span><b>' + esc(title) + '</b><br><span class="config-help" style="max-width:none">' + esc(desc) + '</span></span>' +
+      '</label>';
+  };
+  var modeHtml =
+    '<div class="config-row" style="flex-direction:column;align-items:stretch;gap:8px">' +
+    '<div class="config-key"><div class="config-key-name">How a ' + esc(lc) + ' counts as done</div>' +
+    '<div class="config-help" style="max-width:none">Applies to the status board, fines and My Compliance.</div></div>' +
+    modeOpt('all', 'Everyone assigned', 'Every member in the group has to complete the ' + lc + '. If anyone is missing, the ' + lc + ' shows as not done.') +
+    modeOpt('one', 'One person per group', 'As soon as one member of the group completes the ' + lc + ', it is done for the whole group. If nobody does it, everyone in the group is fined.') +
+    '</div>';
+  keyRows = modeHtml + keyRows;
+
   // Chapter Identity section (virtual rows for keys that may not be in sheet yet)
   var identityRows = '';
   CHAPTER_IDENTITY_KEYS.forEach(function(k) {
@@ -2885,6 +2921,28 @@ function saveDirectConfig(key, inputId) {
     })
     .withFailureHandler(onError)
     .saveConfig(key, val);
+}
+
+function saveChoreMode(val) {
+  var prev = val === 'one' ? 'all' : 'one';
+  document.querySelectorAll('.mode-opt').forEach(function(l) {
+    l.classList.toggle('on', l.querySelector('input').value === val);
+  });
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (r.success) {
+        showToast('Saved: ' + (val === 'one' ? 'one person per group' : 'everyone assigned'));
+        adminConfigData.forEach(function(i) { if (i.key === 'chore_completion_mode') i.value = val; });
+        if (typeof loadWeeklyStatus === 'function') loadWeeklyStatus();
+      } else {
+        showToast('Error: ' + r.error);
+        document.querySelectorAll('input[name="chore-mode"]').forEach(function(i) { i.checked = i.value === prev; });
+        document.querySelectorAll('.mode-opt').forEach(function(l) { l.classList.toggle('on', l.querySelector('input').value === prev); });
+      }
+    })
+    .withFailureHandler(onError)
+    .saveConfig('chore_completion_mode', val);
 }
 
 // Save a module toggle (boolean → 'true'/'false' string)

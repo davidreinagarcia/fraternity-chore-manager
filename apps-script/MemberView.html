@@ -299,11 +299,15 @@ function onWeeklyStatus(json) {
   } catch(e) { console.error(e); }
 }
 
+// Chore-level completion honoring the chapter's mode (all assigned vs one per group); state comes from getWeeklyStatus
+function choreOk(c) {
+  return c.state ? c.state !== 'missing' : c.members.some(m => m.submitted);
+}
+
 function updateSummary() {
   let submitted = 0, missing = 0, flagged = 0;
   for (const c of allChores) {
-    const anySubmitted = c.members.some(m => m.submitted);
-    if (anySubmitted) {
+    if (choreOk(c)) {
       submitted++;
       if (c.members.some(m => m.autoStatus === 'flagged')) flagged++;
     } else {
@@ -333,7 +337,7 @@ function renderGrid() {
   grid.innerHTML = '';
 
   const visible = allChores.filter(c => {
-    const anySubmitted = c.members.some(m => m.submitted);
+    const anySubmitted = choreOk(c);
     const anyFlagged   = c.members.some(m => m.autoStatus === 'flagged');
     if (activeFilter === 'submitted' && !anySubmitted) return false;
     if (activeFilter === 'missing'   && anySubmitted)  return false;
@@ -353,8 +357,7 @@ function renderGrid() {
   // Sort: missing first, then flagged, then submitted
   visible.sort((a, b) => {
     const score = c => {
-      const anySubmitted = c.members.some(m => m.submitted);
-      if (!anySubmitted) return 0;
+      if (!choreOk(c)) return 0;
       if (c.members.some(m => m.autoStatus === 'flagged')) return 1;
       return 2;
     };
@@ -367,7 +370,8 @@ function renderGrid() {
 }
 
 function buildCard(chore) {
-  const anySubmitted = chore.members.some(m => m.submitted);
+  const anySubmitted = choreOk(chore);
+  const anyPhoto     = chore.members.some(m => m.submitted);
   const anyFlagged   = chore.members.some(m => m.autoStatus === 'flagged' || m.autoStatus === 'rejected');
 
   let cardClass = 'chore-card';
@@ -375,7 +379,7 @@ function buildCard(chore) {
   else if (anyFlagged) cardClass += ' card-flagged';
   else cardClass += ' card-missing';
 
-  let ribbonClass = 'ribbon-missing', ribbonText = 'Missing';
+  let ribbonClass = 'ribbon-missing', ribbonText = anyPhoto && !anySubmitted ? 'Incomplete' : 'Missing';
   if (anySubmitted && !anyFlagged) { ribbonClass = 'ribbon-submitted'; ribbonText = 'Submitted'; }
   else if (anyFlagged)             { ribbonClass = 'ribbon-flagged';   ribbonText = 'Flagged'; }
 
@@ -383,13 +387,13 @@ function buildCard(chore) {
   const submittedMem = chore.members.find(m => m.submitted && m.photoUrl);
 
   const imgSection = (() => {
-    if (anySubmitted && submittedMem && showPhotos && submittedMem.photoUrl) {
+    if (anyPhoto && submittedMem && showPhotos && submittedMem.photoUrl) {
       return `<div class="card-img-wrap">
         <img src="${esc(submittedMem.photoUrl)}" alt="Chore photo" loading="lazy"
              onerror="this.parentElement.innerHTML='<div class=\\'card-img-placeholder\\'><span>📷</span><span>Photo submitted</span></div>'">
         <div class="status-ribbon ${ribbonClass}">${ribbonText}</div>
       </div>`;
-    } else if (anySubmitted) {
+    } else if (anyPhoto) {
       return `<div class="card-img-wrap">
         <div class="card-img-placeholder">
           <span>📷</span><span>Photo submitted</span>
@@ -407,7 +411,7 @@ function buildCard(chore) {
   })();
 
   const memberPills = chore.members.map(m => {
-    const cls = m.submitted ? 'member-pill submitted' : 'member-pill';
+    const cls = (m.state ? (m.state === 'done' || m.state === 'review') : m.submitted) ? 'member-pill submitted' : 'member-pill';
     return `<span class="${cls}"><span class="dot"></span>${esc(m.memberName)}</span>`;
   }).join('');
 
@@ -421,7 +425,7 @@ function buildCard(chore) {
   })();
 
   const submissionId = submittedMem ? submittedMem.submissionId : null;
-  const flagDisabled = !anySubmitted || !submissionId ? 'disabled' : '';
+  const flagDisabled = !anyPhoto || !submissionId ? 'disabled' : '';
 
   const card = document.createElement('div');
   card.className = cardClass;

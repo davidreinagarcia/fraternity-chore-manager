@@ -608,15 +608,22 @@ function runMondayReset() {
       }
     }
 
-    // Find delinquents
+    // Find delinquents. 'one' mode: a chore is covered if any assigned member passed; otherwise everyone in the group is fined.
+    const choreMode = _getChoreMode();
+    const choreCovered = {};
+    if (choreMode === 'one') {
+      for (let i = 1; i < assignments.length; i++) {
+        const r = assignments[i];
+        if (r[4] === semester && passed.has(r[1] + '|' + r[2])) choreCovered[r[2]] = true;
+      }
+    }
     const fineList = [];
     for (let i = 1; i < assignments.length; i++) {
       const r = assignments[i];
       if (r[4] !== semester) continue;
       if (!activeMems.has(r[1])) continue;
-      if (!passed.has(r[1] + '|' + r[2])) {
-        fineList.push({ memberId: r[1], memberName: memName[r[1]] || r[1], choreName: r[2] });
-      }
+      if (choreMode === 'one' ? choreCovered[r[2]] : passed.has(r[1] + '|' + r[2])) continue;
+      fineList.push({ memberId: r[1], memberName: memName[r[1]] || r[1], choreName: r[2] });
     }
 
     // Write fines
@@ -1014,11 +1021,21 @@ function saveAutoSplitProposals(proposalsJson, pin) {
 
 // ---- Weekly Status ------------------------------------------
 
+// 'all' = every assigned member must do the chore (default); 'one' = one member per group is enough.
+function _getChoreMode() {
+  return String(getConfigValue('chore_completion_mode') || '').trim() === 'one' ? 'one' : 'all';
+}
+
+function _isCountedSubmission(autoStatus, humanStatus) {
+  return (autoStatus === 'passed' && humanStatus !== 'failed') || humanStatus === 'verified';
+}
+
 function getWeeklyStatus() {
   try {
     const ss       = getSpreadsheet();
     const semester = getConfigValue('semester');
     const weekStart = _normDate(getConfigValue('week_start'));
+    const mode     = _getChoreMode();
 
     const asgData  = ss.getSheetByName('chore_assignments').getDataRange().getValues();
     const subData  = ss.getSheetByName('submissions').getDataRange().getValues();
@@ -1048,9 +1065,14 @@ function getWeeklyStatus() {
     const status = Object.entries(choreMap).map(([choreName, mems]) => {
       const memberStatuses = mems.map(m => {
         const sub = subMap[m.memberId + '|' + choreName] || null;
+        const counted = !!sub && _isCountedSubmission(sub.autoStatus, sub.humanStatus);
+        const failed  = !!sub && sub.humanStatus === 'failed';
         return {
           ...m,
           submitted: !!sub,
+          counted: counted,
+          // done = counts; review = submitted, waiting on a verdict; failed = rejected; missing = nothing submitted
+          state: counted ? 'done' : (!sub ? 'missing' : (failed ? 'failed' : 'review')),
           submissionId: sub ? sub.submissionId : null,
           autoStatus: sub ? sub.autoStatus : null,
           humanStatus: sub ? sub.humanStatus : 'pending',
@@ -1058,15 +1080,28 @@ function getWeeklyStatus() {
           submittedAt: sub ? sub.submittedAt : null
         };
       });
+      const doneCount = memberStatuses.filter(m => m.counted).length;
+      const anyReview = memberStatuses.some(m => m.state === 'review');
+      let choreState;
+      if (mode === 'one') {
+        choreState = doneCount > 0 ? 'done' : (anyReview ? 'review' : 'missing');
+      } else if (doneCount === memberStatuses.length) {
+        choreState = 'done';
+      } else {
+        choreState = memberStatuses.some(m => m.state === 'missing' || m.state === 'failed') ? 'missing' : 'review';
+      }
       return {
         choreName,
         members: memberStatuses,
         submitted: memberStatuses.some(m => m.submitted),
-        allVerified: memberStatuses.every(m => m.humanStatus === 'verified')
+        allVerified: memberStatuses.every(m => m.humanStatus === 'verified'),
+        doneCount: doneCount,
+        total: memberStatuses.length,
+        state: choreState
       };
     });
 
-    return JSON.stringify({ status, weekStart, semester });
+    return JSON.stringify({ status, weekStart, semester, mode });
   } catch (err) {
     logError('getWeeklyStatus', err);
     return JSON.stringify({ error: err.toString() });
