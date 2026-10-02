@@ -19,7 +19,7 @@ Lee en este orden antes de proponer o escribir nada:
 1. `docs/systems/Index.md` — qué sistemas existen, en qué archivo vive cada uno y su estado actual. **Antes de tocar cualquier sistema, pasa por aquí.** Si el sistema ya tiene fichero en `docs/systems/`, entra directo en vez de reconstruir contexto.
 2. El fichero del sistema concreto en `docs/systems/` — tiene el detalle vivo: lógica, datos, casos borde, decisiones abiertas.
 
-**Al terminar de tocar un sistema: actualiza su fichero en el mismo commit. Si creaste un sistema nuevo: créale fichero desde `docs/systems/_template.md` y añade su fila en el Index.**
+**Al terminar de tocar un sistema: actualiza su fichero en el mismo commit. Si creaste un sistema nuevo: créale fichero (modelo: `docs/systems/events.md`; `_template.md` no existe) y añade su fila en el Index.**
 
 Hay un pre-commit hook (`.claude/pre-commit`) que bloquea commits que toquen `apps-script/` sin actualizar `docs/systems/`. Si el checkout se recrea: `cp .claude/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit`. Para saltar el check en un typo/whitespace: `git commit --no-verify`.
 
@@ -65,6 +65,7 @@ Link de acceso: `?app=officer` (el dashboard que David usa).
 | `member` | MemberView | vista individual |
 | `submit` | SubmitApp | photo submission de chores |
 | `signature` | SignatureApp | AM signature self-service |
+| `form` | FormApp | respuesta pública a un form del form builder (`&f=<form_id>`) |
 | `setup` | SetupApp | setup wizard nuevas instalaciones |
 | `draft` | DraftApp | Draft Night board |
 

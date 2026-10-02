@@ -53,7 +53,10 @@ Si no lo tiene, créalo desde [`_template.md`](./_template.md) y añade la fila 
 
 | Sistema | Estado | Fuente | Doc |
 |---|---|---|---|
-| Custom Forms (NM/RM) | Hecho | `CustomForms.gs` | — |
+| Form builder nativo | Hecho | `Forms.gs` + `OfficerDashboard.html` → Forms | [forms.md](./forms.md) |
+| Forms public page | Hecho | `FormApp.html` (`?app=form&f=<id>`) | [forms.md](./forms.md) |
+| Absence request form | Hecho | `Forms.gs` → `_fmExcusesForEvent()` | [forms.md](./forms.md) |
+| Custom Forms (NM/RM, Google Forms) | Hecho | `CustomForms.gs` | — |
 | Form reminders | Hecho | `CustomForms.gs` → `sendFormReminders()` | — |
 | Response tracking | Hecho | `CustomForms.gs` → `getFormResponses()` | — |
 
@@ -72,7 +75,6 @@ Si no lo tiene, créalo desde [`_template.md`](./_template.md) y añade la fila 
 | Sistema | Estado |
 |---|---|
 | Auto-fines por eventos de hermanos | Planeado (base: `event_attendance` + audience ya existe) |
-| Absence form (brothers) | Planeado |
 | Multi-day events | Planeado |
 | Unificación AM Events → Events unificado | Planeado |
 | Dues tracker | Planeado |

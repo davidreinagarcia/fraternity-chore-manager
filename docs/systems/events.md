@@ -46,5 +46,5 @@ Cola basada en flags: filas con `gcal_event_id` en blanco o `gcal_dirty = 'Y'` e
 
 - Reemplazar `AMEvents.gs` (AM-only legacy) con el sistema unificado.
 - Auto-fines para hermanos que salten eventos mandatory de brothers (la base `event_attendance` + audience ya existe).
-- Absence form: brothers rellenan un formulario para no ser multados.
+- Absence form: hecho (ver [forms.md](./forms.md)); el roll call ya muestra las excusas, falta el auto-fine que las consuma.
 - Eventos multi-día.

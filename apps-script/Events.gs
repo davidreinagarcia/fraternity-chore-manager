@@ -787,11 +787,14 @@ function getEventAttendanceData(eventId) {
     attendees.forEach(function(a) {
       if (!inRoster[a.type + ':' + a.memberId]) roster.push({ memberId: a.memberId, name: a.name || a.memberId, type: a.type, former: true });
     });
+    var excuses = {};
+    try { excuses = _fmExcusesForEvent(ss, eventId); } catch (e) { logError('getEventAttendanceData.excuses', e); }
     return JSON.stringify({
       success: true,
       event: { eventId: ev.eventId, title: ev.title, date: ev.date, attendance: ev.attendance, countsForNovatos: ev.countsForNovatos },
       roster: roster,
-      attendees: attendees.map(function(a) { return a.type + ':' + a.memberId; })
+      attendees: attendees.map(function(a) { return a.type + ':' + a.memberId; }),
+      excuses: excuses
     });
   } catch (err) { logError('getEventAttendanceData', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }

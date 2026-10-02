@@ -382,6 +382,10 @@ function doGet(e) {
       case 'signature':
         tmpl = HtmlService.createTemplateFromFile('SignatureApp');
         break;
+      case 'form':
+        tmpl = HtmlService.createTemplateFromFile('FormApp');
+        tmpl.formId = e.parameter.f || '';
+        break;
       case 'officer':
         tmpl = HtmlService.createTemplateFromFile('OfficerDashboard');
         break;

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Form — <?= cfg.chapter.chapter_name ?></title>
+<style>
+  :root {
+    --primary: <?= cfg.chapter.primary_color ?>;
+    --gold: <?= cfg.chapter.accent_color ?>;
+    --green: #16a34a;
+    --red: #dc2626;
+    --card-bg: #ffffff;
+    --text: #1a202c;
+    --muted: #64748b;
+    --radius: 16px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--primary); min-height: 100vh;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px 16px 40px;
+    font-family: 'Segoe UI', -apple-system, Arial, sans-serif;
+  }
+  .card { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px 24px; width: 100%; max-width: 480px; }
+  .header { text-align: center; margin-bottom: 22px; }
+  .header .badge {
+    display: inline-block; background: var(--primary); color: var(--gold);
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 1px;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 10px; text-transform: uppercase;
+  }
+  .header h1 { font-size: 1.5rem; font-weight: 800; line-height: 1.2; margin-bottom: 6px; }
+  .header .desc { font-size: 0.88rem; color: var(--muted); line-height: 1.45; white-space: pre-wrap; }
+  .header .due { display: inline-block; margin-top: 8px; font-size: 0.75rem; font-weight: 700; color: #b45309; background: #fffbeb; padding: 3px 10px; border-radius: 999px; }
+
+  .section { margin-bottom: 20px; }
+  .section > label.lbl {
+    display: block; font-size: 0.8rem; font-weight: 700; color: var(--muted);
+    letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .section .req { color: var(--red); }
+  .section .hint { font-size: 0.75rem; color: #94a3b8; margin-top: 6px; line-height: 1.4; }
+  .info-block { background: #f8fafc; border-left: 3px solid var(--primary); border-radius: 8px; padding: 12px 14px; margin-bottom: 20px; }
+  .info-block strong { display: block; font-size: 0.9rem; margin-bottom: 2px; }
+  .info-block span { font-size: 0.82rem; color: var(--muted); white-space: pre-wrap; }
+
+  select, input[type="text"], input[type="number"], input[type="date"], textarea {
+    width: 100%; padding: 13px 14px; border: 2px solid #e2e8f0; border-radius: 10px;
+    font-size: 1rem; color: var(--text); background: #f8fafc; font-family: inherit;
+  }
+  textarea { min-height: 96px; resize: vertical; }
+  select {
+    cursor: pointer; appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+  }
+  select:focus, input:focus, textarea:focus { outline: none; border-color: var(--primary); }
+
+  .opts { display: flex; flex-direction: column; gap: 8px; }
+  .opts.row { flex-direction: row; }
+  .opt {
+    display: flex; align-items: center; gap: 10px; padding: 12px 14px; flex: 1;
+    border: 2px solid #e2e8f0; border-radius: 10px; background: #f8fafc; cursor: pointer; font-size: 0.95rem;
+  }
+  .opt:has(input:checked) { border-color: var(--primary); background: #f0fdf4; }
+  .opt input { width: 18px; height: 18px; accent-color: var(--primary); flex: none; }
+
+  .who-chip {
+    display: none; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 13px 14px; border: 2px solid var(--green); border-radius: 10px; background: #f0fdf4; font-weight: 700;
+  }
+  .who-chip button { background: none; border: none; color: var(--primary); font-size: 0.82rem; font-weight: 700; text-decoration: underline; cursor: pointer; }
+  .who-results { margin-top: 6px; border: 2px solid #e2e8f0; border-radius: 10px; background: white; max-height: 220px; overflow-y: auto; display: none; }
+  .who-results button { display: block; width: 100%; text-align: left; padding: 12px 14px; background: none; border: none; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; cursor: pointer; font-family: inherit; }
+  .who-results button:last-child { border-bottom: none; }
+  .who-results button:hover { background: #f0fdf4; }
+  .who-results .none { padding: 12px 14px; color: var(--muted); font-size: 0.85rem; }
+
+  #submit-btn {
+    width: 100%; padding: 16px; background: var(--primary); color: var(--gold);
+    border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 800; cursor: pointer; margin-top: 8px;
+  }
+  #submit-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+  #err { display: none; margin-bottom: 14px; padding: 10px 14px; border-radius: 10px; background: #fef2f2; color: var(--red); font-size: 0.85rem; font-weight: 600; }
+
+  .state { text-align: center; padding: 20px 0; }
+  .state .icon { font-size: 3.2rem; margin-bottom: 10px; }
+  .state .title { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
+  .state .msg { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
+  .btn-alt { width: 100%; padding: 12px; border: 2px solid var(--primary); color: var(--primary); background: white; border-radius: 10px; font-size: 0.9rem; font-weight: 700; cursor: pointer; margin-top: 16px; }
+</style>
+<?!= include('ButtonFeedback') ?>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <? if (cfg.chapter.logo_url) { ?>
+    <img src="<?= cfg.chapter.logo_url ?>" alt="<?= cfg.chapter.chapter_name ?>" style="height:52px;width:auto;margin-bottom:10px" onerror="this.style.display='none'">
+    <? } ?>
+    <div class="badge"><?= cfg.chapter.chapter_name ?></div>
+    <h1 id="f-title">Loading...</h1>
+    <div class="desc" id="f-desc"></div>
+    <div class="due" id="f-due" style="display:none"></div>
+  </div>
+
+  <div id="form-area" style="display:none">
+    <div class="section" id="who-section">
+      <label class="lbl">Your name <span class="req">*</span></label>
+      <div class="who-chip" id="who-chip"><span id="who-name"></span><button type="button" onclick="clearWho()">Change</button></div>
+      <div id="who-search">
+        <input type="text" id="who-input" placeholder="Start typing your name..." autocomplete="off" oninput="renderWho()" onfocus="renderWho()">
+        <div class="who-results" id="who-results"></div>
+      </div>
+    </div>
+    <div id="fields"></div>
+    <div id="err"></div>
+    <button id="submit-btn" onclick="submitForm()">Submit</button>
+  </div>
+
+  <div id="state" class="state" style="display:none">
+    <div class="icon" id="state-icon"></div>
+    <div class="title" id="state-title"></div>
+    <div class="msg" id="state-msg"></div>
+    <button class="btn-alt" id="again-btn" style="display:none" onclick="resetForm()">Submit another</button>
+  </div>
+</div>
+
+<script>
+var FORM_ID = <?!= JSON.stringify(formId).replace(/</g, '\\u003c') ?>;
+var form = null, roster = [], events = [], whoKey = '';
+
+function el(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function showState(icon, title, msg, again) {
+  el('form-area').style.display = 'none';
+  el('state').style.display = 'block';
+  el('state-icon').textContent = icon;
+  el('state-title').textContent = title;
+  el('state-msg').textContent = msg || '';
+  el('again-btn').style.display = again ? 'block' : 'none';
+}
+
+window.addEventListener('load', function() {
+  if (!FORM_ID) { el('f-title').textContent = 'Form'; showState('❓', 'No form selected', 'This link is missing its form id. Ask an officer for the right link.'); return; }
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (!r.success) { el('f-title').textContent = 'Form'; showState('❌', 'Form not available', r.error); return; }
+      form = r.form; roster = r.roster || []; events = r.events || [];
+      el('f-title').textContent = form.title;
+      el('f-desc').textContent = form.description;
+      if (form.dueDate) { el('f-due').style.display = 'inline-block'; el('f-due').textContent = 'Due ' + form.dueDate; }
+      document.title = form.title;
+      if (!r.accepting) { showState('🔒', 'Not accepting responses', r.closedReason); return; }
+      renderFields();
+      el('form-area').style.display = 'block';
+    })
+    .withFailureHandler(function() { el('f-title').textContent = 'Form'; showState('❌', 'Could not load', 'Check your connection and refresh the page.'); })
+    .fmGetPublicForm(FORM_ID);
+});
+
+// ---- identity ----
+function renderWho() {
+  var q = el('who-input').value.trim().toLowerCase();
+  var box = el('who-results');
+  if (!q) { box.style.display = 'none'; return; }
+  var hits = roster.filter(function(m) { return m.name.toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
+  box.innerHTML = hits.length
+    ? hits.map(function(m) { return '<button type="button" data-key="' + esc(m.key) + '">' + esc(m.name) + '</button>'; }).join('')
+    : '<div class="none">No match. Check the spelling, or ask an officer if you are not on the list.</div>';
+  box.style.display = 'block';
+  box.querySelectorAll('button').forEach(function(b) { b.onclick = function() { pickWho(b.dataset.key); }; });
+}
+function pickWho(key) {
+  var m = roster.filter(function(x) { return x.key === key; })[0];
+  if (!m) return;
+  whoKey = key;
+  el('who-name').textContent = m.name;
+  el('who-chip').style.display = 'flex';
+  el('who-search').style.display = 'none';
+  el('who-results').style.display = 'none';
+}
+function clearWho() {
+  whoKey = '';
+  el('who-chip').style.display = 'none';
+  el('who-search').style.display = 'block';
+  el('who-input').value = '';
+  el('who-input').focus();
+}
+
+// ---- fields ----
+function renderFields() {
+  var html = '';
+  form.fields.forEach(function(f) {
+    if (f.type === 'info') {
+      html += '<div class="info-block"><strong>' + esc(f.label) + '</strong>' + (f.help ? '<span>' + esc(f.help) + '</span>' : '') + '</div>';
+      return;
+    }
+    html += '<div class="section" data-fid="' + f.id + '"><label class="lbl">' + esc(f.label) + (f.required ? ' <span class="req">*</span>' : '') + '</label>';
+    html += control(f);
+    if (f.help) html += '<div class="hint">' + esc(f.help) + '</div>';
+    html += '</div>';
+  });
+  el('fields').innerHTML = html;
+}
+
+function control(f) {
+  var id = 'in-' + f.id;
+  if (f.type === 'text') return '<input type="text" id="' + id + '" maxlength="300" autocomplete="off">';
+  if (f.type === 'textarea') return '<textarea id="' + id + '" maxlength="2000"></textarea>';
+  if (f.type === 'number') return '<input type="number" id="' + id + '" inputmode="decimal">';
+  if (f.type === 'date') return '<input type="date" id="' + id + '">';
+  if (f.type === 'yesno') {
+    return '<div class="opts row"><label class="opt"><input type="radio" name="' + id + '" value="yes"> Yes</label>' +
+           '<label class="opt"><input type="radio" name="' + id + '" value="no"> No</label></div>';
+  }
+  if (f.type === 'choice') {
+    return '<div class="opts">' + f.options.map(function(o) {
+      return '<label class="opt"><input type="radio" name="' + id + '" value="' + esc(o) + '"> ' + esc(o) + '</label>';
+    }).join('') + '</div>';
+  }
+  if (f.type === 'multi') {
+    return '<div class="opts">' + f.options.map(function(o) {
+      return '<label class="opt"><input type="checkbox" name="' + id + '" value="' + esc(o) + '"> ' + esc(o) + '</label>';
+    }).join('') + '</div>';
+  }
+  if (f.type === 'event') {
+    if (!events.length) return '<div class="hint" style="margin-top:0">There are no upcoming events this form applies to.</div>';
+    return '<select id="' + id + '"><option value="">Select an event...</option>' +
+      events.map(function(e) { return '<option value="' + esc(e.eventId) + '">' + esc(e.label) + '</option>'; }).join('') + '</select>';
+  }
+  return '';
+}
+
+function readAnswer(f) {
+  var id = 'in-' + f.id;
+  if (f.type === 'choice' || f.type === 'yesno') {
+    var c = document.querySelector('input[name="' + id + '"]:checked');
+    return c ? c.value : '';
+  }
+  if (f.type === 'multi') {
+    return Array.prototype.map.call(document.querySelectorAll('input[name="' + id + '"]:checked'), function(c) { return c.value; });
+  }
+  var node = el(id);
+  return node ? node.value : '';
+}
+
+function showErr(msg) { var e = el('err'); e.textContent = msg; e.style.display = msg ? 'block' : 'none'; if (msg) e.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+
+function submitForm() {
+  showErr('');
+  if (!whoKey) { showErr('Pick your name first.'); return; }
+  var answers = {};
+  for (var i = 0; i < form.fields.length; i++) {
+    var f = form.fields[i];
+    if (f.type === 'info') continue;
+    var v = readAnswer(f);
+    var empty = v === '' || (Array.isArray(v) && !v.length);
+    if (empty && f.required) { showErr('"' + f.label + '" is required.'); return; }
+    if (!empty) answers[f.id] = v;
+  }
+  var btn = el('submit-btn');
+  btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      btn.disabled = false;
+      if (!r.success) { showErr(r.message); return; }
+      showState('✅', 'Done', r.message, form.allowMultiple);
+    })
+    .withFailureHandler(function() { btn.disabled = false; showErr('Something went wrong. Please try again.'); })
+    .fmSubmitResponse(FORM_ID, whoKey, JSON.stringify(answers));
+}
+
+function resetForm() {
+  clearWho();
+  renderFields();
+  showErr('');
+  el('state').style.display = 'none';
+  el('form-area').style.display = 'block';
+}
+</script>
+</body>
+</html>

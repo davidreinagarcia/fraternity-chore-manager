@@ -763,7 +763,53 @@
     <!-- PHILANTHROPY SECTION -->
     <div class="sec" id="sec-philanthropy"><div class="container"><div class="coming-soon"><div class="cs-icon">🤝</div><h2>Philanthropy</h2><p>Community service hours tracking — coming soon.</p></div></div></div>
     <!-- FORMS SECTION -->
-    <div class="sec" id="sec-forms"><div class="container"><div class="coming-soon"><div class="cs-icon">📝</div><h2>Forms</h2><p>Custom Forms Manager lives in Admin → Custom Forms Manager.</p><button class="btn-primary" style="margin-top:16px" onclick="showSection('admin',document.querySelector('.ni[data-s=admin]'));setTimeout(function(){toggleAdminSection('admin-forms');formsManagerOnExpand();},120)">Go to Forms Manager</button></div></div></div>
+    <div class="sec" id="sec-forms"><div class="container">
+      <div id="fm-list-view">
+        <div class="card">
+          <div class="card-header">
+            <h2>📝 Forms</h2>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showSection('admin',document.querySelector('.ni[data-s=admin]'));setTimeout(function(){toggleAdminSection('admin-forms');formsManagerOnExpand();},120)">Semester forms (Google Forms)</button>
+              <button class="btn-primary" style="padding:6px 14px;font-size:0.8rem" onclick="openFmModal('')">+ New form</button>
+            </div>
+          </div>
+          <div id="fm-loading" style="text-align:center;color:var(--muted);padding:24px 0">Loading forms...</div>
+          <div class="card-body" style="overflow-x:auto;padding:12px 16px;display:none" id="fm-table-wrap">
+            <table class="data-table" style="min-width:820px">
+              <thead><tr>
+                <th>Form</th><th style="width:170px">For</th><th style="width:110px">Due</th>
+                <th style="width:110px">Status</th><th style="width:150px">Responses</th><th style="width:230px">Actions</th>
+              </tr></thead>
+              <tbody id="fm-tbody"></tbody>
+            </table>
+          </div>
+          <div id="fm-empty" class="empty-state" style="display:none">No forms yet. Create one, or start from the absence request template.</div>
+        </div>
+      </div>
+      <div id="fm-detail-view" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <h2 id="fm-d-title">Form</h2>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="closeFmDetail()">← All forms</button>
+              <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="fmCopyLink(fmCurrent && fmCurrent.url)">Copy link</button>
+              <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="openFmModal(fmCurrent.form.formId)">Edit</button>
+              <button class="btn-outline" id="fm-d-toggle" style="padding:6px 12px;font-size:0.8rem" onclick="fmToggleStatus()">Close form</button>
+              <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="fmExportCsv()">Export CSV</button>
+              <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem;border-color:var(--red);color:var(--red)" onclick="fmDeleteCurrent()">Delete</button>
+            </div>
+          </div>
+          <div id="fm-d-meta" style="padding:10px 16px;font-size:0.82rem;color:var(--muted);border-bottom:1px solid var(--border)"></div>
+          <div id="fm-d-loading" style="text-align:center;color:var(--muted);padding:24px 0">Loading responses...</div>
+          <div id="fm-d-body" style="display:none">
+            <div class="card-body" style="overflow-x:auto;padding:12px 16px">
+              <table class="data-table" id="fm-d-table"></table>
+            </div>
+            <div id="fm-d-missing" style="padding:12px 16px;border-top:1px solid var(--border)"></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
 
     <!-- ADMIN SECTION -->
     <div class="sec" id="sec-admin"><div class="container">
@@ -1583,6 +1629,67 @@
   </div>
 </div>
 
+<!-- Forms: builder modal -->
+<div class="modal-overlay" id="fm-modal">
+  <div class="modal modal-ev">
+    <div class="ev-head"><h3 id="fm-modal-title">New form</h3></div>
+    <div class="ev-body">
+      <div class="ev-card" id="fm-f-templates">
+        <div class="ev-card-title">Start from</div>
+        <div class="ev-seg">
+          <button type="button" onclick="fmApplyTemplate('blank')">Blank form</button>
+          <button type="button" onclick="fmApplyTemplate('absence')">Absence request</button>
+        </div>
+      </div>
+      <div class="ev-grid">
+        <div class="ev-card">
+          <div class="ev-card-title">Details</div>
+          <div>
+            <label class="ev-lbl">Title</label>
+            <input type="text" id="fm-f-title" class="inline-input" style="width:100%" placeholder="e.g. Absence request">
+          </div>
+          <div style="display:flex;flex-direction:column;flex:1">
+            <label class="ev-lbl">Description (shown above the questions)</label>
+            <textarea id="fm-f-desc" class="inline-input" style="width:100%" placeholder="Optional"></textarea>
+          </div>
+        </div>
+        <div class="ev-card">
+          <div class="ev-card-title">Who and when</div>
+          <div>
+            <label class="ev-lbl">Who fills it out</label>
+            <select id="fm-f-audience" class="inline-input" style="width:100%"></select>
+          </div>
+          <div>
+            <label class="ev-lbl">Deadline (optional)</label>
+            <input type="date" id="fm-f-due" class="inline-input" style="width:100%">
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
+            <input type="checkbox" id="fm-f-review" style="width:16px;height:16px"> Officers review each response (approve / deny)
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
+            <input type="checkbox" id="fm-f-multi" style="width:16px;height:16px"> Members can submit more than once
+          </label>
+          <div id="fm-f-action-note" style="display:none;font-size:0.78rem;color:var(--muted)">
+            Absence behavior is on: approved requests show as excused when you take attendance for that event. Needs one event question.
+          </div>
+        </div>
+      </div>
+      <div class="ev-card">
+        <div class="ev-card-title">Questions</div>
+        <div id="fm-f-fields" style="display:flex;flex-direction:column;gap:10px"></div>
+        <div><button type="button" class="btn-outline" style="padding:6px 14px;font-size:0.8rem" onclick="fmAddField()">+ Add question</button></div>
+      </div>
+    </div>
+    <div class="ev-foot">
+      <div class="ev-foot-btns">
+        <span class="spacer"></span>
+        <button class="btn-outline" onclick="closeFmModal()">Cancel</button>
+        <button class="btn-primary" id="fm-save-btn" onclick="saveFmFromModal()">Save form</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Events: Google Calendar settings modal -->
 <div class="modal-overlay" id="evs-cal-modal">
   <div class="modal">
@@ -1749,7 +1856,7 @@ function showSection(id, btn) {
   if (t) t.textContent = _sectionTitles[id] || id;
   if (id === 'members') initMemberManager();
   if (id === 'events') loadEvents();
-  if (id === 'forms' && !_formsManagerInitialized) formsManagerOnExpand();
+  if (id === 'forms') loadForms();
 }
 
 // ---- Dashboard init ----------------------------------------
@@ -4036,6 +4143,7 @@ function takeAttendanceFromModal() {
 // ---- Roll call ----
 var evsAttPending = null;
 var evsAttRoster = [];
+var evsAttExcuses = {};
 
 function openEvAttModal(eventId) {
   evsAttPending = eventId;
@@ -4052,6 +4160,7 @@ function openEvAttModal(eventId) {
       var r = JSON.parse(json);
       if (!r.success) { document.getElementById('evs-att-loading').textContent = 'Error: ' + r.error; return; }
       evsAttRoster = r.roster;
+      evsAttExcuses = r.excuses || {};
       var present = {};
       r.attendees.forEach(function(k) { present[k] = true; });
       renderEvAttList(present);
@@ -4078,6 +4187,12 @@ function renderEvAttList(present) {
       var key = m.type + ':' + m.memberId;
       var tag = m.former ? ' <span style="color:var(--muted);font-size:0.75rem">(no longer on roster)</span>'
         : m.inactive ? ' <span style="color:var(--muted);font-size:0.75rem">(inactive)</span>' : '';
+      var ex = evsAttExcuses[key];
+      if (ex) {
+        tag += ex.status === 'approved'
+          ? ' <span class="badge badge-passed" title="' + esc(ex.reason) + '">Excused' + (ex.reason ? ': ' + esc(ex.reason) : '') + '</span>'
+          : ' <span class="badge badge-flagged" title="' + esc(ex.reason) + '">Absence request pending</span>';
+      }
       html += '<label class="am-att-row" data-name="' + esc(m.name.toLowerCase()) + '">' +
         '<input type="checkbox" data-key="' + esc(key) + '"' + (present[key] ? ' checked' : '') + ' onchange="updateEvAttCount()">' +
         '<span>' + esc(m.name) + tag + '</span></label>';
@@ -5546,6 +5661,356 @@ function doSendReminders() {
       btn.disabled = false; btn.textContent = 'Send Reminders';
     })
     .sendFormReminders('returning', pin);
+}
+
+// ---- Forms (form builder) ----------------------------------
+var fmList = [];
+var fmCurrent = null;
+var fmFields = [];
+var fmEditingId = '';
+var fmEditingAction = 'none';
+var FM_TYPE_LABELS = {
+  text: 'Short text', textarea: 'Paragraph', choice: 'Single choice', multi: 'Multiple choice',
+  number: 'Number', date: 'Date', yesno: 'Yes / No', event: 'Event picker', info: 'Text block (no answer)'
+};
+
+function fmRun(handler) {
+  return google.script.run.withSuccessHandler(function(json) { handler(JSON.parse(json)); }).withFailureHandler(onError);
+}
+
+function fmWhen(iso) {
+  var d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function loadForms() {
+  if (document.getElementById('fm-detail-view').style.display !== 'none') return;
+  document.getElementById('fm-loading').style.display = 'block';
+  document.getElementById('fm-table-wrap').style.display = 'none';
+  document.getElementById('fm-empty').style.display = 'none';
+  fmRun(function(r) {
+    document.getElementById('fm-loading').style.display = 'none';
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    fmList = r.forms;
+    renderFmList();
+  }).fmListForms(correctPin);
+}
+
+function renderFmList() {
+  var labels = evAudienceLabels();
+  document.getElementById('fm-table-wrap').style.display = fmList.length ? 'block' : 'none';
+  document.getElementById('fm-empty').style.display = fmList.length ? 'none' : 'block';
+  document.getElementById('fm-tbody').innerHTML = fmList.map(function(f) {
+    var status = !f.accepting
+      ? '<span class="badge badge-rejected">' + (f.status === 'closed' ? 'Closed' : 'Past due') + '</span>'
+      : '<span class="badge badge-passed">Open</span>';
+    var pending = f.pending ? ' <span class="badge badge-flagged">' + f.pending + ' to review</span>' : '';
+    return '<tr>' +
+      '<td><a href="#" style="font-weight:700;color:var(--primary);text-decoration:none" onclick="openFmDetail(\'' + f.formId + '\');return false">' + esc(f.title) + '</a>' +
+        (f.actionType === 'absence' ? ' <span style="font-size:0.7rem;color:var(--muted)">absence</span>' : '') + '</td>' +
+      '<td style="font-size:0.82rem">' + esc(labels[f.audience]) + '</td>' +
+      '<td style="font-size:0.82rem">' + esc(f.dueDate || '—') + '</td>' +
+      '<td>' + status + '</td>' +
+      '<td style="font-size:0.82rem">' + f.responders + ' / ' + f.audienceSize + pending + '</td>' +
+      '<td><button class="qa-btn" onclick="openFmDetail(\'' + f.formId + '\')">Responses</button> ' +
+        '<button class="qa-btn" onclick="fmCopyLink(\'' + esc(f.url) + '\')">Copy link</button> ' +
+        '<button class="qa-btn" onclick="openFmModal(\'' + f.formId + '\')">Edit</button></td>' +
+      '</tr>';
+  }).join('');
+}
+
+function fmCopyLink(url) {
+  if (!url) return;
+  var done = function() { showToast('Link copied.'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, function() { window.prompt('Copy this link:', url); });
+  else window.prompt('Copy this link:', url);
+}
+
+function openFmDetail(formId) {
+  document.getElementById('fm-list-view').style.display = 'none';
+  document.getElementById('fm-detail-view').style.display = 'block';
+  document.getElementById('fm-d-loading').style.display = 'block';
+  document.getElementById('fm-d-body').style.display = 'none';
+  var f = fmList.filter(function(x) { return x.formId === formId; })[0];
+  document.getElementById('fm-d-title').textContent = f ? f.title : 'Form';
+  document.getElementById('fm-d-meta').textContent = '';
+  fmCurrent = null;
+  reloadFmDetail(formId);
+}
+
+function reloadFmDetail(formId) {
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); closeFmDetail(); return; }
+    fmCurrent = r;
+    renderFmDetail();
+  }).fmGetResponses(correctPin, formId);
+}
+
+function closeFmDetail() {
+  document.getElementById('fm-detail-view').style.display = 'none';
+  document.getElementById('fm-list-view').style.display = 'block';
+  fmCurrent = null;
+  loadForms();
+}
+
+function renderFmDetail() {
+  var r = fmCurrent, f = r.form;
+  var labels = evAudienceLabels();
+  document.getElementById('fm-d-title').textContent = f.title;
+  document.getElementById('fm-d-toggle').textContent = f.status === 'open' ? 'Close form' : 'Reopen form';
+  document.getElementById('fm-d-meta').innerHTML =
+    esc(labels[f.audience]) + (f.dueDate ? ' · due ' + esc(f.dueDate) : '') + ' · ' +
+    (r.accepting ? '<strong style="color:var(--green)">accepting responses</strong>' : '<strong style="color:var(--red)">not accepting responses</strong>') +
+    '<br><span style="font-family:monospace;font-size:0.75rem">' + esc(r.url) + '</span>';
+
+  var cols = f.fields.filter(function(x) { return x.type !== 'info'; });
+  var head = '<thead><tr><th style="width:170px">Who</th><th style="width:120px">Sent</th>' +
+    cols.map(function(c) { return '<th>' + esc(c.label) + '</th>'; }).join('') +
+    (f.requiresReview ? '<th style="width:210px">Review</th>' : '') + '<th style="width:40px"></th></tr></thead>';
+  var novShort = (CHAPTER_CONFIG.labels.label_am_short || 'AM');
+  var body = r.responses.map(function(x) {
+    var review = '';
+    if (f.requiresReview) {
+      var badge = x.reviewStatus === 'approved' ? '<span class="badge badge-passed">Approved</span>'
+        : x.reviewStatus === 'denied' ? '<span class="badge badge-rejected">Denied</span>'
+        : '<span class="badge badge-flagged">Pending</span>';
+      var btns = x.reviewStatus === 'pending' || !x.reviewStatus
+        ? '<button class="qa-btn" onclick="fmReview(\'' + x.responseId + '\',\'approved\')">Approve</button> <button class="qa-btn" onclick="fmReview(\'' + x.responseId + '\',\'denied\')">Deny</button>'
+        : '<button class="qa-btn" onclick="fmReview(\'' + x.responseId + '\',\'pending\')">Undo</button>';
+      review = '<td>' + badge + ' ' + btns + (x.reviewNote ? '<div style="font-size:0.72rem;color:var(--muted)">' + esc(x.reviewNote) + '</div>' : '') + '</td>';
+    }
+    return '<tr><td style="font-weight:600">' + esc(x.memberName) + (x.memberType === 'novato' ? ' <span style="font-size:0.7rem;color:var(--muted)">' + esc(novShort) + '</span>' : '') + '</td>' +
+      '<td style="font-size:0.78rem;color:var(--muted)">' + esc(fmWhen(x.submittedAt)) + '</td>' +
+      cols.map(function(c) { return '<td style="font-size:0.82rem;white-space:pre-wrap">' + esc(x.display[c.id] || '') + '</td>'; }).join('') +
+      review + '<td><button class="qa-btn" title="Delete response" onclick="fmDeleteResponse(\'' + x.responseId + '\')">✕</button></td></tr>';
+  }).join('');
+  document.getElementById('fm-d-table').innerHTML = head + '<tbody>' + (body || '<tr><td colspan="' + (cols.length + 4) + '" class="empty-state">No responses yet.</td></tr>') + '</tbody>';
+
+  var nr = r.nonResponders, emailable = nr.filter(function(m) { return m.hasEmail; }).length;
+  document.getElementById('fm-d-missing').innerHTML = nr.length
+    ? '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">' +
+        '<strong style="font-size:0.85rem">Not responded yet (' + nr.length + ')</strong>' +
+        '<button class="btn-outline" style="padding:5px 12px;font-size:0.78rem" onclick="fmSendReminders(this)"' + (emailable ? '' : ' disabled') + '>Email reminder to ' + emailable + '</button></div>' +
+      '<div style="font-size:0.8rem;color:var(--muted);line-height:1.7">' + nr.map(function(m) { return esc(m.name) + (m.hasEmail ? '' : ' (no email)'); }).join(' · ') + '</div>'
+    : '<strong style="font-size:0.85rem;color:var(--green)">Everyone has responded.</strong>';
+  document.getElementById('fm-d-loading').style.display = 'none';
+  document.getElementById('fm-d-body').style.display = 'block';
+}
+
+function fmToggleStatus() {
+  if (!fmCurrent) return;
+  var f = fmCurrent.form;
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    showToast(r.message);
+    reloadFmDetail(f.formId);
+  }).fmSetStatus(correctPin, f.formId, f.status === 'open' ? 'closed' : 'open');
+}
+
+function fmDeleteCurrent() {
+  if (!fmCurrent) return;
+  var f = fmCurrent.form;
+  if (!confirm('Delete "' + f.title + '" and its ' + fmCurrent.responses.length + ' response(s)? This cannot be undone.')) return;
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    showToast(r.message);
+    closeFmDetail();
+  }).fmDeleteForm(correctPin, f.formId);
+}
+
+function fmReview(responseId, decision) {
+  var note = '';
+  if (decision === 'denied') {
+    note = window.prompt('Reason for denying (optional, only officers see it):', '');
+    if (note === null) return;
+  }
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    reloadFmDetail(fmCurrent.form.formId);
+  }).fmReviewResponse(correctPin, responseId, decision, note, 'Officer');
+}
+
+function fmDeleteResponse(responseId) {
+  if (!confirm('Delete this response?')) return;
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    reloadFmDetail(fmCurrent.form.formId);
+  }).fmDeleteResponse(correctPin, responseId);
+}
+
+function fmSendReminders(btn) {
+  if (!fmCurrent || !confirm('Email everyone who has not responded yet?')) return;
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    showToast(r.message || ('Sent ' + r.sent + ' reminder(s)' + (r.skipped ? ', ' + r.skipped + ' skipped (no email)' : '') + '.'));
+  }).fmSendReminders(correctPin, fmCurrent.form.formId);
+}
+
+function fmExportCsv() {
+  if (!fmCurrent) return;
+  var f = fmCurrent.form;
+  var cols = f.fields.filter(function(x) { return x.type !== 'info'; });
+  var cell = function(v) {
+    v = String(v == null ? '' : v);
+    if (/^[=+\-@]/.test(v)) v = "'" + v;
+    return '"' + v.replace(/"/g, '""') + '"';
+  };
+  var rows = [['Name', 'Type', 'Submitted'].concat(cols.map(function(c) { return c.label; }), ['Review', 'Reviewed by', 'Note'])];
+  fmCurrent.responses.forEach(function(x) {
+    rows.push([x.memberName, x.memberType, x.submittedAt].concat(cols.map(function(c) { return x.display[c.id] || ''; }), [x.reviewStatus, x.reviewedBy, x.reviewNote]));
+  });
+  var blob = new Blob([rows.map(function(r) { return r.map(cell).join(','); }).join('\r\n')], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = f.title.replace(/[^A-Za-z0-9]+/g, '_') + '_responses.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// ---- Builder ----
+function fmTemplate(kind) {
+  if (kind === 'absence') {
+    return {
+      title: 'Absence request',
+      description: 'Going to miss a mandatory event? Send this before it happens. Approved requests show as excused when attendance is taken.',
+      audience: 'brothers', requiresReview: true, allowMultiple: true, action: 'absence', dueDate: '',
+      fields: [
+        { type: 'event', label: 'Which event will you miss?', required: true, help: '' },
+        { type: 'choice', label: 'Reason', required: true, help: '', options: ['Class or exam', 'Work or interview', 'Illness', 'Family', 'Out of town', 'Other'] },
+        { type: 'textarea', label: 'Details', required: false, help: 'Anything the officers should know.' }
+      ]
+    };
+  }
+  return { title: '', description: '', audience: 'brothers', requiresReview: false, allowMultiple: false, action: 'none', dueDate: '',
+    fields: [{ type: 'text', label: '', required: true, help: '' }] };
+}
+
+function fmLoadIntoModal(t) {
+  document.getElementById('fm-f-title').value = t.title;
+  document.getElementById('fm-f-desc').value = t.description;
+  document.getElementById('fm-f-audience').value = t.audience;
+  document.getElementById('fm-f-due').value = t.dueDate || '';
+  document.getElementById('fm-f-review').checked = !!t.requiresReview;
+  document.getElementById('fm-f-multi').checked = !!t.allowMultiple;
+  fmEditingAction = t.action || 'none';
+  document.getElementById('fm-f-action-note').style.display = fmEditingAction === 'absence' ? 'block' : 'none';
+  fmFields = t.fields.map(function(f) { return Object.assign({}, f, { options: (f.options || []).slice() }); });
+  fmRenderFields();
+}
+
+function openFmModal(formId) {
+  var labels = evAudienceLabels();
+  document.getElementById('fm-f-audience').innerHTML = ['brothers', 'novatos', 'everyone'].map(function(a) {
+    return '<option value="' + a + '">' + esc(labels[a]) + '</option>';
+  }).join('');
+  fmEditingId = formId || '';
+  document.getElementById('fm-modal-title').textContent = formId ? 'Edit form' : 'New form';
+  document.getElementById('fm-f-templates').style.display = formId ? 'none' : 'flex';
+  var btn = document.getElementById('fm-save-btn');
+  btn.disabled = false; window.bfBusy(btn, false);
+  if (!formId) {
+    fmLoadIntoModal(fmTemplate('blank'));
+    document.getElementById('fm-modal').classList.add('open');
+    return;
+  }
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    var f = r.form;
+    fmLoadIntoModal({ title: f.title, description: f.description, audience: f.audience, dueDate: f.dueDate, requiresReview: f.requiresReview,
+      allowMultiple: f.allowMultiple, action: f.action.type, fields: f.fields });
+    document.getElementById('fm-modal').classList.add('open');
+  }).fmGetForm(correctPin, formId);
+}
+
+function closeFmModal() { document.getElementById('fm-modal').classList.remove('open'); }
+
+function fmApplyTemplate(kind) {
+  var dirty = document.getElementById('fm-f-title').value.trim() || fmFields.some(function(f) { return f.label; });
+  if (dirty && !confirm('Replace what you have so far with this template?')) return;
+  fmLoadIntoModal(fmTemplate(kind));
+}
+
+function fmSyncFields() {
+  document.querySelectorAll('#fm-f-fields .fm-row').forEach(function(row, i) {
+    var f = fmFields[i];
+    f.type = row.querySelector('.fm-type').value;
+    f.label = row.querySelector('.fm-label').value;
+    f.help = row.querySelector('.fm-help').value;
+    f.required = row.querySelector('.fm-req').checked;
+    var opts = row.querySelector('.fm-opts');
+    f.options = opts ? opts.value.split('\n').map(function(s) { return s.trim(); }).filter(Boolean) : (f.options || []);
+  });
+}
+
+function fmRenderFields() {
+  document.getElementById('fm-f-fields').innerHTML = fmFields.map(function(f, i) {
+    var typeOpts = Object.keys(FM_TYPE_LABELS).map(function(t) {
+      return '<option value="' + t + '"' + (f.type === t ? ' selected' : '') + '>' + FM_TYPE_LABELS[t] + '</option>';
+    }).join('');
+    var hasOpts = f.type === 'choice' || f.type === 'multi';
+    return '<div class="fm-row" style="background:white;border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px">' +
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+        '<select class="fm-type inline-input" style="width:190px" onchange="fmSyncFields();fmRenderFields()">' + typeOpts + '</select>' +
+        '<input type="text" class="fm-label inline-input" style="flex:1;min-width:180px" placeholder="' + (f.type === 'info' ? 'Heading' : 'Question') + '" value="' + esc(f.label) + '">' +
+        (f.type === 'info' ? '<input type="checkbox" class="fm-req" style="display:none">' :
+          '<label style="display:flex;align-items:center;gap:5px;font-size:0.8rem;cursor:pointer"><input type="checkbox" class="fm-req"' + (f.required ? ' checked' : '') + '> Required</label>') +
+        '<button type="button" class="qa-btn" title="Move up" onclick="fmMoveField(' + i + ',-1)">↑</button>' +
+        '<button type="button" class="qa-btn" title="Move down" onclick="fmMoveField(' + i + ',1)">↓</button>' +
+        '<button type="button" class="qa-btn" title="Remove" onclick="fmRemoveField(' + i + ')">✕</button>' +
+      '</div>' +
+      '<input type="text" class="fm-help inline-input" style="width:100%" placeholder="' + (f.type === 'info' ? 'Text shown to members' : 'Help text (optional)') + '" value="' + esc(f.help) + '">' +
+      (hasOpts ? '<textarea class="fm-opts inline-input" style="width:100%;min-height:70px" placeholder="One option per line">' + esc((f.options || []).join('\n')) + '</textarea>' : '') +
+    '</div>';
+  }).join('');
+}
+
+function fmAddField() {
+  fmSyncFields();
+  fmFields.push({ type: 'text', label: '', required: false, help: '' });
+  fmRenderFields();
+}
+
+function fmRemoveField(i) {
+  fmSyncFields();
+  fmFields.splice(i, 1);
+  fmRenderFields();
+}
+
+function fmMoveField(i, d) {
+  fmSyncFields();
+  var j = i + d;
+  if (j < 0 || j >= fmFields.length) return;
+  var t = fmFields[i]; fmFields[i] = fmFields[j]; fmFields[j] = t;
+  fmRenderFields();
+}
+
+function saveFmFromModal() {
+  fmSyncFields();
+  var payload = {
+    formId: fmEditingId,
+    title: document.getElementById('fm-f-title').value.trim(),
+    description: document.getElementById('fm-f-desc').value,
+    audience: document.getElementById('fm-f-audience').value,
+    dueDate: document.getElementById('fm-f-due').value,
+    requiresReview: document.getElementById('fm-f-review').checked,
+    allowMultiple: document.getElementById('fm-f-multi').checked,
+    action: { type: fmEditingAction },
+    fields: fmFields
+  };
+  if (!payload.title) { showToast('Give the form a title.'); return; }
+  var btn = document.getElementById('fm-save-btn');
+  btn.disabled = true; window.bfBusy(btn, true);
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      btn.disabled = false; window.bfBusy(btn, false);
+      if (!r.success) { showToast('Error: ' + r.error); return; }
+      closeFmModal();
+      showToast(r.message);
+      if (document.getElementById('fm-detail-view').style.display !== 'none') reloadFmDetail(r.formId);
+      else loadForms();
+    })
+    .withFailureHandler(function(err) { btn.disabled = false; window.bfBusy(btn, false); onError(err); })
+    .fmSaveForm(correctPin, JSON.stringify(payload), 'Officer');
 }
 
 // Load form URLs lazily on first expand of the forms manager section.
