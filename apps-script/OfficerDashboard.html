@@ -2023,12 +2023,19 @@ function onWeeklyStatus(json) {
     const chips = chore.members.map(m => {
       const covered = mode === 'one' && chore.state === 'done' && !m.counted;
       const cls = m.state + (m.state === 'missing' && !covered ? ' need' : '');
-      const label = covered ? 'Not needed' : ({ done: 'Done', review: 'In review', failed: 'Failed', missing: 'Not done' })[m.state];
+      let label;
+      if (covered) label = 'Not needed';
+      else if (m.state === 'missing') label = 'Not done';
+      else if (m.humanStatus === 'verified') label = '✓ Verified';
+      else if (m.humanStatus === 'failed') label = 'Failed';
+      else if (m.autoStatus === 'flagged') label = 'Flagged';
+      else if (m.state === 'done') label = 'Done (auto-passed)';
+      else label = 'Awaiting review';
       const nm = esc(m.memberName), cn = esc(chore.choreName);
       const actions = m.submitted ? `
         <button class="action-btn btn-photo" onclick="viewPhoto('${m.submissionId}')">Photo</button>
-        <button class="action-btn btn-verify" onclick="openVerify('${m.submissionId}','${nm}','${cn}','verified')">✓ Verify</button>
-        <button class="action-btn btn-fail" onclick="openVerify('${m.submissionId}','${nm}','${cn}','failed')">✗ Fail</button>
+        ${m.humanStatus === 'verified' ? '' : `<button class="action-btn btn-verify" onclick="openVerify('${m.submissionId}','${nm}','${cn}','verified')">✓ Verify</button>`}
+        ${m.humanStatus === 'failed' ? '' : `<button class="action-btn btn-fail" onclick="openVerify('${m.submissionId}','${nm}','${cn}','failed')">✗ Fail</button>`}
         <button class="action-btn" style="background:var(--red-bg);color:var(--red);border:1px solid #fecaca" onclick="openFlagFraudModal('${m.submissionId}','${nm}','${cn}')">🚩 Fraud</button>
       ` : `<button class="action-btn btn-verify" onclick="openMarkCompleteModal('${m.memberId||''}','${nm}','${cn}')">✓ Mark Complete</button>`;
       return `<div class="gm ${cls}">
@@ -2126,7 +2133,7 @@ function confirmVerify() {
   google.script.run
     .withSuccessHandler(function(json) {
       const r = JSON.parse(json);
-      showToast(r.success ? 'Updated!' : 'Error: ' + r.message);
+      showToast(r.success ? 'Updated!' : 'Error: ' + (r.message || r.error));
       if (r.success) loadWeeklyStatus();
     })
     .withFailureHandler(onError)

@@ -33,7 +33,7 @@ Config key con dos valores, editable en Admin → Chore Manager (selector encima
 
 ### Pestaña Chores del dashboard
 
-"This Week" muestra una fila por chore (tipo "chore: lista de gente"): nombre y estado a la izquierda, miembros a la derecha con su estado y acciones (Photo/Verify/Fail/Fraud/Mark Complete). Borde y fondo rojo/amarillo/verde según `state` de la chore. Botón "Manage chores" abre Admin → Chore Manager (`openAdminPage('admin-chores')`). Fine Preview y los stats usan la misma regla que `runMondayReset`. My Compliance (`MemberView.html`) usa `state` de la chore para tarjetas, ribbon, filtros y resumen.
+"This Week" muestra una fila por chore (tipo "chore: lista de gente"): nombre y estado a la izquierda, miembros a la derecha con su estado y acciones (Photo/Verify/Fail/Fraud/Mark Complete). Borde y fondo rojo/amarillo/verde según `state` de la chore. Cada miembro muestra su estado de verificación (Not done / Awaiting review / Done (auto-passed) / ✓ Verified / Flagged / Failed); Verify se oculta si ya está verificada y Fail si ya está fallada. Botón "Manage chores" abre Admin → Chore Manager (`openAdminPage('admin-chores')`). Fine Preview y los stats usan la misma regla que `runMondayReset`. My Compliance (`MemberView.html`) usa `state` de la chore para tarjetas, ribbon, filtros y resumen.
 
 ### Fine enforcement
 
