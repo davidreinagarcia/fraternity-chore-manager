@@ -23,7 +23,7 @@ Ratios de distribución en `config/chore_ratios.json` (fuera del Apps Script, so
 
 ### Modo de completado (`chore_completion_mode`)
 
-Config key con dos valores, editable en Admin → Config Editor → Key Settings:
+Config key con dos valores, editable en Admin → Chore Manager (selector encima de la tabla de chores, `renderChoreMode()`/`saveChoreMode()`):
 - `all` (default): todos los asignados al grupo (la chore) tienen que hacerla. Falta uno → la chore sale roja "Not done".
 - `one`: basta con que una persona del grupo la haga. Quien la hace sale en verde, la chore pasa a "Done" y el resto queda como "Not needed". Si nadie la hace, se multa a todo el grupo.
 

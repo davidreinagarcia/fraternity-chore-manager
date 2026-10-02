@@ -907,6 +907,7 @@
           </div>
           <div class="admin-loading" id="admin-chores-loading">Loading chores...</div>
           <div id="admin-chores-content" style="display:none">
+            <div id="chore-mode-box" style="margin-bottom:20px"></div>
             <div style="overflow-x:auto">
               <table class="data-table" id="chores-table">
                 <thead>
@@ -2395,6 +2396,7 @@ function loadAdminChores() {
       if (!r.success) { showToast('Error loading chores: ' + r.error); return; }
       adminChores = (r.data.chores || []).map(function(c) { return { name: c.name, people: c.people }; });
       renderChoresTable();
+      google.script.run.withSuccessHandler(renderChoreMode).getConfigValue('chore_completion_mode');
       document.getElementById('admin-chores-loading').style.display = 'none';
       document.getElementById('admin-chores-content').style.display = 'block';
     })
@@ -2403,6 +2405,25 @@ function loadAdminChores() {
       onError(err);
     })
     .getChoreRatiosRaw();
+}
+
+function renderChoreMode(curMode) {
+  var lc = (CHAPTER_CONFIG.labels.label_chore || 'Chore').toLowerCase();
+  curMode = curMode === 'one' ? 'one' : 'all';
+  var opt = function(val, title, desc) {
+    return '<label class="mode-opt' + (curMode === val ? ' on' : '') + '">' +
+      '<input type="radio" name="chore-mode" value="' + val + '"' + (curMode === val ? ' checked' : '') +
+      ' onchange="saveChoreMode(this.value)">' +
+      '<span><b>' + esc(title) + '</b><br><span class="config-help" style="max-width:none">' + esc(desc) + '</span></span>' +
+      '</label>';
+  };
+  document.getElementById('chore-mode-box').innerHTML =
+    '<div class="config-key-name" style="margin-bottom:2px">How a ' + esc(lc) + ' counts as done</div>' +
+    '<div class="config-help" style="max-width:none;margin-bottom:8px">Applies to the status board, fines and My Compliance.</div>' +
+    '<div style="display:flex;flex-direction:column;gap:8px">' +
+    opt('all', 'Everyone assigned', 'Every member in the group has to complete the ' + lc + '. If anyone is missing, the ' + lc + ' shows as not done.') +
+    opt('one', 'One person per group', 'As soon as one member of the group completes the ' + lc + ', it is done for the whole group. If nobody does it, everyone in the group is fined.') +
+    '</div>';
 }
 
 function renderChoresTable() {
@@ -2805,25 +2826,6 @@ function renderConfigEditor() {
     }
   });
 
-  // Completion mode (how a chore counts as done for its group)
-  var lc = (CHAPTER_CONFIG.labels.label_chore || 'Chore').toLowerCase();
-  var curMode = String(configMap.chore_completion_mode || '').trim() === 'one' ? 'one' : 'all';
-  var modeOpt = function(val, title, desc) {
-    return '<label class="mode-opt' + (curMode === val ? ' on' : '') + '">' +
-      '<input type="radio" name="chore-mode" value="' + val + '"' + (curMode === val ? ' checked' : '') +
-      ' onchange="saveChoreMode(this.value)">' +
-      '<span><b>' + esc(title) + '</b><br><span class="config-help" style="max-width:none">' + esc(desc) + '</span></span>' +
-      '</label>';
-  };
-  var modeHtml =
-    '<div class="config-row" style="flex-direction:column;align-items:stretch;gap:8px">' +
-    '<div class="config-key"><div class="config-key-name">How a ' + esc(lc) + ' counts as done</div>' +
-    '<div class="config-help" style="max-width:none">Applies to the status board, fines and My Compliance.</div></div>' +
-    modeOpt('all', 'Everyone assigned', 'Every member in the group has to complete the ' + lc + '. If anyone is missing, the ' + lc + ' shows as not done.') +
-    modeOpt('one', 'One person per group', 'As soon as one member of the group completes the ' + lc + ', it is done for the whole group. If nobody does it, everyone in the group is fined.') +
-    '</div>';
-  keyRows = modeHtml + keyRows;
-
   // Chapter Identity section (virtual rows for keys that may not be in sheet yet)
   var identityRows = '';
   CHAPTER_IDENTITY_KEYS.forEach(function(k) {
@@ -2933,7 +2935,6 @@ function saveChoreMode(val) {
       var r = JSON.parse(json);
       if (r.success) {
         showToast('Saved: ' + (val === 'one' ? 'one person per group' : 'everyone assigned'));
-        adminConfigData.forEach(function(i) { if (i.key === 'chore_completion_mode') i.value = val; });
         if (typeof loadWeeklyStatus === 'function') loadWeeklyStatus();
       } else {
         showToast('Error: ' + r.error);
