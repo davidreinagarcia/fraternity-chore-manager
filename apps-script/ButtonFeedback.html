@@ -11,8 +11,8 @@
     border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: bf-spin .7s linear infinite;
   }
   @keyframes bf-spin { to { transform: rotate(360deg); } }
-  #bf-bar { position: fixed; top: 0; left: 0; height: 3px; width: 0; z-index: 99999; pointer-events: none; opacity: 0;
-    background: linear-gradient(90deg, rgba(255,255,255,0), #d4a017, #fff3c4); transition: width .4s ease, opacity .25s ease; }
+  #bf-bar { position: fixed; top: 0; left: 0; height: 2px; width: 0; z-index: 99999; pointer-events: none; opacity: 0;
+    background: var(--primary, #1a73e8); transition: width .4s ease, opacity .25s ease; }
   #bf-bar.on { opacity: 1; width: 85%; transition: width 8s cubic-bezier(.1,.7,.2,1), opacity .1s ease; }
   #bf-bar.done { opacity: 0; width: 100%; transition: width .15s ease, opacity .35s ease .1s; }
 </style>

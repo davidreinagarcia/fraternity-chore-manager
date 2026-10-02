@@ -26,9 +26,9 @@
   .card { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px 24px; width: 100%; max-width: 480px; }
   .header { text-align: center; margin-bottom: 22px; }
   .header .badge {
-    display: inline-block; background: var(--primary); color: var(--gold);
+    display: inline-block; background: var(--primary); color:#fff;
     font-size: 0.7rem; font-weight: 700; letter-spacing: 1px;
-    padding: 4px 12px; border-radius: 20px; margin-bottom: 10px; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 8px; margin-bottom: 10px; text-transform: uppercase;
   }
   .header h1 { font-size: 1.5rem; font-weight: 800; line-height: 1.2; margin-bottom: 6px; }
   .header .desc { font-size: 0.88rem; color: var(--muted); line-height: 1.45; white-space: pre-wrap; }
@@ -41,12 +41,12 @@
   }
   .section .req { color: var(--red); }
   .section .hint { font-size: 0.75rem; color: #94a3b8; margin-top: 6px; line-height: 1.4; }
-  .info-block { background: #f8fafc; border-left: 3px solid var(--primary); border-radius: 8px; padding: 12px 14px; margin-bottom: 20px; }
+  .info-block { background: #f8fafc; border-left: 3px solid var(--primary); border-radius: 4px; padding: 12px 14px; margin-bottom: 20px; }
   .info-block strong { display: block; font-size: 0.9rem; margin-bottom: 2px; }
   .info-block span { font-size: 0.82rem; color: var(--muted); white-space: pre-wrap; }
 
   select, input[type="text"], input[type="number"], input[type="date"], textarea {
-    width: 100%; padding: 13px 14px; border: 2px solid #e2e8f0; border-radius: 10px;
+    width: 100%; padding: 13px 14px; border: 2px solid #e2e8f0; border-radius: 4px;
     font-size: 1rem; color: var(--text); background: #f8fafc; font-family: inherit;
   }
   textarea { min-height: 96px; resize: vertical; }
@@ -61,45 +61,46 @@
   .opts.row { flex-direction: row; }
   .opt {
     display: flex; align-items: center; gap: 10px; padding: 12px 14px; flex: 1;
-    border: 2px solid #e2e8f0; border-radius: 10px; background: #f8fafc; cursor: pointer; font-size: 0.95rem;
+    border: 2px solid #e2e8f0; border-radius: 4px; background: #f8fafc; cursor: pointer; font-size: 0.95rem;
   }
   .opt:has(input:checked) { border-color: var(--primary); background: #f0fdf4; }
   .opt input { width: 18px; height: 18px; accent-color: var(--primary); flex: none; }
 
   .who-chip {
     display: none; align-items: center; justify-content: space-between; gap: 10px;
-    padding: 13px 14px; border: 2px solid var(--green); border-radius: 10px; background: #f0fdf4; font-weight: 700;
+    padding: 13px 14px; border: 2px solid var(--green); border-radius: 4px; background: #f0fdf4; font-weight: 700;
   }
   .who-chip button { background: none; border: none; color: var(--primary); font-size: 0.82rem; font-weight: 700; text-decoration: underline; cursor: pointer; }
-  .who-results { margin-top: 6px; border: 2px solid #e2e8f0; border-radius: 10px; background: white; max-height: 220px; overflow-y: auto; display: none; }
+  .who-results { margin-top: 6px; border: 2px solid #e2e8f0; border-radius: 4px; background: white; max-height: 220px; overflow-y: auto; display: none; }
   .who-results button { display: block; width: 100%; text-align: left; padding: 12px 14px; background: none; border: none; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; cursor: pointer; font-family: inherit; }
   .who-results button:last-child { border-bottom: none; }
   .who-results button:hover { background: #f0fdf4; }
   .who-results .none { padding: 12px 14px; color: var(--muted); font-size: 0.85rem; }
 
   #submit-btn {
-    width: 100%; padding: 16px; background: var(--primary); color: var(--gold);
-    border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 800; cursor: pointer; margin-top: 8px;
+    width: 100%; padding: 16px; background: var(--primary); color:#fff;
+    border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; margin-top: 8px;
   }
   #submit-btn:disabled { background: #94a3b8; cursor: not-allowed; }
-  #err { display: none; margin-bottom: 14px; padding: 10px 14px; border-radius: 10px; background: #fef2f2; color: var(--red); font-size: 0.85rem; font-weight: 600; }
+  #err { display: none; margin-bottom: 14px; padding: 10px 14px; border-radius: 4px; background: #fef2f2; color: var(--red); font-size: 0.85rem; font-weight: 600; }
 
   .state { text-align: center; padding: 20px 0; }
   .state .icon { font-size: 3.2rem; margin-bottom: 10px; }
   .state .title { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
   .state .msg { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
-  .btn-alt { width: 100%; padding: 12px; border: 2px solid var(--primary); color: var(--primary); background: white; border-radius: 10px; font-size: 0.9rem; font-weight: 700; cursor: pointer; margin-top: 16px; }
+  .btn-alt { width: 100%; padding: 12px; border: 2px solid var(--primary); color: var(--primary); background: white; border-radius: 4px; font-size: 0.9rem; font-weight: 700; cursor: pointer; margin-top: 16px; }
   .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
-  .photo-grid .ph { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: #e2e8f0; }
+  .photo-grid .ph { position: relative; aspect-ratio: 1; border-radius: 4px; overflow: hidden; background: #e2e8f0; }
   .photo-grid .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .photo-grid .ph button { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(15,23,42,0.75); color: white; font-size: 0.8rem; cursor: pointer; }
-  .photo-add, .list-add { width: 100%; padding: 12px; border: 2px dashed #cbd5e1; border-radius: 10px; background: #f8fafc; color: var(--primary); font-weight: 700; font-size: 0.9rem; cursor: pointer; font-family: inherit; }
+  .photo-add, .list-add { width: 100%; padding: 12px; border: 2px dashed #cbd5e1; border-radius: 4px; background: #f8fafc; color: var(--primary); font-weight: 700; font-size: 0.9rem; cursor: pointer; font-family: inherit; }
   .photo-count { font-size: 0.75rem; color: #64748b; margin-top: 6px; }
   .list-row { display: flex; gap: 8px; margin-bottom: 8px; }
   .list-row input { flex: 1; }
-  .list-row button { width: 44px; border: 2px solid #e2e8f0; border-radius: 10px; background: white; color: #64748b; font-size: 0.9rem; cursor: pointer; flex: none; }
+  .list-row button { width: 44px; border: 2px solid #e2e8f0; border-radius: 4px; background: white; color: #64748b; font-size: 0.9rem; cursor: pointer; flex: none; }
 </style>
 <?!= include('ButtonFeedback') ?>
+<?!= include('Theme') ?>
 </head>
 <body>
 <div class="card">

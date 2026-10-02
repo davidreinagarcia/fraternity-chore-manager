@@ -75,6 +75,8 @@ Link de acceso: `?app=officer` (el dashboard que David usa).
 
 **UI feedback**: `ButtonFeedback.html` se incluye en todo app interactivo via `<?!= include('ButtonFeedback') ?>`. Pressed state + spinner automático por botón. Todo nuevo HTML app debe incluirlo; si el server call arranca tras un dialog, wrappear con `window.bfBusy(btn, true/false)`.
 
+**Estilo**: toda app HTML clara incluye `<?!= include('Theme') ?>` al final del `<head>` (look Google: plano, bordes 1px, radios 4/8px, Roboto). UI nueva usa sus tokens; detalle en `docs/systems/theme.md`.
+
 **Fechas en Sheets**: siempre texto plano (formato `@`, `yyyy-MM-dd` / `HH:mm`), nunca objetos Date. Sheets desplaza fechas en round-trips entre timezones del script y de la spreadsheet.
 
 **Secrets**: tokens y API keys nunca en código comprometido. Officer PIN solo en el tab `config` de la Sheet (clave `officer_pin`), nunca en código.

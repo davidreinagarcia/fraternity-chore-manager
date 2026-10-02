@@ -30,7 +30,7 @@
 
   /* ---- Topbar ---- */
   #topbar {
-    background: var(--primary); color: var(--gold);
+    background: var(--primary); color:#fff;
     padding: 0 24px; height: 56px;
     display: flex; align-items: center; justify-content: space-between;
     position: sticky; top: 0; z-index: 200;
@@ -39,9 +39,9 @@
   #topbar h1 { font-size: 1.1rem; font-weight: 800; letter-spacing: 0.5px; }
   #topbar .meta { font-size: 0.75rem; color: #aac; margin-top: 2px; }
   .top-btn {
-    background: rgba(255,255,255,0.15); color: var(--gold);
+    background: rgba(255,255,255,0.15); color:#fff;
     border: 1px solid rgba(255,215,0,0.4); padding: 6px 14px;
-    border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 600;
+    border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: 600;
     margin-left: 8px;
   }
   .top-btn:hover { background: rgba(255,255,255,0.25); }
@@ -60,14 +60,14 @@
   .pin-card p { color: var(--muted); margin-bottom: 24px; font-size: 0.9rem; }
   #pin-input {
     width: 100%; padding: 14px; font-size: 1.5rem; text-align: center;
-    border: 2px solid var(--border); border-radius: 10px;
+    border: 2px solid var(--border); border-radius: 4px;
     letter-spacing: 8px; font-family: monospace;
     margin-bottom: 16px;
   }
   #pin-input:focus { outline: none; border-color: var(--primary); }
   #pin-btn {
-    width: 100%; padding: 14px; background: var(--primary); color: var(--gold);
-    border: none; border-radius: 10px; font-size: 1rem; font-weight: 700; cursor: pointer;
+    width: 100%; padding: 14px; background: var(--primary); color:#fff;
+    border: none; border-radius: 4px; font-size: 1rem; font-weight: 700; cursor: pointer;
   }
   #pin-error { color: var(--red); font-size: 0.85rem; margin-top: 10px; display: none; }
 
@@ -84,12 +84,12 @@
   #sb.col { width:var(--swc); }
   .sb-hdr { padding:20px 16px 14px; display:flex; align-items:center; gap:10px; border-bottom:1px solid rgba(255,255,255,0.12); flex-shrink:0; }
   .sb-logo { height:34px; width:auto; flex-shrink:0; }
-  .sb-chapter { color:var(--gold); font-size:0.78rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:opacity 0.15s; }
+  .sb-chapter { color:#fff; font-size:0.78rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:opacity 0.15s; }
   #sb.col .sb-chapter { opacity:0; width:0; }
   .ng { padding:12px 8px 4px; }
   .nl { font-size:0.62rem; font-weight:700; letter-spacing:0.08em; color:rgba(255,255,255,0.45); padding:0 8px; margin-bottom:4px; white-space:nowrap; transition:opacity 0.15s; }
   #sb.col .nl { opacity:0; }
-  .ni { width:100%; display:flex; align-items:center; gap:10px; padding:9px 8px; border-radius:8px; border:none; background:transparent; color:rgba(255,255,255,0.75); cursor:pointer; font-size:0.85rem; font-weight:600; text-align:left; transition:background 0.12s,color 0.12s; margin-bottom:2px; white-space:nowrap; }
+  .ni { width:100%; display:flex; align-items:center; gap:10px; padding:9px 8px; border-radius:4px; border:none; background:transparent; color:rgba(255,255,255,0.75); cursor:pointer; font-size:0.85rem; font-weight:600; text-align:left; transition:background 0.12s,color 0.12s; margin-bottom:2px; white-space:nowrap; }
   .ni:hover { background:rgba(255,255,255,0.1); color:white; }
   .ni.on { background:var(--gold); color:var(--primary); }
   .ni-ic { font-size:1rem; width:20px; text-align:center; flex-shrink:0; }
@@ -106,8 +106,8 @@
   .tab-pane { display:none; }
   .tab-pane.active { display:block; }
   .sub-nav { display:flex; gap:4px; background:var(--card); padding:6px; border-radius:var(--radius); margin-bottom:16px; box-shadow:var(--shadow); overflow-x:auto; }
-  .sub-btn { flex:1; min-width:80px; padding:8px 12px; border:none; border-radius:6px; cursor:pointer; font-size:0.82rem; font-weight:600; color:var(--muted); background:transparent; white-space:nowrap; transition:all 0.15s; }
-  .sub-btn.active { background:var(--primary); color:var(--gold); }
+  .sub-btn { flex:1; min-width:80px; padding:8px 12px; border:none; border-radius:4px; cursor:pointer; font-size:0.82rem; font-weight:600; color:var(--muted); background:transparent; white-space:nowrap; transition:all 0.15s; }
+  .sub-btn.active { background:var(--primary); color:#fff; }
   .sub-btn:hover:not(.active) { background:var(--bg); }
   .coming-soon { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:80px 40px; text-align:center; }
   .coming-soon .cs-icon { font-size:3rem; margin-bottom:16px; }
@@ -150,7 +150,7 @@
   /* ---- Status badges ---- */
   .badge {
     display: inline-block; padding: 3px 10px;
-    border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    border-radius: 8px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
   }
   .badge-passed  { background: var(--green-bg);  color: var(--green);  }
   .badge-verified{ background: var(--green-bg);  color: var(--green);  }
@@ -168,7 +168,7 @@
 
   /* ---- Action buttons ---- */
   .action-btn {
-    padding: 5px 12px; border-radius: 6px; border: none;
+    padding: 5px 12px; border-radius: 4px; border: none;
     font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
     white-space: nowrap; margin: 0 2px;
   }
@@ -176,11 +176,11 @@
   .btn-verify  { background: var(--green-bg); color: var(--green); border: 1px solid #bbf7d0; }
   .btn-fail    { background: var(--red-bg);   color: var(--red);   border: 1px solid #fecaca; }
   .btn-photo   { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
-  .btn-primary { background: var(--primary); color: var(--gold); border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
-  .btn-danger  { background: var(--red); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
-  .btn-outline { background: white; color: var(--primary); border: 2px solid var(--primary); padding: 8px 16px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
-  .btn-filter  { background: white; color: var(--muted); border: 1px solid var(--border); padding: 5px 10px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
-  .btn-filter.active { background: var(--primary); color: var(--gold); border-color: var(--primary); }
+  .btn-primary { background: var(--primary); color:#fff; border: none; padding: 8px 16px; border-radius: 4px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+  .btn-danger  { background: var(--red); color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+  .btn-outline { background: white; color: var(--primary); border: 2px solid var(--primary); padding: 8px 16px; border-radius: 4px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+  .btn-filter  { background: white; color: var(--muted); border: 1px solid var(--border); padding: 5px 10px; border-radius: 4px; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+  .btn-filter.active { background: var(--primary); color:#fff; border-color: var(--primary); }
 
   /* ---- Summary stats ---- */
   .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
@@ -209,7 +209,7 @@
   .modal h3 { margin-bottom: 12px; }
   .modal textarea {
     width: 100%; padding: 10px; border: 1px solid var(--border);
-    border-radius: 8px; font-size: 0.9rem; resize: vertical; min-height: 80px;
+    border-radius: 4px; font-size: 0.9rem; resize: vertical; min-height: 80px;
     margin-bottom: 14px;
   }
   .modal .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
@@ -218,7 +218,7 @@
   #toast {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
     background: #0f172a; color: white; padding: 10px 20px;
-    border-radius: 8px; font-size: 0.9rem; font-weight: 600;
+    border-radius: 4px; font-size: 0.9rem; font-weight: 600;
     opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999;
     white-space: nowrap;
   }
@@ -241,7 +241,7 @@
   .admin-section-body { padding: 20px; }
   .admin-loading { text-align: center; padding: 24px; color: var(--muted); font-size: 0.85rem; }
   .inline-input {
-    padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
+    padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px;
     font-size: 0.85rem; font-family: inherit; background: white;
   }
   .inline-input:focus { outline: none; border-color: var(--primary); }
@@ -264,13 +264,13 @@
   .config-advanced-toggle:hover { color: var(--primary); }
   .config-val-input {
     flex: 1; min-width: 180px; padding: 7px 10px;
-    border: 1px solid var(--border); border-radius: 6px; font-size: 0.85rem; font-family: inherit;
+    border: 1px solid var(--border); border-radius: 4px; font-size: 0.85rem; font-family: inherit;
   }
   .config-val-input:focus { outline: none; border-color: var(--primary); }
 
   .mm-stat-chip {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 8px 14px; border-radius: 10px; font-size: 0.82rem; font-weight: 600;
+    padding: 8px 14px; border-radius: 4px; font-size: 0.82rem; font-weight: 600;
   }
   .mm-stat-icon { font-size: 0.95rem; }
   .mm-stat-green  { background: var(--green-bg);  color: var(--green); }
@@ -292,7 +292,7 @@
   /* ---- Contextual action dropdown ---- */
   .ctx-menu {
     position:fixed; background:white; border:1px solid var(--border);
-    border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.14);
+    border-radius:4px; box-shadow:0 4px 20px rgba(0,0,0,0.14);
     z-index:600; min-width:185px; display:none; overflow:hidden;
   }
   .ctx-menu.open { display:block; }
@@ -314,12 +314,12 @@
   }
   .notes-panel.open { right:0; }
   .notes-panel-header {
-    padding:16px 20px; background:var(--primary); color:var(--gold);
+    padding:16px 20px; background:var(--primary); color:#fff;
     display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
   }
   .notes-panel-header h3 { font-size:0.95rem; font-weight:700; }
   .notes-list { flex:1; overflow-y:auto; padding:12px 16px; }
-  .note-item { padding:10px 12px; border-radius:8px; margin-bottom:8px; }
+  .note-item { padding:10px 12px; border-radius:4px; margin-bottom:8px; }
   .note-handoff  { background:#fff7ed; border-left:3px solid var(--gold); }
   .note-disciplinary { background:var(--red-bg); border-left:3px solid var(--red); }
   .note-warning  { background:var(--yellow-bg); border-left:3px solid var(--yellow); }
@@ -337,25 +337,25 @@
   .ev-head h3 { margin:0; font-size:1.2rem; }
   .ev-body { padding:4px 28px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:16px; }
   .ev-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-  .ev-card { background:#fafcfa; border:1px solid var(--border); border-radius:12px; padding:16px 18px; display:flex; flex-direction:column; gap:12px; }
+  .ev-card { background:#fafcfa; border:1px solid var(--border); border-radius:8px; padding:16px 18px; display:flex; flex-direction:column; gap:12px; }
   .ev-card-title { font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); }
   .ev-lbl { font-size:0.75rem; font-weight:600; display:block; margin-bottom:4px; }
   .ev-row { display:flex; gap:12px; }
   .ev-row > div { flex:1; min-width:0; }
   .ev-card textarea.inline-input { flex:1; min-height:70px; resize:vertical; margin:0; }
-  .ev-rep { background:white; border:1px solid var(--border); border-radius:10px; padding:12px 14px; display:flex; flex-direction:column; gap:10px; font-size:0.82rem; }
+  .ev-rep { background:white; border:1px solid var(--border); border-radius:4px; padding:12px 14px; display:flex; flex-direction:column; gap:10px; font-size:0.82rem; }
   .ev-rep-line { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .ev-rep-line label.opt { display:flex; align-items:center; gap:6px; cursor:pointer; }
   .ev-dow { display:flex; gap:6px; }
   .ev-dow button { width:32px; height:32px; border-radius:50%; border:2px solid var(--border); background:white; color:var(--text); font-size:0.75rem; font-weight:700; cursor:pointer; padding:0; }
-  .ev-dow button.on { background:var(--primary); border-color:var(--primary); color:var(--gold); }
+  .ev-dow button.on { background:var(--primary); border-color:var(--primary); color:#fff; }
   .ev-rep-sum { font-size:0.75rem; color:var(--muted); }
-  .ev-scope-opt { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; cursor:pointer; font-size:0.88rem; margin-bottom:8px; }
+  .ev-scope-opt { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:0.88rem; margin-bottom:8px; }
   .ev-scope-opt:has(input:checked) { border-color:var(--primary); background:#f1f7f3; }
   .ev-seg { display:flex; flex-wrap:wrap; gap:8px; }
   .ev-seg button { background:white; color:var(--text); border:2px solid var(--border); border-radius:999px; padding:8px 16px; font-size:0.82rem; font-weight:600; cursor:pointer; }
   .ev-seg button:hover { border-color:var(--primary); }
-  .ev-seg button.active { background:var(--primary); border-color:var(--primary); color:var(--gold); }
+  .ev-seg button.active { background:var(--primary); border-color:var(--primary); color:#fff; }
   .ev-foot { padding:16px 28px; border-top:1px solid var(--border); background:#fafcfa; display:flex; flex-direction:column; gap:10px; }
   .ev-foot-btns { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
   .ev-foot-btns button { padding:10px 22px; white-space:nowrap; }
@@ -371,7 +371,7 @@
 
   /* ---- Quick action btn ---- */
   .qa-btn {
-    padding:4px 9px; border-radius:5px; border:1px solid var(--border);
+    padding:4px 9px; border-radius:4px; border:1px solid var(--border);
     background:white; font-size:0.75rem; cursor:pointer; margin:0 1px;
     color:var(--muted); transition:all 0.12s;
   }
@@ -393,13 +393,13 @@
   .am-cal-legend span { display:flex; align-items:center; gap:5px; }
   .am-cal-legend i { width:11px; height:11px; border-radius:3px; display:inline-block; }
   #am-events-calendar { padding:16px; }
-  .am-att-list { max-height:46vh; overflow-y:auto; border:1px solid var(--border); border-radius:8px; }
+  .am-att-list { max-height:46vh; overflow-y:auto; border:1px solid var(--border); border-radius:4px; }
   .am-att-row { display:flex; align-items:center; gap:10px; padding:9px 14px; border-bottom:1px solid var(--border); font-size:0.85rem; }
   .am-att-row:last-child { border-bottom:none; }
   .am-att-row input { width:16px; height:16px; cursor:pointer; }
   .fc-event { cursor:pointer; }
   #evs-calendar { --fc-today-bg-color: transparent; }
-  #evs-calendar .fc-day-today .fc-daygrid-day-number { background:var(--primary); color:var(--gold); border-radius:999px; min-width:26px; text-align:center; padding:2px 6px; margin:4px; }
+  #evs-calendar .fc-day-today .fc-daygrid-day-number { background:var(--primary); color:#fff; border-radius:999px; min-width:26px; text-align:center; padding:2px 6px; margin:4px; }
   .fc-event-retired { opacity:0.45; }
   @media (max-width: 768px) {
     .container { padding: 12px 10px; }
@@ -414,6 +414,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.8/index.global.min.js"></script>
 <?!= include('ButtonFeedback') ?>
+<?!= include('Theme') ?>
 </head>
 <body>
 
@@ -486,7 +487,7 @@
           <h2>Submission Status — <span id="week-label">Week of —</span></h2>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
             <input type="text" id="status-search" placeholder="Filter chores..."
-                   style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.85rem"
+                   style="padding:6px 10px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem"
                    oninput="filterStatusTable()">
             <div style="display:flex;gap:4px">
               <button class="btn-filter active" id="sf-all"          onclick="setStatusFilter('all')">All</button>
@@ -562,7 +563,7 @@
         <div style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:8px;align-items:center">
           <input type="text" id="mm-search" class="inline-input" placeholder="Search name, email..." style="width:260px" oninput="filterMM()">
           <div style="display:flex;gap:4px;flex-wrap:wrap">
-            <button id="mmf-all"      class="action-btn" onclick="setMMFilter('all')"      style="background:var(--primary);color:var(--gold);border:none">All <span id="mm-cnt-all"></span></button>
+            <button id="mmf-all"      class="action-btn" onclick="setMMFilter('all')"      style="background:var(--primary);color:#fff;border:none">All <span id="mm-cnt-all"></span></button>
             <button id="mmf-active"   class="action-btn" onclick="setMMFilter('active')"   style="background:transparent;color:var(--green);border:1px solid #bbf7d0">Active <span id="mm-cnt-active"></span></button>
             <button id="mmf-inactive" class="action-btn" onclick="setMMFilter('inactive')" style="background:transparent;color:var(--muted);border:1px solid var(--border)">Inactive <span id="mm-cnt-inactive"></span></button>
             <span style="width:1px;background:var(--border);align-self:stretch;margin:0 2px"></span>
@@ -879,7 +880,7 @@
                 <tbody id="chores-tbody"></tbody>
               </table>
             </div>
-            <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;background:#f8fafc;padding:14px;border-radius:8px">
+            <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;background:#f8fafc;padding:14px;border-radius:4px">
               <div>
                 <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Chore Name</label>
                 <input type="text" id="new-chore-name" class="inline-input" placeholder="e.g. Kitchen Cleanup" style="width:210px">
@@ -920,32 +921,32 @@
         </div>
         <div class="admin-section-body" id="admin-semester-body" style="display:none">
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
-            <div style="background:var(--green-bg);border-radius:8px;padding:16px;border:1px solid #bbf7d0">
+            <div style="background:var(--green-bg);border-radius:4px;padding:16px;border:1px solid #bbf7d0">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px;color:var(--green)">Semester Sync</div>
               <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Run at the start of each semester. Processes new &amp; returning member forms, flags incomplete forms, checks graduation, reviews inactive members.</p>
               <button class="btn-primary" onclick="openSemesterSyncModal()">Run Semester Sync</button>
             </div>
-            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+            <div style="background:#f8fafc;border-radius:4px;padding:16px">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Review Graduation Candidates</div>
               <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Show members whose anticipated graduation date is past or at current semester. Review before graduating.</p>
               <button class="btn-outline" onclick="openGradReview()">Review Candidates</button>
             </div>
-            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+            <div style="background:#f8fafc;border-radius:4px;padding:16px">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Import Members CSV</div>
               <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Paste CSV rows (name, email, pledge_class) to batch-add or update members.</p>
               <button class="btn-primary" onclick="openCSVImportModal()">Paste &amp; Import CSV</button>
             </div>
-            <div style="background:var(--red-bg);border-radius:8px;padding:16px;border:1px solid #fecaca">
+            <div style="background:var(--red-bg);border-radius:4px;padding:16px;border:1px solid #fecaca">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px;color:var(--red)">End of Semester Archive</div>
               <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Clears assignments, submissions, <?= cfg.labels.label_fine.toLowerCase() ?>s, and weekly_status. <strong>This is irreversible.</strong></p>
               <button class="btn-danger" onclick="openEndSemesterModal()">End of Semester Archive</button>
             </div>
-            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+            <div style="background:#f8fafc;border-radius:4px;padding:16px">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Migrate From Old Roster <span style="font-size:0.68rem;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-weight:700">RUN ONCE</span></div>
               <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">One-time import from the old roster sheet. Grays out permanently after running.</p>
               <button class="btn-outline btn-run-once" id="btn-migrate" onclick="runMigrateRoster(this)">Migrate Old Roster</button>
             </div>
-            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+            <div style="background:#f8fafc;border-radius:4px;padding:16px">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Relink Google Forms <span style="font-size:0.68rem;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-weight:700">RUN ONCE</span></div>
               <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Links New Member and Returning Member forms to this spreadsheet. Run once after setup.</p>
               <button class="btn-outline btn-run-once" id="btn-relink" onclick="runRelinkForms(this)">Relink Forms</button>
@@ -964,15 +965,15 @@
           <p style="font-size:0.82rem;color:var(--muted);line-height:1.6;margin-bottom:14px">Every photo the app collects (signatures, chores, form uploads) is saved inside one Drive folder you choose, organized by semester. The folder must be reachable by the Google account this app runs under, with Editor access.</p>
           <div id="drv-loading" style="color:var(--muted);font-size:0.85rem">Loading...</div>
           <div id="drv-body" style="display:none">
-            <div id="drv-current" style="background:#f8fafc;border-radius:8px;padding:16px;margin-bottom:16px"></div>
+            <div id="drv-current" style="background:#f8fafc;border-radius:4px;padding:16px;margin-bottom:16px"></div>
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
-              <div style="background:#f8fafc;border-radius:8px;padding:16px">
+              <div style="background:#f8fafc;border-radius:4px;padding:16px">
                 <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Use an existing folder</div>
                 <p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Open the folder in Google Drive, copy its link from the address bar and paste it here.</p>
                 <input type="text" id="drv-input" class="inline-input" style="width:100%;margin-bottom:10px" placeholder="https://drive.google.com/drive/folders/...">
                 <button class="btn-primary" id="drv-save-btn" onclick="driveSaveRoot(this)">Use this folder</button>
               </div>
-              <div style="background:#f8fafc;border-radius:8px;padding:16px">
+              <div style="background:#f8fafc;border-radius:4px;padding:16px">
                 <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Create a new folder</div>
                 <p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Creates a new folder in the Drive of the account this app runs under and builds the structure inside it.</p>
                 <button class="btn-outline" id="drv-create-btn" onclick="driveCreateRoot(this)">Create folder for me</button>
@@ -992,12 +993,12 @@
 
           <!-- Collection window controls -->
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:20px">
-            <div style="background:var(--green-bg);border-radius:8px;padding:16px;border:1px solid #bbf7d0">
+            <div style="background:var(--green-bg);border-radius:4px;padding:16px;border:1px solid #bbf7d0">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px;color:var(--green)">Create / Recreate Forms</div>
               <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Programmatically creates both Google Forms and links them to this spreadsheet. Old form links will stop working.</p>
               <button class="btn-primary" onclick="openCreateFormsModal()">Create Member Forms</button>
             </div>
-            <div id="forms-url-card" style="background:#f8fafc;border-radius:8px;padding:16px">
+            <div id="forms-url-card" style="background:#f8fafc;border-radius:4px;padding:16px">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Form Links</div>
               <div id="forms-url-content" style="font-size:0.8rem;color:var(--muted)">Loading…</div>
             </div>
@@ -1005,7 +1006,7 @@
 
           <!-- Collection window toggles -->
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:20px">
-            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+            <div style="background:#f8fafc;border-radius:4px;padding:16px">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">New Member Form Window</div>
               <p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Open when accepting new pledges/AMs. Late submissions are still processed but flagged.</p>
               <div style="display:flex;gap:8px">
@@ -1014,7 +1015,7 @@
               </div>
               <div id="nm-window-status" style="font-size:0.75rem;margin-top:8px;color:var(--muted)"></div>
             </div>
-            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+            <div style="background:#f8fafc;border-radius:4px;padding:16px">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Returning Member Form Window</div>
               <p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Open at the start of each semester for existing members to update their info.</p>
               <div style="display:flex;gap:8px">
@@ -1026,7 +1027,7 @@
           </div>
 
           <!-- Response tracking -->
-          <div style="background:#f8fafc;border-radius:8px;padding:16px;margin-bottom:16px">
+          <div style="background:#f8fafc;border-radius:4px;padding:16px;margin-bottom:16px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
               <div style="font-size:0.9rem;font-weight:700">Response Tracking</div>
               <button class="btn-outline" onclick="loadFormStatus()" style="font-size:0.78rem;padding:5px 12px">Refresh</button>
@@ -1035,7 +1036,7 @@
           </div>
 
           <!-- Pending review entries -->
-          <div style="background:var(--yellow-bg);border-radius:8px;padding:16px;border:1px solid #fde68a;margin-bottom:16px">
+          <div style="background:var(--yellow-bg);border-radius:4px;padding:16px;border:1px solid #fde68a;margin-bottom:16px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
               <div style="font-size:0.9rem;font-weight:700;color:var(--yellow)">Pending Review Queue</div>
               <button class="btn-outline" onclick="loadPendingReview()" style="font-size:0.78rem;padding:5px 12px">Load</button>
@@ -1068,17 +1069,17 @@
         </div>
         <div class="admin-section-body" id="admin-handoff-body" style="display:none">
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
-            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+            <div style="background:#f8fafc;border-radius:4px;padding:16px">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Generate Handoff Report</div>
               <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Generates a full HTML report with active members, outstanding fines, handoff notes, and instructions for the incoming officer.</p>
               <button class="btn-primary" onclick="doGenerateHandoff()">Generate Handoff Report</button>
             </div>
-            <div style="background:#f8fafc;border-radius:8px;padding:16px">
+            <div style="background:#f8fafc;border-radius:4px;padding:16px">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Change Officer PIN</div>
               <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Update the PIN required to access this dashboard. You'll need to enter the current PIN to confirm.</p>
               <button class="btn-outline" onclick="openChangePinModal()">Change PIN</button>
             </div>
-            <div style="background:var(--green-bg);border-radius:8px;padding:16px;border:1px solid #bbf7d0">
+            <div style="background:var(--green-bg);border-radius:4px;padding:16px;border:1px solid #bbf7d0">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px;color:var(--green)">Semester Sync</div>
               <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;line-height:1.5">Run at the start of each semester to sync member rosters, form responses, and compliance data.</p>
               <button class="btn-primary" onclick="openSemesterSyncModal()">Run Semester Sync</button>
@@ -1114,11 +1115,11 @@
       Paste CSV rows below. Format: <code style="background:#f1f5f9;padding:1px 6px;border-radius:3px;font-size:0.8rem">name, email, pledge_class</code>
       (header row optional). Members <strong>not</strong> in this list will be deactivated.
     </p>
-    <textarea id="csv-textarea" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;resize:vertical;min-height:120px;font-family:monospace;margin-bottom:10px" placeholder="John Smith, jsmith@email.com, Spring 2025&#10;Jane Doe, jdoe@email.com, Fall 2024"></textarea>
+    <textarea id="csv-textarea" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:4px;font-size:0.82rem;resize:vertical;min-height:120px;font-family:monospace;margin-bottom:10px" placeholder="John Smith, jsmith@email.com, Spring 2025&#10;Jane Doe, jdoe@email.com, Fall 2024"></textarea>
     <div style="margin-bottom:12px">
       <button class="btn-outline" onclick="previewCSV()" style="font-size:0.82rem;padding:6px 14px">Preview Rows</button>
     </div>
-    <div id="csv-preview-section" style="display:none;margin-bottom:14px;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px">
+    <div id="csv-preview-section" style="display:none;margin-bottom:14px;max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:4px">
       <div id="csv-preview" style="padding:10px"></div>
     </div>
     <div class="modal-btns">
@@ -1132,7 +1133,7 @@
 <div class="modal-overlay" id="end-semester-modal">
   <div class="modal" style="max-width:96vw">
     <h3 style="color:var(--red)">End of Semester Archive</h3>
-    <div style="background:var(--red-bg);border:1px solid #fecaca;border-radius:8px;padding:14px;margin:12px 0 16px">
+    <div style="background:var(--red-bg);border:1px solid #fecaca;border-radius:4px;padding:14px;margin:12px 0 16px">
       <div style="font-weight:700;color:var(--red);margin-bottom:8px">WARNING — This action cannot be undone</div>
       <ul style="font-size:0.84rem;padding-left:18px;line-height:1.8;color:var(--text)">
         <li>All chore assignments will be deleted</li>
@@ -1176,23 +1177,23 @@
   <div class="modal" style="padding:0;overflow:hidden">
     <div style="background:var(--primary);padding:24px 28px;text-align:center">
       <div style="font-size:2rem;margin-bottom:6px">🎉</div>
-      <h3 style="color:var(--gold);margin-bottom:4px">Cross Into <?= cfg.labels.label_brotherhood ?></h3>
+      <h3 style="margin-bottom:4px">Cross Into <?= cfg.labels.label_brotherhood ?></h3>
       <p id="cross-member-sub" style="color:rgba(255,255,255,0.75);font-size:0.85rem"></p>
     </div>
     <div style="padding:24px 28px">
       <div style="margin-bottom:12px">
         <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:6px">Next <?= cfg.labels.label_member_id ?> (auto-assigned)</label>
-        <div id="cross-bk-input" style="width:100%;box-sizing:border-box;font-size:1.6rem;text-align:center;letter-spacing:8px;font-family:monospace;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg)">…</div>
+        <div id="cross-bk-input" style="width:100%;box-sizing:border-box;font-size:1.6rem;text-align:center;letter-spacing:8px;font-family:monospace;padding:10px;border:1px solid var(--border);border-radius:4px;background:var(--bg)">…</div>
         <p style="font-size:0.72rem;color:var(--muted);margin-top:6px;line-height:1.4">
           <?= cfg.labels.label_member_id ?> values auto-assign as the next sequential number in order — so it only lands in points order if you cross <?= cfg.labels.label_am_group ?> top-to-bottom in the <?= cfg.labels.label_am_group ?> Manager list (already sorted by points, highest first).
         </p>
       </div>
-      <p id="cross-tie-warning" style="display:none;font-size:0.75rem;color:#92400e;background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:8px 10px;margin-bottom:12px;line-height:1.4">
+      <p id="cross-tie-warning" style="display:none;font-size:0.75rem;color:#92400e;background:#fef3c7;border:1px solid #fbbf24;border-radius:4px;padding:8px 10px;margin-bottom:12px;line-height:1.4">
         ⚠️ This <?= cfg.labels.label_am_short ?> is tied on points with another <?= cfg.labels.label_new_member ?> in the same <?= cfg.labels.label_pledge_class ?>. Remember to add a point to whichever one accepted their bid first, so the crossing order is unambiguous.
       </p>
       <div class="modal-btns">
         <button class="btn-outline" onclick="closeCrossModal()">Cancel</button>
-        <button style="background:var(--primary);color:var(--gold);border:none;padding:10px 20px;border-radius:8px;font-size:0.95rem;font-weight:700;cursor:pointer" onclick="confirmCross()">Cross Into <?= cfg.labels.label_brotherhood ?></button>
+        <button style="background:var(--primary);color:#fff;border:none;padding:10px 20px;border-radius:4px;font-size:0.95rem;font-weight:700;cursor:pointer" onclick="confirmCross()">Cross Into <?= cfg.labels.label_brotherhood ?></button>
       </div>
     </div>
   </div>
@@ -1328,10 +1329,10 @@
 
 <!-- QR Code Modal -->
 <div class="modal-overlay" id="qr-modal">
-  <div class="modal" style="background:#1a3a2a;border:2px solid var(--gold);width:360px">
-    <h3 style="color:var(--gold);margin-bottom:4px" id="qr-modal-title">QR Code</h3>
+  <div class="modal" style="width:360px">
+    <h3 style="margin-bottom:4px" id="qr-modal-title">QR Code</h3>
     <p style="font-size:0.82rem;color:#9dbfa5;margin-bottom:16px;word-break:break-all" id="qr-modal-sub"></p>
-    <div style="background:white;border-radius:8px;padding:12px;display:flex;justify-content:center;margin-bottom:16px">
+    <div style="background:white;border-radius:4px;padding:12px;display:flex;justify-content:center;margin-bottom:16px">
       <div id="qr-canvas-wrap"></div>
     </div>
     <div class="modal-btns">
@@ -1352,7 +1353,7 @@
     </div>
     <div style="margin-bottom:14px">
       <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Notes (required — why marking manually?) *</label>
-      <textarea id="mc-notes" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;resize:vertical;min-height:70px;font-family:inherit" placeholder="e.g. Verified in person, photo not submitted due to phone issues"></textarea>
+      <textarea id="mc-notes" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;resize:vertical;min-height:70px;font-family:inherit" placeholder="e.g. Verified in person, photo not submitted due to phone issues"></textarea>
     </div>
     <div class="modal-btns">
       <button class="btn-outline" onclick="closeMarkCompleteModal()">Cancel</button>
@@ -1368,7 +1369,7 @@
     <p id="ff-sub" style="font-size:0.85rem;color:var(--muted);margin-bottom:14px"></p>
     <div style="margin-bottom:14px">
       <label style="font-size:0.75rem;font-weight:600;display:block;margin-bottom:4px">Reason *</label>
-      <textarea id="ff-reason" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;resize:vertical;min-height:70px;font-family:inherit" placeholder="e.g. Photo is from a previous week / not their chore area"></textarea>
+      <textarea id="ff-reason" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;resize:vertical;min-height:70px;font-family:inherit" placeholder="e.g. Photo is from a previous week / not their chore area"></textarea>
     </div>
     <div class="modal-btns">
       <button class="btn-outline" onclick="closeFlagFraudModal()">Cancel</button>
@@ -1432,7 +1433,7 @@
 <div class="modal-overlay" id="sem-sync-modal">
   <div class="modal">
     <h3>Run Semester Sync</h3>
-    <div style="background:var(--green-bg);border:1px solid #bbf7d0;border-radius:8px;padding:14px;margin-bottom:16px">
+    <div style="background:var(--green-bg);border:1px solid #bbf7d0;border-radius:4px;padding:14px;margin-bottom:16px">
       <div style="font-weight:700;color:var(--green);margin-bottom:8px">This will:</div>
       <ul style="font-size:0.83rem;padding-left:18px;line-height:1.9;color:var(--text)">
         <li>Process new member form responses</li>
@@ -1469,7 +1470,7 @@
       This creates two Google Forms (New Member intake + Returning Member semester update) and links
       them to this spreadsheet. Any existing form links will stop working — share the new URLs with members.
     </p>
-    <div id="create-forms-result" style="display:none;padding:10px;border-radius:6px;margin-bottom:12px;font-size:0.82rem"></div>
+    <div id="create-forms-result" style="display:none;padding:10px;border-radius:4px;margin-bottom:12px;font-size:0.82rem"></div>
     <div class="modal-btns">
       <button class="btn-outline" onclick="document.getElementById('create-forms-modal').style.display='none'">Cancel</button>
       <button class="btn-primary" id="create-forms-btn" onclick="doCreateForms()">Create Forms</button>
@@ -1484,7 +1485,7 @@
     <p style="font-size:0.83rem;color:var(--muted);margin-bottom:14px;line-height:1.5">
       Emails active members who have not yet submitted the returning-member form with a reminder and the form link.
     </p>
-    <div id="send-reminders-result" style="display:none;padding:10px;border-radius:6px;margin-bottom:12px;font-size:0.82rem"></div>
+    <div id="send-reminders-result" style="display:none;padding:10px;border-radius:4px;margin-bottom:12px;font-size:0.82rem"></div>
     <div class="modal-btns">
       <button class="btn-outline" onclick="document.getElementById('send-reminders-modal').style.display='none'">Cancel</button>
       <button class="btn-primary" id="send-reminders-btn" onclick="doSendReminders()">Send Reminders</button>
@@ -1629,7 +1630,7 @@
         <select id="evs-f-attendance" style="display:none"></select>
         <div class="ev-seg" id="evs-f-att-seg"></div>
         <div id="evs-f-att-note" style="font-size:0.78rem;color:var(--muted)"></div>
-        <div id="evs-f-novato-wrap" style="display:none;background:white;border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+        <div id="evs-f-novato-wrap" style="display:none;background:white;border:1px solid var(--border);border-radius:4px;padding:12px 14px">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
             <input type="checkbox" id="evs-f-counts" style="width:16px;height:16px" onchange="toggleEvAttendanceFields()"> <span>Counts toward the <strong id="evs-f-counts-lbl"></strong> attendance %</span>
           </label>
@@ -1754,7 +1755,7 @@
         <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="createEvCalendar()">Create</button>
       </div>
       <div id="evs-cal-pending" style="display:none;font-size:0.82rem"></div>
-      <div id="evs-tw" style="display:none;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:0.82rem">
+      <div id="evs-tw" style="display:none;border:1px solid var(--border);border-radius:4px;padding:12px 14px;font-size:0.82rem">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
           <div>
             <div style="font-weight:700" id="evs-tw-title">Two-way sync</div>
@@ -1810,7 +1811,7 @@
 <div class="notes-panel" id="notes-panel">
   <div class="notes-panel-header">
     <h3 id="notes-panel-title">Notes</h3>
-    <button onclick="closeNotesPanel()" style="background:rgba(255,255,255,0.15);border:none;color:var(--gold);padding:4px 10px;border-radius:5px;cursor:pointer;font-size:0.85rem">✕ Close</button>
+    <button onclick="closeNotesPanel()" style="background:#fff;border:1px solid var(--border);color:var(--primary);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:0.85rem">✕ Close</button>
   </div>
   <div class="notes-list" id="notes-list">
     <div style="text-align:center;padding:20px;color:var(--muted)">Loading notes...</div>
@@ -1824,7 +1825,7 @@
       <option value="warning">Warning</option>
       <option value="disciplinary">Disciplinary</option>
     </select>
-    <textarea id="note-text-input" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:7px;font-size:0.83rem;resize:vertical;min-height:60px;font-family:inherit;margin-bottom:8px" placeholder="Enter note..."></textarea>
+    <textarea id="note-text-input" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:0.83rem;resize:vertical;min-height:60px;font-family:inherit;margin-bottom:8px" placeholder="Enter note..."></textarea>
     <div style="display:flex;gap:8px;align-items:center">
       <input type="text" id="note-author" class="inline-input" style="flex:1" placeholder="Your name">
       <button class="btn-primary" style="padding:7px 14px;font-size:0.82rem" onclick="submitNote()">Add</button>
@@ -3211,7 +3212,7 @@ function updateMMCounts() {
 }
 
 var _mmFilterColors = {
-  all:       ['var(--primary)','var(--gold)','none'],
+  all:       ['var(--primary)','#fff','none'],
   active:    ['transparent','var(--green)','1px solid #bbf7d0'],
   inactive:  ['transparent','var(--muted)','1px solid var(--border)'],
   alumni:    ['transparent','#b45309','1px solid #fde68a'],
@@ -3227,7 +3228,7 @@ function setMMFilter(status) {
     var active = s === status;
     var c = _mmFilterColors[s];
     btn.style.background = active ? 'var(--primary)' : c[0];
-    btn.style.color      = active ? 'var(--gold)'    : c[1];
+    btn.style.color      = active ? '#fff'    : c[1];
     btn.style.border     = active ? 'none'            : c[2];
   });
   filterMM();
@@ -3298,7 +3299,7 @@ function renderMMTable(data) {
   }
   data.forEach(function(m) {
     var bkCell = m.bkNumber
-      ? '<span style="font-family:monospace;font-weight:700;color:var(--gold)">' + esc(m.bkNumber) + '</span>'
+      ? '<span style="font-family:monospace;font-weight:700;color:var(--primary)">' + esc(m.bkNumber) + '</span>'
       : '<span style="color:var(--muted)">—</span>';
     var toggleCell = '<span id="mm-toggle-' + m.memberId + '" onclick="toggleMMExpand(\'' + m.memberId + '\')" ' +
       'style="cursor:pointer;display:inline-block;width:14px;color:var(--muted);user-select:none" title="More info">▸</span>';
@@ -3392,7 +3393,7 @@ function renderMMAlumni(data) {
   }
   data.forEach(function(m) {
     var bkCell = m.bkNumber
-      ? '<span style="font-family:monospace;font-weight:700;color:var(--gold)">' + esc(m.bkNumber) + '</span>'
+      ? '<span style="font-family:monospace;font-weight:700;color:var(--primary)">' + esc(m.bkNumber) + '</span>'
       : '<span style="color:var(--muted)">—</span>';
     tbody.insertAdjacentHTML('beforeend',
       '<tr>' +
@@ -3580,7 +3581,7 @@ function setAMEventsView(view, skipRender) {
     var btn = document.getElementById(id);
     var on = (idx === 0) === isCal;
     btn.style.background = on ? 'var(--primary)' : 'transparent';
-    btn.style.color      = on ? 'var(--gold)'    : 'var(--text)';
+    btn.style.color      = on ? '#fff'    : 'var(--text)';
     btn.style.border     = on ? 'none'            : '1px solid var(--border)';
   });
   if (!skipRender && amEventsLoaded) renderCurrentAMEventsView();
@@ -4051,7 +4052,7 @@ function setEventsView(view, skipRender) {
     var btn = document.getElementById(id);
     var on = (idx === 0) === isCal;
     btn.style.background = on ? 'var(--primary)' : 'transparent';
-    btn.style.color      = on ? 'var(--gold)'    : 'var(--text)';
+    btn.style.color      = on ? '#fff'    : 'var(--text)';
     btn.style.border     = on ? 'none'            : '1px solid var(--border)';
   });
   if (!skipRender && document.getElementById('evs-loading').style.display === 'none') renderCurrentEventsView();
@@ -4792,7 +4793,7 @@ function renderSignaturesDashboard(data) {
         }).join('')
       : '<div style="padding:10px 0;color:var(--muted);font-size:0.85rem">No signatures yet.</div>';
 
-    return '<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden">' +
+    return '<div style="border:1px solid var(--border);border-radius:4px;margin-bottom:10px;overflow:hidden">' +
       '<div onclick="toggleSigAM(' + idx + ')" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer;background:var(--bg)">' +
         '<strong>' + esc(am.name) + '</strong>' +
         '<span style="font-weight:700;color:var(--primary)">' + am.count + ' signature' + (am.count === 1 ? '' : 's') + ' <span id="sig-arrow-' + idx + '">▸</span></span>' +
@@ -4992,7 +4993,7 @@ function openActModal(action, memberId, memberName) {
       input = '<select id="' + f.id + '" class="inline-input" style="width:100%">' +
         f.opts.map(function(o) { return '<option value="' + o + '">' + o + '</option>'; }).join('') + '</select>';
     } else if (f.type === 'textarea') {
-      input = '<textarea id="' + f.id + '" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:7px;font-size:0.85rem;resize:vertical;min-height:60px;font-family:inherit" placeholder="' + (f.placeholder||'') + '"></textarea>';
+      input = '<textarea id="' + f.id + '" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;resize:vertical;min-height:60px;font-family:inherit" placeholder="' + (f.placeholder||'') + '"></textarea>';
     } else if (f.type === 'date') {
       input = '<input type="date" id="' + f.id + '" class="inline-input" style="width:100%">';
     } else if (f.type === 'checkbox') {
@@ -5335,9 +5336,9 @@ function _syncListBlock(title, items, color, hint) {
 function showSemesterSyncResults(r) {
   var html =
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:18px">' +
-      '<div style="background:var(--green-bg);border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:var(--green)">' + (r.newAdded||0) + '</div><div style="font-size:0.72rem;color:var(--muted)">NEW MEMBERS</div></div>' +
-      '<div style="background:#eff6ff;border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#2563eb">' + (r.returningUpdated||0) + '</div><div style="font-size:0.72rem;color:var(--muted)">RETURNING UPDATED</div></div>' +
-      '<div style="background:#fffbeb;border-radius:8px;padding:10px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#a16207">' + (r.incompleteCount||0) + '</div><div style="font-size:0.72rem;color:var(--muted)">FORM NOT SUBMITTED</div></div>' +
+      '<div style="background:var(--green-bg);border-radius:4px;padding:10px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:var(--green)">' + (r.newAdded||0) + '</div><div style="font-size:0.72rem;color:var(--muted)">NEW MEMBERS</div></div>' +
+      '<div style="background:#eff6ff;border-radius:4px;padding:10px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#2563eb">' + (r.returningUpdated||0) + '</div><div style="font-size:0.72rem;color:var(--muted)">RETURNING UPDATED</div></div>' +
+      '<div style="background:#fffbeb;border-radius:4px;padding:10px;text-align:center"><div style="font-size:1.4rem;font-weight:800;color:#a16207">' + (r.incompleteCount||0) + '</div><div style="font-size:0.72rem;color:var(--muted)">FORM NOT SUBMITTED</div></div>' +
     '</div>' +
     _syncListBlock('❗ Unmatched returning forms', r.unmatchedReturning, '#b91c1c', 'Queued in Pending Review — match manually or have them resubmit with the correct ' + LBL.label_member_id + '.') +
     _syncListBlock('🔴 Marked inactive (from form)', r.statusChangedInactive, '#b91c1c', 'Their chore assignments were removed. Reassign at next draft night if they return.') +
@@ -5367,7 +5368,7 @@ function openGradReview() {
       }
       list.innerHTML = '<table class="data-table"><thead><tr><th>' + esc(CHAPTER_CONFIG.labels.label_member_id) + '</th><th>Name</th><th>Anticipated Grad</th></tr></thead><tbody>' +
         r.data.map(function(c) {
-          return '<tr><td style="font-family:monospace;color:var(--gold)">' + esc(c.bkNumber||'—') + '</td>' +
+          return '<tr><td style="font-family:monospace;color:var(--primary)">' + esc(c.bkNumber||'—') + '</td>' +
             '<td><strong>' + esc(c.name) + '</strong></td>' +
             '<td>' + esc(c.anticipatedGraduation||'—') + '</td></tr>';
         }).join('') + '</tbody></table>';
@@ -5583,7 +5584,7 @@ function loadFormStatus() {
         '</div>' +
         '</div>';
       if (r.pendingReviewCount > 0) {
-        html += '<div style="margin-top:12px;padding:8px 12px;background:var(--yellow-bg);border-radius:6px;font-size:0.82rem;border:1px solid #fde68a">' +
+        html += '<div style="margin-top:12px;padding:8px 12px;background:var(--yellow-bg);border-radius:4px;font-size:0.82rem;border:1px solid #fde68a">' +
           '⚠️ <strong>' + r.pendingReviewCount + '</strong> unmatched returning-member response(s) need manual review.' +
           '</div>';
       }
@@ -6035,7 +6036,7 @@ function fmRenderFields() {
       return '<option value="' + t + '"' + (f.type === t ? ' selected' : '') + '>' + FM_TYPE_LABELS[t] + '</option>';
     }).join('');
     var hasOpts = f.type === 'choice' || f.type === 'multi';
-    return '<div class="fm-row" style="background:white;border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px">' +
+    return '<div class="fm-row" style="background:white;border:1px solid var(--border);border-radius:4px;padding:10px 12px;display:flex;flex-direction:column;gap:8px">' +
       '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
         '<select class="fm-type inline-input" style="width:190px" onchange="fmSyncFields();fmRenderFields()">' + typeOpts + '</select>' +
         '<input type="text" class="fm-label inline-input" style="flex:1;min-width:180px" placeholder="' + (f.type === 'info' ? 'Heading' : 'Question') + '" value="' + esc(f.label) + '">' +
@@ -6169,7 +6170,7 @@ function phThumbs(list) {
     var id = encodeURIComponent(p.id);
     return '<a href="https://drive.google.com/file/d/' + id + '/view" target="_blank" rel="noopener" title="Open photo">' +
       '<img src="https://drive.google.com/thumbnail?id=' + id + '&sz=w400" alt="Proof photo" loading="lazy" ' +
-      'style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border);background:#f3f4f6" ' +
+      'style="width:64px;height:64px;object-fit:cover;border-radius:4px;border:1px solid var(--border);background:#f3f4f6" ' +
       'onerror="this.outerHTML=\'<span style=&quot;font-size:0.75rem;color:var(--primary);font-weight:600&quot;>Open photo</span>\'"></a>';
   }).join('') + '</div>';
 }

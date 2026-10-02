@@ -41,9 +41,9 @@
   .header { text-align: center; margin-bottom: 24px; }
   .header .badge {
     display: inline-block;
-    background: var(--primary); color: var(--gold);
+    background: var(--primary); color:#fff;
     font-size: 0.7rem; font-weight: 700; letter-spacing: 1px;
-    padding: 4px 12px; border-radius: 20px; margin-bottom: 10px;
+    padding: 4px 12px; border-radius: 8px; margin-bottom: 10px;
     text-transform: uppercase;
   }
   .header h1 {
@@ -64,7 +64,7 @@
 
   select, .file-label {
     width: 100%; padding: 14px 16px;
-    border: 2px solid #e2e8f0; border-radius: 10px;
+    border: 2px solid #e2e8f0; border-radius: 4px;
     font-size: 1rem; color: var(--text);
     background: #f8fafc; cursor: pointer;
     appearance: none; -webkit-appearance: none;
@@ -75,7 +75,7 @@
 
   /* Photo section */
   .photo-area {
-    border: 2px dashed #cbd5e1; border-radius: 12px;
+    border: 2px dashed #cbd5e1; border-radius: 8px;
     padding: 20px; text-align: center; cursor: pointer;
     transition: border-color 0.2s, background 0.2s;
     background: #f8fafc;
@@ -90,7 +90,7 @@
 
   #preview-wrap { margin-top: 14px; display: none; }
   #preview-wrap img {
-    width: 100%; border-radius: 10px;
+    width: 100%; border-radius: 4px;
     max-height: 240px; object-fit: cover;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
@@ -106,8 +106,8 @@
   /* Submit button */
   #submit-btn {
     width: 100%; padding: 16px;
-    background: var(--primary); color: var(--gold);
-    border: none; border-radius: 12px;
+    background: var(--primary); color:#fff;
+    border: none; border-radius: 8px;
     font-size: 1.1rem; font-weight: 800; cursor: pointer;
     transition: background 0.2s, transform 0.1s;
     margin-top: 8px; letter-spacing: 0.5px;
@@ -139,14 +139,14 @@
   #submit-another {
     display: none; width: 100%; padding: 12px;
     border: 2px solid var(--primary); color: var(--primary); background: white;
-    border-radius: 10px; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+    border-radius: 4px; font-size: 0.9rem; font-weight: 700; cursor: pointer;
     margin-top: 14px;
   }
 
   /* Warnings */
   .warning-box {
     background: #fefce8; border: 1px solid #fde68a;
-    border-radius: 10px; padding: 12px 14px;
+    border-radius: 4px; padding: 12px 14px;
     font-size: 0.85rem; color: #92400e; margin-bottom: 16px; display: none;
   }
 
@@ -157,6 +157,7 @@
   }
 </style>
 <?!= include('ButtonFeedback') ?>
+<?!= include('Theme') ?>
 </head>
 <body>
 <div class="card">

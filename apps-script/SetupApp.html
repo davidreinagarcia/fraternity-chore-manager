@@ -37,7 +37,7 @@
     gap: 12px;
     border-bottom: 3px solid var(--gold);
   }
-  .topbar h1 { font-size: 1.1rem; font-weight: 800; color: var(--gold); }
+  .topbar h1 { font-size: 1.1rem; font-weight: 800; color:#fff; }
   .topbar p  { font-size: 0.75rem; color: rgba(255,255,255,0.6); }
 
   /* Progress bar */
@@ -108,7 +108,7 @@
     width: 100%;
     padding: 9px 12px;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 4px;
     font-size: 0.9rem;
     font-family: inherit;
     background: white;
@@ -145,7 +145,7 @@
     display: flex; align-items: center; justify-content: space-between;
     padding: 12px 14px;
     border: 1px solid var(--border);
-    border-radius: 9px;
+    border-radius: 4px;
     background: #fafafa;
     gap: 12px;
   }
@@ -158,7 +158,7 @@
   .toggle input { opacity: 0; width: 0; height: 0; }
   .toggle .slider {
     position: absolute; inset: 0;
-    background: var(--border); border-radius: 22px;
+    background: var(--border); border-radius: 8px;
     cursor: pointer; transition: background 0.2s;
   }
   .toggle .slider:before {
@@ -176,7 +176,7 @@
   .chore-item {
     display: flex; align-items: center; gap: 8px;
     padding: 8px 12px; border: 1px solid var(--border);
-    border-radius: 8px; background: white;
+    border-radius: 4px; background: white;
   }
   .chore-item input[type=text] { flex: 1; border: none; padding: 0; font-size: 0.88rem; background: transparent; }
   .chore-item input[type=number] { width: 64px; font-size: 0.88rem; }
@@ -186,7 +186,7 @@
   }
   .chore-item label { font-size: 0.68rem; color: var(--muted); white-space: nowrap; margin-bottom: 0; }
   .add-chore-btn {
-    background: none; border: 1px dashed var(--border); border-radius: 8px;
+    background: none; border: 1px dashed var(--border); border-radius: 4px;
     color: var(--muted); cursor: pointer; padding: 8px; font-size: 0.83rem;
     width: 100%; transition: border-color 0.15s, color 0.15s;
   }
@@ -199,7 +199,7 @@
   }
   .btn-primary {
     background: var(--primary); color: white;
-    border: none; border-radius: 8px;
+    border: none; border-radius: 4px;
     padding: 11px 24px; font-size: 0.9rem; font-weight: 700;
     cursor: pointer; transition: opacity 0.15s;
   }
@@ -207,7 +207,7 @@
   .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn-outline {
     background: white; color: var(--text);
-    border: 1px solid var(--border); border-radius: 8px;
+    border: 1px solid var(--border); border-radius: 4px;
     padding: 10px 20px; font-size: 0.88rem; font-weight: 600;
     cursor: pointer; transition: border-color 0.15s;
   }
@@ -215,7 +215,7 @@
 
   /* Color preview */
   .color-preview {
-    height: 40px; border-radius: 8px; border: 1px solid var(--border);
+    height: 40px; border-radius: 4px; border: 1px solid var(--border);
     display: flex; align-items: center; justify-content: center;
     font-size: 0.78rem; font-weight: 700; margin-top: 6px;
     transition: background 0.15s;
@@ -224,7 +224,7 @@
   /* Summary / finish */
   .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   @media (max-width: 480px) { .summary-grid { grid-template-columns: 1fr; } }
-  .summary-item { padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: #fafafa; }
+  .summary-item { padding: 10px 14px; border: 1px solid var(--border); border-radius: 4px; background: #fafafa; }
   .summary-item .sk { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); }
   .summary-item .sv { font-size: 0.9rem; font-weight: 700; margin-top: 2px; }
 
@@ -240,17 +240,18 @@
   .success-box h2 { color: var(--green); margin-bottom: 8px; }
   .success-box p { color: var(--muted); font-size: 0.88rem; line-height: 1.6; }
   .error-box {
-    background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px;
+    background: #fef2f2; border: 1px solid #fecaca; border-radius: 4px;
     padding: 14px 16px; margin-top: 12px; font-size: 0.85rem; color: var(--red);
     display: none;
   }
 
   .warn-box {
-    background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+    background: #fffbeb; border: 1px solid #fde68a; border-radius: 4px;
     padding: 10px 14px; font-size: 0.82rem; color: #92400e; margin-top: 10px;
   }
 </style>
 <?!= include('ButtonFeedback') ?>
+<?!= include('Theme') ?>
 </head>
 <body>
 
@@ -469,7 +470,7 @@
         <div class="card-title">Paste your Google Sheets link</div>
         <details style="margin-bottom:14px">
           <summary style="font-size:0.83rem;color:var(--muted);cursor:pointer;user-select:none">How to share your sheet →</summary>
-          <div style="font-size:0.82rem;color:var(--muted);margin-top:10px;padding:12px;background:#f8fafc;border-radius:8px;line-height:1.8">
+          <div style="font-size:0.82rem;color:var(--muted);margin-top:10px;padding:12px;background:#f8fafc;border-radius:4px;line-height:1.8">
             1. Open your Google Sheet<br>
             2. Click <strong>Share</strong> (top-right corner)<br>
             3. Under "General access" → set to <strong>Anyone with the link</strong><br>
@@ -480,7 +481,7 @@
           <input type="text" id="mig-url" placeholder="https://docs.google.com/spreadsheets/d/..." style="flex:1">
           <button class="btn-primary" onclick="loadMigSheets()" id="mig-load-btn" style="white-space:nowrap">Load →</button>
         </div>
-        <div id="mig-load-error" style="display:none;margin-top:10px;padding:10px 14px;background:#fef2f2;border-radius:8px;font-size:0.83rem;color:#991b1b;line-height:1.5"></div>
+        <div id="mig-load-error" style="display:none;margin-top:10px;padding:10px 14px;background:#fef2f2;border-radius:4px;font-size:0.83rem;color:#991b1b;line-height:1.5"></div>
       </div>
 
       <div id="mig-sheet-wrap" style="display:none">
@@ -521,7 +522,7 @@
         <button class="btn-primary" id="mig-import-btn" onclick="doMigration()">Import Members</button>
         <button class="btn-outline" onclick="resetMigration()">Start Over</button>
       </div>
-      <div id="mig-result" style="display:none;padding:12px 16px;border-radius:8px;font-size:0.85rem"></div>
+      <div id="mig-result" style="display:none;padding:12px 16px;border-radius:4px;font-size:0.85rem"></div>
     </div>
   </div>
 
@@ -561,11 +562,11 @@
       <div id="success-warnings" style="margin-top:12px"></div>
 
       <!-- Active links (shown after URL is saved) -->
-      <div id="url-section" style="display:none;margin-top:20px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:16px;text-align:left">
+      <div id="url-section" style="display:none;margin-top:20px;background:#f0fdf4;border:1px solid #86efac;border-radius:4px;padding:16px;text-align:left">
         <div style="font-weight:700;margin-bottom:10px;color:#166534;font-size:0.9rem">Your App URL</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <code id="app-url-display" style="flex:1;background:white;border:1px solid #d1fae5;border-radius:6px;padding:8px 12px;font-size:0.75rem;word-break:break-all"></code>
-          <button id="copy-btn" onclick="copyAppUrl()" style="background:#16a34a;color:white;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-weight:600;white-space:nowrap;font-size:0.85rem">Copy URL</button>
+          <code id="app-url-display" style="flex:1;background:white;border:1px solid #d1fae5;border-radius:4px;padding:8px 12px;font-size:0.75rem;word-break:break-all"></code>
+          <button id="copy-btn" onclick="copyAppUrl()" style="background:#16a34a;color:white;border:none;border-radius:4px;padding:8px 14px;cursor:pointer;font-weight:600;white-space:nowrap;font-size:0.85rem">Copy URL</button>
         </div>
         <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:10px">
           <a id="link-dashboard" href="#" target="_blank" class="btn-primary" style="text-decoration:none">Open Officer Dashboard →</a>
@@ -577,19 +578,19 @@
       </div>
 
       <!-- Shown when no URL is available yet — links to the script editor directly -->
-      <div id="deploy-instructions" style="margin-top:20px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:20px;text-align:left">
+      <div id="deploy-instructions" style="margin-top:20px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:20px;text-align:left">
         <div style="font-weight:800;margin-bottom:4px;color:#92400e;font-size:1rem">🚀 One last step — activate your web app</div>
         <div style="font-size:0.83rem;color:#78350f;margin-bottom:16px;line-height:1.5">Your chapter data is all set up. Now you need to create a public URL so your brothers can access the system. Takes about 2 minutes.</div>
 
         <div style="margin-bottom:16px">
           <a id="open-editor-btn" href="#" target="_blank"
-             style="display:inline-block;background:#d97706;color:white;text-decoration:none;border-radius:8px;padding:11px 22px;font-weight:700;font-size:0.92rem">
+             style="display:inline-block;background:#d97706;color:white;text-decoration:none;border-radius:4px;padding:11px 22px;font-weight:700;font-size:0.92rem">
             Step 1 — Open Apps Script Editor →
           </a>
           <div style="font-size:0.75rem;color:#92400e;margin-top:6px">Opens in a new tab. Keep this tab open — you'll come back to it.</div>
         </div>
 
-        <div style="background:white;border:1px solid #fde68a;border-radius:8px;padding:14px;margin-bottom:16px">
+        <div style="background:white;border:1px solid #fde68a;border-radius:4px;padding:14px;margin-bottom:16px">
           <div style="font-weight:700;font-size:0.78rem;text-transform:uppercase;letter-spacing:0.5px;color:#92400e;margin-bottom:12px">Step 2 — In the editor that just opened:</div>
           <div style="display:flex;flex-direction:column;gap:10px">
 
@@ -629,7 +630,7 @@
           </div>
         </div>
 
-        <div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:0.8rem;color:#713f12;line-height:1.5">
+        <div style="background:#fef9c3;border:1px solid #fde047;border-radius:4px;padding:10px 14px;margin-bottom:16px;font-size:0.8rem;color:#713f12;line-height:1.5">
           ⚠️ <strong>Seeing a "Google hasn't verified this app" warning?</strong> That's normal — it's your own private app.
           Click <strong>Advanced</strong> (bottom-left) → <strong>"Go to [your app] (unsafe)"</strong> → tick all the checkboxes (Google Calendar included) → <strong>Allow</strong>.
         </div>
@@ -637,8 +638,8 @@
         <div style="font-weight:700;font-size:0.82rem;color:#92400e;margin-bottom:8px">Step 3 — Come back here and paste your URL:</div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <input id="url-input" type="url" placeholder="https://script.google.com/macros/s/…/exec"
-            style="flex:1;padding:9px 12px;border:1px solid #fbbf24;border-radius:6px;font-size:0.85rem;min-width:0">
-          <button onclick="saveWebAppUrl()" style="background:#d97706;color:white;border:none;border-radius:6px;padding:9px 18px;cursor:pointer;font-weight:700;white-space:nowrap;font-size:0.88rem">Activate →</button>
+            style="flex:1;padding:9px 12px;border:1px solid #fbbf24;border-radius:4px;font-size:0.85rem;min-width:0">
+          <button onclick="saveWebAppUrl()" style="background:#d97706;color:white;border:none;border-radius:4px;padding:9px 18px;cursor:pointer;font-weight:700;white-space:nowrap;font-size:0.88rem">Activate →</button>
         </div>
         <div id="url-save-error" style="display:none;margin-top:8px;color:#dc2626;font-size:0.8rem"></div>
       </div>
@@ -751,7 +752,7 @@ function loadMigSheets() {
         dataSheets.forEach(function(s) {
           var card = document.createElement('div');
           var isSelected = s.name === best.name;
-          card.style.cssText = 'padding:12px 20px;border-radius:10px;border:2px solid ' + (isSelected ? 'var(--primary)' : 'var(--border)') + ';cursor:pointer;min-width:130px;text-align:center;transition:all 0.15s;background:' + (isSelected ? '#f0f9ff' : 'white');
+          card.style.cssText = 'padding:12px 20px;border-radius:4px;border:2px solid ' + (isSelected ? 'var(--primary)' : 'var(--border)') + ';cursor:pointer;min-width:130px;text-align:center;transition:all 0.15s;background:' + (isSelected ? '#f0f9ff' : 'white');
           card.innerHTML = '<div style="font-weight:700;font-size:0.92rem">' + s.name + '</div><div style="font-size:0.75rem;color:var(--muted);margin-top:3px">' + s.rowCount + ' rows</div>';
           card.addEventListener('click', function() {
             document.querySelectorAll('#mig-sheet-cards > div').forEach(function(c) {
@@ -890,7 +891,7 @@ function _buildMigSuggestions(sheet) {
   grid.innerHTML = '';
   MIG_SUGGESTED_FIELDS.forEach(function(f) {
     var pill = document.createElement('label');
-    pill.style.cssText = 'display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:20px;border:1.5px solid var(--border);cursor:pointer;font-size:0.83rem;font-weight:500;background:white;transition:all 0.15s;user-select:none';
+    pill.style.cssText = 'display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:8px;border:1.5px solid var(--border);cursor:pointer;font-size:0.83rem;font-weight:500;background:white;transition:all 0.15s;user-select:none';
     pill.innerHTML = '<input type="checkbox" value="' + f.value + '" style="width:14px;height:14px;cursor:pointer;flex-shrink:0"> ' + f.label;
     var cb = pill.querySelector('input');
     cb.addEventListener('change', function() {
@@ -924,17 +925,17 @@ function doMigration() {
       btn.disabled = false; btn.textContent = 'Import Members';
       var r = JSON.parse(json);
       if (r.success) {
-        result.style.cssText = 'display:block;padding:12px 16px;border-radius:8px;font-size:0.85rem;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534';
+        result.style.cssText = 'display:block;padding:12px 16px;border-radius:4px;font-size:0.85rem;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534';
         result.innerHTML = '<strong>Done!</strong> ' + r.added + ' members imported.' + (r.skipped ? ' ' + r.skipped + ' rows skipped (no name or email).' : '') + ' You can continue to the Review step.';
         btn.textContent = '✓ Imported'; btn.style.background = 'var(--green)';
       } else {
-        result.style.cssText = 'display:block;padding:12px 16px;border-radius:8px;font-size:0.85rem;background:#fef2f2;border:1px solid #fecaca;color:#991b1b';
+        result.style.cssText = 'display:block;padding:12px 16px;border-radius:4px;font-size:0.85rem;background:#fef2f2;border:1px solid #fecaca;color:#991b1b';
         result.textContent = 'Error: ' + r.error;
       }
     })
     .withFailureHandler(function(err) {
       btn.disabled = false; btn.textContent = 'Import Members';
-      result.style.cssText = 'display:block;padding:12px 16px;border-radius:8px;font-size:0.85rem;background:#fef2f2;border:1px solid #fecaca;color:#991b1b';
+      result.style.cssText = 'display:block;padding:12px 16px;border-radius:4px;font-size:0.85rem;background:#fef2f2;border:1px solid #fecaca;color:#991b1b';
       result.textContent = 'Error: ' + err.message;
     })
     .importFromExternalSheet(url, migSelectedSheet, JSON.stringify(mapping));
@@ -1363,7 +1364,7 @@ function addCFRow(existing) {
   var typeOpts = CF_TYPES.map(function(t) {
     return '<option value="' + t.value + '"' + (f.type === t.value ? ' selected' : '') + '>' + t.label + '</option>';
   }).join('');
-  var html = '<div class="cf-row" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;padding:12px;background:#f8fafc;border-radius:8px;border:1px solid var(--border)" data-idx="' + idx + '">' +
+  var html = '<div class="cf-row" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;padding:12px;background:#f8fafc;border-radius:4px;border:1px solid var(--border)" data-idx="' + idx + '">' +
     '<div style="flex:1;min-width:0">' +
       '<input type="text" class="cf-label-input" placeholder="Field label (e.g. Major, Car on campus, Instrument...)" value="' + (f.label || '') + '" ' +
              'style="width:100%;margin-bottom:8px" oninput="updateCFKey(this)">' +

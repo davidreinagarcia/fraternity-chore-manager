@@ -37,7 +37,7 @@
     border-bottom: 3px solid var(--gold);
   }
   header .inner { max-width: 900px; margin: 0 auto; }
-  header h1 { font-size: 1.2rem; color: var(--gold); font-weight: 800; }
+  header h1 { font-size: 1.2rem; color:#fff; font-weight: 800; }
   header p  { font-size: 0.8rem; color: #aac; margin-top: 2px; }
   .header-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
@@ -48,17 +48,17 @@
   }
   .search-box {
     flex: 1; min-width: 180px; padding: 10px 14px;
-    border: 1px solid var(--border); border-radius: 10px;
+    border: 1px solid var(--border); border-radius: 4px;
     font-size: 0.9rem; background: var(--card); color: var(--text);
   }
   .search-box:focus { outline: none; border-color: var(--primary); }
   .filter-btn {
-    padding: 8px 14px; border-radius: 8px;
+    padding: 8px 14px; border-radius: 4px;
     border: 1px solid var(--border); background: var(--card);
     font-size: 0.8rem; font-weight: 600; cursor: pointer; color: var(--muted);
     transition: all 0.15s;
   }
-  .filter-btn.active { background: var(--primary); color: var(--gold); border-color: var(--primary); }
+  .filter-btn.active { background: var(--primary); color:#fff; border-color: var(--primary); }
 
   /* ---- Grid ---- */
   .grid {
@@ -101,7 +101,7 @@
 
   .status-ribbon {
     position: absolute; top: 10px; right: 10px;
-    padding: 4px 10px; border-radius: 20px;
+    padding: 4px 10px; border-radius: 8px;
     font-size: 0.7rem; font-weight: 800; text-transform: uppercase;
   }
   .ribbon-submitted { background: #dcfce7; color: var(--green); }
@@ -118,7 +118,7 @@
   .member-list { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
   .member-pill {
     background: #eff6ff; color: #1d4ed8;
-    border-radius: 20px; padding: 3px 10px;
+    border-radius: 8px; padding: 3px 10px;
     font-size: 0.72rem; font-weight: 600;
     display: flex; align-items: center; gap: 4px;
   }
@@ -130,7 +130,7 @@
   .flag-btn {
     width: 100%; padding: 8px;
     border: 1px solid #fde68a; background: #fffbeb; color: var(--yellow);
-    border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    border-radius: 4px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
     transition: background 0.15s;
   }
   .flag-btn:hover { background: #fef3c7; }
@@ -142,7 +142,7 @@
     display: flex; gap: 12px; flex-wrap: wrap;
   }
   .summary-pill {
-    background: var(--card); border-radius: 20px; padding: 8px 16px;
+    background: var(--card); border-radius: 8px; padding: 8px 16px;
     font-size: 0.8rem; font-weight: 600; color: var(--muted);
     border: 1px solid var(--border); display: flex; gap: 6px; align-items: center;
   }
@@ -169,17 +169,17 @@
   .modal h3 { margin-bottom: 8px; }
   .modal p  { font-size: 0.85rem; color: var(--muted); margin-bottom: 12px; }
   .modal textarea {
-    width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px;
+    width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px;
     font-size: 0.9rem; resize: vertical; min-height: 70px; margin-bottom: 12px;
   }
   .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
-  .btn-cancel { padding: 8px 16px; border: 1px solid var(--border); border-radius: 8px; background: white; cursor: pointer; font-size: 0.85rem; }
-  .btn-flag   { padding: 8px 16px; background: var(--yellow); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; }
+  .btn-cancel { padding: 8px 16px; border: 1px solid var(--border); border-radius: 4px; background: white; cursor: pointer; font-size: 0.85rem; }
+  .btn-flag   { padding: 8px 16px; background: var(--yellow); color: white; border: none; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 0.85rem; }
 
   /* ---- Toast ---- */
   #toast {
     position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-    background: #0f172a; color: white; padding: 10px 20px; border-radius: 8px;
+    background: #0f172a; color: white; padding: 10px 20px; border-radius: 4px;
     font-size: 0.9rem; font-weight: 600; opacity: 0; transition: opacity 0.3s;
     pointer-events: none; z-index: 999;
   }
@@ -191,6 +191,7 @@
   }
 </style>
 <?!= include('ButtonFeedback') ?>
+<?!= include('Theme') ?>
 </head>
 <body>
 
@@ -208,8 +209,8 @@
         </div>
       </div>
       <button onclick="refreshData()"
-              style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,215,0,0.3);
-                     color:var(--gold);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:600">
+              style="background:#fff;border:1px solid var(--border);
+                     color:var(--primary);padding:7px 14px;border-radius:4px;cursor:pointer;font-size:0.8rem;font-weight:500">
         ↻ Refresh
       </button>
     </div>
