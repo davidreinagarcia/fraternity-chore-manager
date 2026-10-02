@@ -89,6 +89,15 @@
   .state .title { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
   .state .msg { font-size: 0.9rem; color: var(--muted); line-height: 1.5; }
   .btn-alt { width: 100%; padding: 12px; border: 2px solid var(--primary); color: var(--primary); background: white; border-radius: 10px; font-size: 0.9rem; font-weight: 700; cursor: pointer; margin-top: 16px; }
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+  .photo-grid .ph { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: #e2e8f0; }
+  .photo-grid .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-grid .ph button { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%; border: none; background: rgba(15,23,42,0.75); color: white; font-size: 0.8rem; cursor: pointer; }
+  .photo-add, .list-add { width: 100%; padding: 12px; border: 2px dashed #cbd5e1; border-radius: 10px; background: #f8fafc; color: var(--primary); font-weight: 700; font-size: 0.9rem; cursor: pointer; font-family: inherit; }
+  .photo-count { font-size: 0.75rem; color: #64748b; margin-top: 6px; }
+  .list-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .list-row input { flex: 1; }
+  .list-row button { width: 44px; border: 2px solid #e2e8f0; border-radius: 10px; background: white; color: #64748b; font-size: 0.9rem; cursor: pointer; flex: none; }
 </style>
 <?!= include('ButtonFeedback') ?>
 </head>
@@ -128,7 +137,9 @@
 
 <script>
 var FORM_ID = <?!= JSON.stringify(formId).replace(/</g, '\\u003c') ?>;
-var form = null, roster = [], events = [], whoKey = '';
+var form = null, roster = [], events = [], eventsAll = [], whoKey = '';
+var photoState = {}, photoBusy = 0;
+var MAX_PHOTOS = 6, MAX_LIST = 30;
 
 function el(id) { return document.getElementById(id); }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -148,7 +159,7 @@ window.addEventListener('load', function() {
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
       if (!r.success) { el('f-title').textContent = 'Form'; showState('❌', 'Form not available', r.error); return; }
-      form = r.form; roster = r.roster || []; events = r.events || [];
+      form = r.form; roster = r.roster || []; events = r.events || []; eventsAll = r.eventsAll || [];
       el('f-title').textContent = form.title;
       el('f-desc').textContent = form.description;
       if (form.dueDate) { el('f-due').style.display = 'inline-block'; el('f-due').textContent = 'Due ' + form.dueDate; }
@@ -227,11 +238,81 @@ function control(f) {
     }).join('') + '</div>';
   }
   if (f.type === 'event') {
-    if (!events.length) return '<div class="hint" style="margin-top:0">There are no upcoming events this form applies to.</div>';
+    var evs = f.allEvents ? eventsAll : events;
+    if (!evs.length) return '<div class="hint" style="margin-top:0">There are no upcoming events this form applies to.</div>';
     return '<select id="' + id + '"><option value="">Select an event...</option>' +
-      events.map(function(e) { return '<option value="' + esc(e.eventId) + '">' + esc(e.label) + '</option>'; }).join('') + '</select>';
+      evs.map(function(e) { return '<option value="' + esc(e.eventId) + '">' + esc(e.label) + '</option>'; }).join('') + '</select>';
+  }
+  if (f.type === 'photo') {
+    return '<div id="' + id + '"><div class="photo-grid" id="grid-' + f.id + '"></div>' +
+      '<input type="file" id="file-' + f.id + '" accept="image/*" multiple style="display:none" onchange="addPhotos(\'' + f.id + '\', this)">' +
+      '<button type="button" class="photo-add" id="add-' + f.id + '" onclick="document.getElementById(\'file-' + f.id + '\').click()">+ Add photos from your gallery</button>' +
+      '<div class="photo-count" id="count-' + f.id + '"></div></div>';
+  }
+  if (f.type === 'list') {
+    return '<div id="' + id + '"><div id="rows-' + f.id + '">' + listRow(f.id) + listRow(f.id) + listRow(f.id) + '</div>' +
+      '<button type="button" class="list-add" onclick="addListRow(\'' + f.id + '\')">+ Add another</button></div>';
   }
   return '';
+}
+
+// ---- list of names ----
+function listRow(fid) {
+  return '<div class="list-row"><input type="text" maxlength="100" autocomplete="off" placeholder="Full name">' +
+    '<button type="button" title="Remove" onclick="removeListRow(this)">✕</button></div>';
+}
+function addListRow(fid) {
+  var box = el('rows-' + fid);
+  if (box.children.length >= MAX_LIST) return;
+  box.insertAdjacentHTML('beforeend', listRow(fid));
+  box.lastChild.querySelector('input').focus();
+}
+function removeListRow(btn) {
+  var row = btn.parentNode, box = row.parentNode;
+  if (box.children.length > 1) row.remove(); else row.querySelector('input').value = '';
+}
+
+// ---- photos (gallery pick, compressed in the browser, sent as JPEG) ----
+function compressPhoto(file, done) {
+  var url = URL.createObjectURL(file);
+  var img = new Image();
+  img.onload = function() {
+    var scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+    var c = document.createElement('canvas');
+    c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    done(c.toDataURL('image/jpeg', 0.82));
+  };
+  img.onerror = function() { URL.revokeObjectURL(url); done(null); };
+  img.src = url;
+}
+function addPhotos(fid, input) {
+  var list = photoState[fid] = photoState[fid] || [];
+  var files = Array.prototype.slice.call(input.files || []);
+  input.value = '';
+  files.forEach(function(file) {
+    if (list.length + photoBusy >= MAX_PHOTOS) { showErr('You can add up to ' + MAX_PHOTOS + ' photos.'); return; }
+    if (file.size > 30 * 1024 * 1024) { showErr('One photo is too large (max 30MB).'); return; }
+    photoBusy++;
+    compressPhoto(file, function(dataUrl) {
+      photoBusy--;
+      if (dataUrl) { list.push(dataUrl); showErr(''); } else showErr('Could not read one of the photos. Try a different one.');
+      renderPhotos(fid);
+    });
+  });
+}
+function removePhoto(fid, i) { photoState[fid].splice(i, 1); renderPhotos(fid); }
+function renderPhotos(fid) {
+  var list = photoState[fid] || [];
+  var grid = el('grid-' + fid);
+  if (!grid) return;
+  grid.innerHTML = list.map(function(d, i) {
+    return '<div class="ph"><img src="' + d + '" alt=""><button type="button" title="Remove" onclick="removePhoto(\'' + fid + '\',' + i + ')">✕</button></div>';
+  }).join('');
+  el('count-' + fid).textContent = list.length ? list.length + ' of ' + MAX_PHOTOS + ' photos' : '';
+  el('add-' + fid).style.display = list.length >= MAX_PHOTOS ? 'none' : 'block';
+  el('add-' + fid).textContent = list.length ? '+ Add more photos' : '+ Add photos from your gallery';
 }
 
 function readAnswer(f) {
@@ -243,6 +324,10 @@ function readAnswer(f) {
   if (f.type === 'multi') {
     return Array.prototype.map.call(document.querySelectorAll('input[name="' + id + '"]:checked'), function(c) { return c.value; });
   }
+  if (f.type === 'list') {
+    return Array.prototype.map.call(document.querySelectorAll('#rows-' + f.id + ' input'), function(i) { return i.value.trim(); }).filter(Boolean);
+  }
+  if (f.type === 'photo') return (photoState[f.id] || []).length ? 'photos' : '';
   var node = el(id);
   return node ? node.value : '';
 }
@@ -252,29 +337,34 @@ function showErr(msg) { var e = el('err'); e.textContent = msg; e.style.display 
 function submitForm() {
   showErr('');
   if (!whoKey) { showErr('Pick your name first.'); return; }
-  var answers = {};
+  if (photoBusy) { showErr('Photos are still being prepared. Wait a second and try again.'); return; }
+  var answers = {}, photos = {};
   for (var i = 0; i < form.fields.length; i++) {
     var f = form.fields[i];
     if (f.type === 'info') continue;
     var v = readAnswer(f);
     var empty = v === '' || (Array.isArray(v) && !v.length);
-    if (empty && f.required) { showErr('"' + f.label + '" is required.'); return; }
-    if (!empty) answers[f.id] = v;
+    if (empty && f.required) { showErr('"' + f.label + (f.type === 'photo' ? '" needs at least one photo.' : '" is required.')); return; }
+    if (empty) continue;
+    if (f.type === 'photo') photos[f.id] = photoState[f.id].map(function(d) { return { data: d.split(',')[1] }; });
+    else answers[f.id] = v;
   }
   var btn = el('submit-btn');
   btn.disabled = true;
+  if (Object.keys(photos).length) btn.textContent = 'Uploading...';
   google.script.run
     .withSuccessHandler(function(json) {
       var r = JSON.parse(json);
-      btn.disabled = false;
+      btn.disabled = false; btn.textContent = 'Submit';
       if (!r.success) { showErr(r.message); return; }
       showState('✅', 'Done', r.message, form.allowMultiple);
     })
-    .withFailureHandler(function() { btn.disabled = false; showErr('Something went wrong. Please try again.'); })
-    .fmSubmitResponse(FORM_ID, whoKey, JSON.stringify(answers));
+    .withFailureHandler(function() { btn.disabled = false; btn.textContent = 'Submit'; showErr('Something went wrong. Please try again.'); })
+    .fmSubmitResponse(FORM_ID, whoKey, JSON.stringify(answers), JSON.stringify(photos));
 }
 
 function resetForm() {
+  photoState = {};
   clearWho();
   renderFields();
   showErr('');

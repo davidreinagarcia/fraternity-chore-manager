@@ -10,13 +10,18 @@
 // that member as excused for that event; the excuse is DERIVED from the
 // responses (approved, or any non-denied when review is off) so there is no
 // second copy of the state to keep in sync. See _fmExcusesForEvent.
+// 'philanthropy': a number field (hours) + a photo field (proof); approved
+// hours are summed per member by fmPhilanthropySummary for the Philanthropy page.
 // ============================================================
 
 var FM_HEADERS = ['form_id', 'title', 'description', 'status', 'audience', 'fields', 'due_date', 'requires_review', 'allow_multiple', 'action', 'created_by', 'created_at', 'updated_at'];
 var FM_RESP_HEADERS = ['response_id', 'form_id', 'member_id', 'member_type', 'member_name', 'answers', 'submitted_at', 'review_status', 'reviewed_by', 'reviewed_at', 'review_note'];
-var FM_FIELD_TYPES = ['text', 'textarea', 'choice', 'multi', 'number', 'date', 'yesno', 'event', 'info'];
+var FM_FIELD_TYPES = ['text', 'textarea', 'choice', 'multi', 'number', 'date', 'yesno', 'event', 'photo', 'list', 'info'];
 var FM_AUDIENCES = ['brothers', 'novatos', 'everyone'];
 var FM_MAX_FIELDS = 40;
+var FM_MAX_PHOTOS = 6;
+var FM_MAX_LIST = 30;
+var FM_MAX_HOURS = 100;
 
 // All columns are text ('@'): ISO timestamps and yyyy-MM-dd dates must not be
 // auto-parsed into Date cells (see the dates rule in CLAUDE.md).
@@ -115,8 +120,9 @@ function _fmIsAccepting(form) {
   return { ok: true };
 }
 
-// Upcoming events that take attendance and involve the form's audience.
-function _fmEventOptions(ss, audience) {
+// Upcoming events that take attendance and involve the form's audience; with
+// anyEvent (parties, socials) every upcoming event is offered.
+function _fmEventOptions(ss, audience, anyEvent) {
   var allowed = { brothers: ['brothers', 'everyone'], novatos: ['novatos', 'everyone'], everyone: ['brothers', 'novatos', 'everyone'] }[audience] || [];
   var sheet = _getEventsSheet(ss);
   var data = sheet.getDataRange().getValues();
@@ -126,7 +132,7 @@ function _fmEventOptions(ss, audience) {
   for (var i = 1; i < data.length; i++) {
     if (!data[i][cm['event_id']]) continue;
     var ev = _eventFromRow(data[i], cm);
-    if (ev.date >= today && allowed.indexOf(ev.attendance) !== -1) evs.push(ev);
+    if (ev.date >= today && (anyEvent || allowed.indexOf(ev.attendance) !== -1)) evs.push(ev);
   }
   evs.sort(function(a, b) { return (a.date + (a.startTime || '')).localeCompare(b.date + (b.startTime || '')); });
   return evs.map(function(ev) {
@@ -139,7 +145,16 @@ function _fmAnswerText(field, value) {
   if (field.type === 'multi') return (value || []).join(', ');
   if (field.type === 'event') return value.label || '';
   if (field.type === 'yesno') return value === 'yes' ? 'Yes' : 'No';
+  if (field.type === 'list') return (value || []).join('; ');
+  if (field.type === 'photo') return (value || []).map(function(p) { return p.url; }).join(' ');
   return String(value);
+}
+
+function _fmEventOpts(ss, form) {
+  return {
+    std: form.fields.some(function(f) { return f.type === 'event' && !f.allEvents; }) ? _fmEventOptions(ss, form.audience) : [],
+    all: form.fields.some(function(f) { return f.type === 'event' && f.allEvents; }) ? _fmEventOptions(ss, form.audience, true) : []
+  };
 }
 
 // ---- Public side (no login) --------------------------------
@@ -158,17 +173,28 @@ function fmGetPublicForm(formId) {
     };
     if (acc.ok) {
       out.roster = _eventRoster(form.audience).map(function(m) { return { key: m.type + ':' + m.memberId, name: m.name, type: m.type }; });
-      if (form.fields.some(function(f) { return f.type === 'event'; })) out.events = _fmEventOptions(ss, form.audience);
+      var eo = _fmEventOpts(ss, form);
+      out.events = eo.std;
+      out.eventsAll = eo.all;
     }
     return JSON.stringify(out);
   } catch (err) { logError('fmGetPublicForm', err); return JSON.stringify({ success: false, error: 'Could not load the form. Try again.' }); }
 }
 
-function _fmValidateAnswers(form, answers, eventOptions) {
+// photoCounts: how many photos were sent per photo field (uploaded later, so
+// clean[fieldId] is only a placeholder here).
+function _fmValidateAnswers(form, answers, eventOpts, photoCounts) {
   var clean = {};
   for (var i = 0; i < form.fields.length; i++) {
     var f = form.fields[i];
     if (f.type === 'info') continue;
+    if (f.type === 'photo') {
+      var cnt = photoCounts[f.id] || 0;
+      if (!cnt) { if (f.required) return { error: '"' + f.label + '" needs at least one photo.' }; continue; }
+      if (cnt > FM_MAX_PHOTOS) return { error: 'At most ' + FM_MAX_PHOTOS + ' photos for "' + f.label + '".' };
+      clean[f.id] = [];
+      continue;
+    }
     var v = answers[f.id];
     var empty = v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length);
     if (empty) {
@@ -197,34 +223,101 @@ function _fmValidateAnswers(form, answers, eventOptions) {
     } else if (f.type === 'yesno') {
       if (v !== 'yes' && v !== 'no') return { error: 'Answer yes or no for "' + f.label + '".' };
     } else if (f.type === 'event') {
-      var opt = eventOptions.filter(function(e) { return e.eventId === String(v); })[0];
+      var opt = (f.allEvents ? eventOpts.all : eventOpts.std).filter(function(e) { return e.eventId === String(v); })[0];
       if (!opt) return { error: 'That event is not available for this form.' };
       v = { eventId: opt.eventId, label: opt.label };
+    } else if (f.type === 'list') {
+      if (!Array.isArray(v)) return { error: '"' + f.label + '" must be a list.' };
+      v = v.map(function(x) { return String(x).trim(); }).filter(Boolean);
+      if (!v.length) { if (f.required) return { error: '"' + f.label + '" is required.' }; continue; }
+      if (v.length > FM_MAX_LIST) return { error: 'At most ' + FM_MAX_LIST + ' entries for "' + f.label + '".' };
+      for (var q = 0; q < v.length; q++) if (v[q].length > 100) return { error: 'An entry in "' + f.label + '" is too long.' };
     }
     clean[f.id] = v;
   }
   return { clean: clean };
 }
 
-function fmSubmitResponse(formId, memberKey, answersJson) {
+// ---- Photos (Drive) ----------------------------------------
+
+function _fmIsJpeg(bytes) { return bytes.length > 3 && (bytes[0] & 255) === 255 && (bytes[1] & 255) === 216; }
+
+// Form Uploads/<semester>/<form title>/ under the shared root folder; files are
+// link-viewable like the signature photos.
+function _fmSavePhoto(bytes, form, memberName, n) {
+  try {
+    var root = _getOrCreateFolder(DriveApp.getFolderById(SIGNATURES_PARENT_FOLDER_ID), 'Form Uploads');
+    var semF = _getOrCreateFolder(root, getConfigValue('semester') || 'Unknown Semester');
+    var formF = _getOrCreateFolder(semF, String(form.title).replace(/[\\/]/g, '-').substring(0, 60));
+    var name = String(memberName || 'member').replace(/[^A-Za-z0-9]/g, '_') + '__' + Date.now() + '_' + n + '.jpg';
+    var file = formF.createFile(Utilities.newBlob(bytes, 'image/jpeg', name));
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return { id: file.getId(), url: file.getUrl() };
+  } catch (err) { logError('_fmSavePhoto', err); return null; }
+}
+
+function _fmTrashPhotos(ids) {
+  ids.forEach(function(id) {
+    try { DriveApp.getFileById(id).setTrashed(true); } catch (err) { logError('_fmTrashPhotos', err); }
+  });
+}
+
+function _fmPhotoIds(form, answers) {
+  var ids = [];
+  form.fields.forEach(function(f) {
+    if (f.type === 'photo' && Array.isArray(answers[f.id])) answers[f.id].forEach(function(p) { if (p && p.id) ids.push(p.id); });
+  });
+  return ids;
+}
+
+// photosJson: { fieldId: [{ data: <base64 jpeg> }] }. Validation and Drive
+// uploads happen before the lock so slow uploads never block other submitters.
+function fmSubmitResponse(formId, memberKey, answersJson, photosJson) {
+  var uploaded = [];
+  var fail = function(msg) { _fmTrashPhotos(uploaded); return JSON.stringify({ success: false, message: msg }); };
   var lock = LockService.getScriptLock();
   var locked = false;
   try {
-    lock.waitLock(20000);
-    locked = true;
     var ss = getSpreadsheet();
     var form = _fmFindForm(ss, formId);
-    if (!form) return JSON.stringify({ success: false, message: 'This form does not exist.' });
+    if (!form) return fail('This form does not exist.');
     var acc = _fmIsAccepting(form);
-    if (!acc.ok) return JSON.stringify({ success: false, message: acc.reason });
+    if (!acc.ok) return fail(acc.reason);
 
     var member = _eventRoster(form.audience).filter(function(m) { return m.type + ':' + m.memberId === String(memberKey); })[0];
-    if (!member) return JSON.stringify({ success: false, message: 'Pick your name from the list.' });
+    if (!member) return fail('Pick your name from the list.');
 
-    var eventOptions = form.fields.some(function(f) { return f.type === 'event'; }) ? _fmEventOptions(ss, form.audience) : [];
-    var v = _fmValidateAnswers(form, _fmJson(answersJson, {}), eventOptions);
-    if (v.error) return JSON.stringify({ success: false, message: v.error });
+    var photosIn = _fmJson(photosJson, {});
+    var photoCounts = {};
+    form.fields.forEach(function(f) { if (f.type === 'photo') photoCounts[f.id] = Array.isArray(photosIn[f.id]) ? photosIn[f.id].length : 0; });
 
+    var v = _fmValidateAnswers(form, _fmJson(answersJson, {}), _fmEventOpts(ss, form), photoCounts);
+    if (v.error) return fail(v.error);
+
+    if (form.action.type === 'philanthropy') {
+      var hours = v.clean[form.action.hoursField];
+      if (!(hours > 0 && hours <= FM_MAX_HOURS)) return fail('Hours must be more than 0 and at most ' + FM_MAX_HOURS + '.');
+    }
+
+    var decoded = [];
+    form.fields.forEach(function(f) {
+      if (f.type !== 'photo' || !photoCounts[f.id]) return;
+      photosIn[f.id].forEach(function(item) { decoded.push({ fid: f.id, bytes: item && item.data ? Utilities.base64Decode(String(item.data)) : [] }); });
+    });
+    for (var d = 0; d < decoded.length; d++) {
+      if (decoded[d].bytes.length < 5120) return fail('A photo is too small or empty. Pick real photos.');
+      if (decoded[d].bytes.length > 8 * 1024 * 1024) return fail('A photo is too large.');
+      if (!_fmIsJpeg(decoded[d].bytes)) return fail('Photos must be JPEG images.');
+    }
+    for (var u = 0; u < decoded.length; u++) {
+      var saved = _fmSavePhoto(decoded[u].bytes, form, member.name, u + 1);
+      if (!saved) return fail('Could not save a photo. Please try again.');
+      uploaded.push(saved.id);
+      v.clean[decoded[u].fid].push(saved);
+    }
+
+    lock.waitLock(20000);
+    locked = true;
     var mine = _fmReadResponses(ss, form.formId).filter(function(r) { return r.memberId === member.memberId && r.memberType === member.type; });
 
     if (form.action.type === 'absence') {
@@ -232,7 +325,7 @@ function fmSubmitResponse(formId, memberKey, answersJson) {
       var dupe = mine.filter(function(r) {
         return r.reviewStatus !== 'denied' && (r.answers[form.action.eventField] || {}).eventId === evId;
       })[0];
-      if (dupe) return JSON.stringify({ success: false, message: 'You already sent an absence request for that event.' });
+      if (dupe) return fail('You already sent an absence request for that event.');
     }
 
     var now = new Date().toISOString();
@@ -242,14 +335,19 @@ function fmSubmitResponse(formId, memberKey, answersJson) {
       var row = mine[0]._rowNum;
       sheet.getRange(row, 6, 1, 6).setValues([[JSON.stringify(v.clean), now, review, '', '', '']]);
       logInfo('fmSubmitResponse', form.formId + ' updated by ' + member.name);
+      var oldIds = _fmPhotoIds(form, mine[0].answers);
+      uploaded = [];
+      if (locked) { try { lock.releaseLock(); } catch (e) {} locked = false; }
+      _fmTrashPhotos(oldIds);
       return JSON.stringify({ success: true, updated: true, message: 'Your response was updated.' });
     }
     sheet.appendRow([_fmNewId('RS'), form.formId, member.memberId, member.type, member.name, JSON.stringify(v.clean), now, review, '', '', '']);
     logInfo('fmSubmitResponse', form.formId + ' submitted by ' + member.name);
+    uploaded = [];
     return JSON.stringify({ success: true, message: form.requiresReview ? 'Submitted. An officer will review it.' : 'Thanks, your response was recorded.' });
   } catch (err) {
     logError('fmSubmitResponse', err);
-    return JSON.stringify({ success: false, message: 'Submission failed. Please try again or contact an officer.' });
+    return fail('Submission failed. Please try again or contact an officer.');
   } finally {
     if (locked) { try { lock.releaseLock(); } catch (e) {} }
   }
@@ -315,6 +413,7 @@ function _fmCleanFields(raw) {
       });
       if (field.options.length < 2) return { error: '"' + label + '" needs at least two options.' };
     }
+    if (type === 'event' && f.allEvents) field.allEvents = true;
     if (type !== 'info') answerable++;
     out.push(field);
   }
@@ -342,6 +441,17 @@ function fmSaveForm(pin, payloadJson, performedBy) {
       ev.required = true;
       var reason = cf.fields.filter(function(f) { return f.type === 'choice'; })[0];
       action = { type: 'absence', eventField: ev.id, reasonField: reason ? reason.id : '' };
+    }
+
+    if (p.action && p.action.type === 'philanthropy') {
+      var hf = cf.fields.filter(function(f) { return f.type === 'number'; })[0];
+      var pf = cf.fields.filter(function(f) { return f.type === 'photo'; })[0];
+      if (!hf) return JSON.stringify({ success: false, error: 'A philanthropy form needs a number field for the hours.' });
+      if (!pf) return JSON.stringify({ success: false, error: 'A philanthropy form needs a photo field for the proof.' });
+      hf.required = true; pf.required = true;
+      var tf = cf.fields.filter(function(f) { return f.type === 'text'; })[0];
+      var df = cf.fields.filter(function(f) { return f.type === 'date'; })[0];
+      action = { type: 'philanthropy', hoursField: hf.id, photoField: pf.id, titleField: tf ? tf.id : '', dateField: df ? df.id : '' };
     }
 
     var ss = getSpreadsheet();
@@ -386,8 +496,12 @@ function fmDeleteForm(pin, formId) {
     var form = _fmFindForm(ss, formId);
     if (!form) return JSON.stringify({ success: false, error: 'Form not found.' });
     var respSheet = _fmSheet(ss, 'form_responses', FM_RESP_HEADERS);
-    var rows = _fmReadResponses(ss, form.formId).map(function(r) { return r._rowNum; }).sort(function(a, b) { return b - a; });
+    var resps = _fmReadResponses(ss, form.formId);
+    var photoIds = [];
+    resps.forEach(function(r) { photoIds = photoIds.concat(_fmPhotoIds(form, r.answers)); });
+    var rows = resps.map(function(r) { return r._rowNum; }).sort(function(a, b) { return b - a; });
     rows.forEach(function(n) { respSheet.deleteRow(n); });
+    _fmTrashPhotos(photoIds);
     _fmSheet(ss, 'forms', FM_HEADERS).deleteRow(form._rowNum);
     logInfo('fmDeleteForm', form.formId + ' "' + form.title + '" with ' + rows.length + ' response(s)');
     return JSON.stringify({ success: true, message: 'Form deleted.' });
@@ -423,9 +537,13 @@ function fmGetResponses(pin, formId) {
       url: _fmFormUrl(form.formId),
       accepting: _fmIsAccepting(form).ok,
       responses: responses.map(function(r) {
-        var display = {};
-        Object.keys(r.answers).forEach(function(id) { if (fieldById[id]) display[id] = _fmAnswerText(fieldById[id], r.answers[id]); });
-        return { responseId: r.responseId, memberName: r.memberName, memberType: r.memberType, submittedAt: r.submittedAt, display: display, reviewStatus: r.reviewStatus, reviewedBy: r.reviewedBy, reviewNote: r.reviewNote };
+        var display = {}, photos = {};
+        Object.keys(r.answers).forEach(function(id) {
+          if (!fieldById[id]) return;
+          display[id] = _fmAnswerText(fieldById[id], r.answers[id]);
+          if (fieldById[id].type === 'photo') photos[id] = r.answers[id];
+        });
+        return { photos: photos, responseId: r.responseId, memberName: r.memberName, memberType: r.memberType, submittedAt: r.submittedAt, display: display, reviewStatus: r.reviewStatus, reviewedBy: r.reviewedBy, reviewNote: r.reviewNote };
       }).sort(function(a, b) { return b.submittedAt.localeCompare(a.submittedAt); }),
       nonResponders: nonResponders
     });
@@ -454,7 +572,9 @@ function fmDeleteResponse(pin, responseId) {
     var ss = getSpreadsheet();
     var r = _fmReadResponses(ss).filter(function(x) { return x.responseId === String(responseId); })[0];
     if (!r) return JSON.stringify({ success: false, error: 'Response not found.' });
+    var form = _fmFindForm(ss, r.formId);
     _fmSheet(ss, 'form_responses', FM_RESP_HEADERS).deleteRow(r._rowNum);
+    if (form) _fmTrashPhotos(_fmPhotoIds(form, r.answers));
     return JSON.stringify({ success: true, message: 'Response deleted.' });
   } catch (err) { logError('fmDeleteResponse', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }
@@ -515,4 +635,57 @@ function _fmExcusesForEvent(ss, eventId) {
     });
   });
   return out;
+}
+
+// ---- Philanthropy action -----------------------------------
+
+// Hours per member across every form whose action is 'philanthropy'. Approved
+// (or any non-denied when review is off) hours count; pending ones are shown
+// separately. Members with no submission are listed too, with zero hours.
+function fmPhilanthropySummary(pin) {
+  var denied = _fmDeny(pin); if (denied) return denied;
+  try {
+    var ss = getSpreadsheet();
+    var forms = _fmReadForms(ss).filter(function(f) { return f.action.type === 'philanthropy'; });
+    if (!forms.length) return JSON.stringify({ success: true, hasForm: false });
+    var byKey = {};
+    var touch = function(key, name, type) {
+      if (!byKey[key]) byKey[key] = { key: key, name: name, type: type, approved: 0, pending: 0, entries: [] };
+      return byKey[key];
+    };
+    forms.forEach(function(f) {
+      _eventRoster(f.audience).forEach(function(m) { touch(m.type + ':' + m.memberId, m.name, m.type); });
+      var fieldById = {};
+      f.fields.forEach(function(x) { fieldById[x.id] = x; });
+      _fmReadResponses(ss, f.formId).forEach(function(r) {
+        var status = f.requiresReview ? (r.reviewStatus || 'pending') : 'approved';
+        var hours = Number(r.answers[f.action.hoursField]) || 0;
+        var m = touch(r.memberType + ':' + r.memberId, r.memberName, r.memberType);
+        if (status === 'approved') m.approved += hours;
+        else if (status === 'pending') m.pending += hours;
+        m.entries.push({
+          responseId: r.responseId, formId: f.formId, reviewable: f.requiresReview, submittedAt: r.submittedAt, status: status, hours: hours,
+          activity: f.action.titleField ? _fmAnswerText(fieldById[f.action.titleField] || {}, r.answers[f.action.titleField]) : '',
+          date: f.action.dateField ? String(r.answers[f.action.dateField] || '') : '',
+          photos: r.answers[f.action.photoField] || [], reviewNote: r.reviewNote
+        });
+      });
+    });
+    var members = Object.keys(byKey).map(function(k) { return byKey[k]; });
+    members.forEach(function(m) {
+      m.approved = Math.round(m.approved * 100) / 100;
+      m.pending = Math.round(m.pending * 100) / 100;
+      m.entries.sort(function(a, b) { return b.submittedAt.localeCompare(a.submittedAt); });
+    });
+    members.sort(function(a, b) { return (b.approved - a.approved) || (b.pending - a.pending) || a.name.localeCompare(b.name); });
+    var totalApproved = 0, totalPending = 0, contributors = 0;
+    members.forEach(function(m) { totalApproved += m.approved; totalPending += m.pending; if (m.approved > 0) contributors++; });
+    var primary = forms[0];
+    return JSON.stringify({
+      success: true, hasForm: true,
+      form: { formId: primary.formId, title: primary.title, url: _fmFormUrl(primary.formId), accepting: _fmIsAccepting(primary).ok },
+      totals: { approved: Math.round(totalApproved * 100) / 100, pending: Math.round(totalPending * 100) / 100, contributors: contributors, members: members.length },
+      members: members
+    });
+  } catch (err) { logError('fmPhilanthropySummary', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }

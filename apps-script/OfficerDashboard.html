@@ -761,7 +761,27 @@
     <!-- FINANCE SECTION -->
     <div class="sec" id="sec-finance"><div class="container"><div class="coming-soon"><div class="cs-icon">💰</div><h2>Finance</h2><p>Dues tracker and financial dashboard — coming soon.</p></div></div></div>
     <!-- PHILANTHROPY SECTION -->
-    <div class="sec" id="sec-philanthropy"><div class="container"><div class="coming-soon"><div class="cs-icon">🤝</div><h2>Philanthropy</h2><p>Community service hours tracking — coming soon.</p></div></div></div>
+    <div class="sec" id="sec-philanthropy"><div class="container">
+      <div class="card">
+        <div class="card-header">
+          <h2>🤝 Philanthropy</h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="phCopyLink()">Copy submission link</button>
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="phOpenForm()">Form &amp; responses</button>
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="loadPhilanthropy()">Refresh</button>
+          </div>
+        </div>
+        <div id="ph-loading" style="text-align:center;color:var(--muted);padding:24px 0">Loading philanthropy hours...</div>
+        <div id="ph-body" style="display:none;padding:12px 16px">
+          <div class="stats-row" id="ph-stats"></div>
+          <div id="ph-closed" style="display:none;font-size:0.82rem;color:var(--muted);margin-bottom:10px">The submission form is closed, so members cannot log new hours. Reopen it from Form &amp; responses.</div>
+          <div style="overflow-x:auto"><table class="data-table" style="min-width:560px">
+            <thead><tr><th>Member</th><th style="width:110px">Approved hrs</th><th style="width:110px">Pending hrs</th><th style="width:90px">Entries</th></tr></thead>
+            <tbody id="ph-tbody"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div></div>
     <!-- FORMS SECTION -->
     <div class="sec" id="sec-forms"><div class="container">
       <div id="fm-list-view">
@@ -1639,6 +1659,8 @@
         <div class="ev-seg">
           <button type="button" onclick="fmApplyTemplate('blank')">Blank form</button>
           <button type="button" onclick="fmApplyTemplate('absence')">Absence request</button>
+          <button type="button" onclick="fmApplyTemplate('philanthropy')">Philanthropy hours</button>
+          <button type="button" onclick="fmApplyTemplate('guestlist')">Party guest list</button>
         </div>
       </div>
       <div class="ev-grid">
@@ -1669,9 +1691,7 @@
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
             <input type="checkbox" id="fm-f-multi" style="width:16px;height:16px"> Members can submit more than once
           </label>
-          <div id="fm-f-action-note" style="display:none;font-size:0.78rem;color:var(--muted)">
-            Absence behavior is on: approved requests show as excused when you take attendance for that event. Needs one event question.
-          </div>
+          <div id="fm-f-action-note" style="display:none;font-size:0.78rem;color:var(--muted)"></div>
         </div>
       </div>
       <div class="ev-card">
@@ -1857,6 +1877,7 @@ function showSection(id, btn) {
   if (id === 'members') initMemberManager();
   if (id === 'events') loadEvents();
   if (id === 'forms') loadForms();
+  if (id === 'philanthropy') loadPhilanthropy();
 }
 
 // ---- Dashboard init ----------------------------------------
@@ -5669,9 +5690,13 @@ var fmCurrent = null;
 var fmFields = [];
 var fmEditingId = '';
 var fmEditingAction = 'none';
+var FM_ACTION_NOTES = {
+  absence: 'Absence behavior is on: approved requests show as excused when you take attendance for that event. Needs one event question.',
+  philanthropy: 'Philanthropy behavior is on: approved hours feed the Philanthropy page. Needs one number question (hours) and one photo question (proof).'
+};
 var FM_TYPE_LABELS = {
   text: 'Short text', textarea: 'Paragraph', choice: 'Single choice', multi: 'Multiple choice',
-  number: 'Number', date: 'Date', yesno: 'Yes / No', event: 'Event picker', info: 'Text block (no answer)'
+  number: 'Number', date: 'Date', yesno: 'Yes / No', event: 'Event picker', photo: 'Photos (from gallery)', list: 'List of names', info: 'Text block (no answer)'
 };
 
 function fmRun(handler) {
@@ -5707,7 +5732,7 @@ function renderFmList() {
     var pending = f.pending ? ' <span class="badge badge-flagged">' + f.pending + ' to review</span>' : '';
     return '<tr>' +
       '<td><a href="#" style="font-weight:700;color:var(--primary);text-decoration:none" onclick="openFmDetail(\'' + f.formId + '\');return false">' + esc(f.title) + '</a>' +
-        (f.actionType === 'absence' ? ' <span style="font-size:0.7rem;color:var(--muted)">absence</span>' : '') + '</td>' +
+        (f.actionType && f.actionType !== 'none' ? ' <span style="font-size:0.7rem;color:var(--muted)">' + esc(f.actionType) + '</span>' : '') + '</td>' +
       '<td style="font-size:0.82rem">' + esc(labels[f.audience]) + '</td>' +
       '<td style="font-size:0.82rem">' + esc(f.dueDate || '—') + '</td>' +
       '<td>' + status + '</td>' +
@@ -5781,7 +5806,10 @@ function renderFmDetail() {
     }
     return '<tr><td style="font-weight:600">' + esc(x.memberName) + (x.memberType === 'novato' ? ' <span style="font-size:0.7rem;color:var(--muted)">' + esc(novShort) + '</span>' : '') + '</td>' +
       '<td style="font-size:0.78rem;color:var(--muted)">' + esc(fmWhen(x.submittedAt)) + '</td>' +
-      cols.map(function(c) { return '<td style="font-size:0.82rem;white-space:pre-wrap">' + esc(x.display[c.id] || '') + '</td>'; }).join('') +
+      cols.map(function(c) {
+        if (c.type === 'photo') return '<td>' + phThumbs((x.photos || {})[c.id]) + '</td>';
+        return '<td style="font-size:0.82rem;white-space:pre-wrap">' + esc(x.display[c.id] || '') + '</td>';
+      }).join('') +
       review + '<td><button class="qa-btn" title="Delete response" onclick="fmDeleteResponse(\'' + x.responseId + '\')">✕</button></td></tr>';
   }).join('');
   document.getElementById('fm-d-table').innerHTML = head + '<tbody>' + (body || '<tr><td colspan="' + (cols.length + 4) + '" class="empty-state">No responses yet.</td></tr>') + '</tbody>';
@@ -5867,6 +5895,21 @@ function fmExportCsv() {
 }
 
 // ---- Builder ----
+function fmPhilanthropyTemplate() {
+  return {
+    title: 'Philanthropy hours',
+    description: 'Log volunteer hours. An officer reviews each submission and approved hours count toward your total.',
+    audience: 'brothers', requiresReview: true, allowMultiple: true, action: 'philanthropy', dueDate: '',
+    fields: [
+      { type: 'text', label: 'Activity or organization', required: true, help: '' },
+      { type: 'date', label: 'Date', required: true, help: '' },
+      { type: 'number', label: 'Hours', required: true, help: 'e.g. 2.5' },
+      { type: 'textarea', label: 'What did you do?', required: false, help: '' },
+      { type: 'photo', label: 'Photos as proof', required: true, help: 'Pick photos from your gallery: the event, a signed sheet or a certificate.' }
+    ]
+  };
+}
+
 function fmTemplate(kind) {
   if (kind === 'absence') {
     return {
@@ -5877,6 +5920,18 @@ function fmTemplate(kind) {
         { type: 'event', label: 'Which event will you miss?', required: true, help: '' },
         { type: 'choice', label: 'Reason', required: true, help: '', options: ['Class or exam', 'Work or interview', 'Illness', 'Family', 'Out of town', 'Other'] },
         { type: 'textarea', label: 'Details', required: false, help: 'Anything the officers should know.' }
+      ]
+    };
+  }
+  if (kind === 'philanthropy') return fmPhilanthropyTemplate();
+  if (kind === 'guestlist') {
+    return {
+      title: 'Party guest list',
+      description: 'Add the people you are inviting. You are listed as the host.',
+      audience: 'brothers', requiresReview: false, allowMultiple: true, action: 'none', dueDate: '',
+      fields: [
+        { type: 'event', label: 'Which event?', required: true, help: '', allEvents: true },
+        { type: 'list', label: 'Guests you are inviting', required: true, help: 'Full name of each guest, one per row.' }
       ]
     };
   }
@@ -5892,7 +5947,9 @@ function fmLoadIntoModal(t) {
   document.getElementById('fm-f-review').checked = !!t.requiresReview;
   document.getElementById('fm-f-multi').checked = !!t.allowMultiple;
   fmEditingAction = t.action || 'none';
-  document.getElementById('fm-f-action-note').style.display = fmEditingAction === 'absence' ? 'block' : 'none';
+  var note = document.getElementById('fm-f-action-note');
+  note.textContent = FM_ACTION_NOTES[fmEditingAction] || '';
+  note.style.display = FM_ACTION_NOTES[fmEditingAction] ? 'block' : 'none';
   fmFields = t.fields.map(function(f) { return Object.assign({}, f, { options: (f.options || []).slice() }); });
   fmRenderFields();
 }
@@ -5936,6 +5993,8 @@ function fmSyncFields() {
     f.label = row.querySelector('.fm-label').value;
     f.help = row.querySelector('.fm-help').value;
     f.required = row.querySelector('.fm-req').checked;
+    var ae = row.querySelector('.fm-allev');
+    f.allEvents = ae ? ae.checked : false;
     var opts = row.querySelector('.fm-opts');
     f.options = opts ? opts.value.split('\n').map(function(s) { return s.trim(); }).filter(Boolean) : (f.options || []);
   });
@@ -5958,6 +6017,7 @@ function fmRenderFields() {
         '<button type="button" class="qa-btn" title="Remove" onclick="fmRemoveField(' + i + ')">✕</button>' +
       '</div>' +
       '<input type="text" class="fm-help inline-input" style="width:100%" placeholder="' + (f.type === 'info' ? 'Text shown to members' : 'Help text (optional)') + '" value="' + esc(f.help) + '">' +
+      (f.type === 'event' ? '<label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer"><input type="checkbox" class="fm-allev"' + (f.allEvents ? ' checked' : '') + '> Include events without attendance (e.g. parties)</label>' : '') +
       (hasOpts ? '<textarea class="fm-opts inline-input" style="width:100%;min-height:70px" placeholder="One option per line">' + esc((f.options || []).join('\n')) + '</textarea>' : '') +
     '</div>';
   }).join('');
@@ -6011,6 +6071,123 @@ function saveFmFromModal() {
     })
     .withFailureHandler(function(err) { btn.disabled = false; window.bfBusy(btn, false); onError(err); })
     .fmSaveForm(correctPin, JSON.stringify(payload), 'Officer');
+}
+
+// ---- Philanthropy page ----
+var phData = null;
+
+function phThumbs(list) {
+  if (!list || !list.length) return '<span style="color:var(--muted);font-size:0.78rem">No photos</span>';
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap">' + list.map(function(p) {
+    var id = encodeURIComponent(p.id);
+    return '<a href="https://drive.google.com/file/d/' + id + '/view" target="_blank" rel="noopener" title="Open photo">' +
+      '<img src="https://drive.google.com/thumbnail?id=' + id + '&sz=w400" alt="Proof photo" loading="lazy" ' +
+      'style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border);background:#f3f4f6" ' +
+      'onerror="this.outerHTML=\'<span style=&quot;font-size:0.75rem;color:var(--primary);font-weight:600&quot;>Open photo</span>\'"></a>';
+  }).join('') + '</div>';
+}
+
+function loadPhilanthropy() {
+  document.getElementById('ph-loading').style.display = 'block';
+  document.getElementById('ph-body').style.display = 'none';
+  fmRun(function(r) {
+    if (!r.success) { document.getElementById('ph-loading').textContent = 'Error: ' + r.error; return; }
+    if (!r.hasForm) { phCreateForm(); return; }
+    phData = r;
+    renderPhilanthropy();
+  }).fmPhilanthropySummary(correctPin);
+}
+
+var _phCreating = false;
+function phCreateForm() {
+  if (_phCreating) return;
+  _phCreating = true;
+  var t = fmPhilanthropyTemplate();
+  var payload = { formId: '', title: t.title, description: t.description, audience: t.audience, dueDate: '',
+    requiresReview: t.requiresReview, allowMultiple: t.allowMultiple, action: { type: t.action }, fields: t.fields };
+  google.script.run
+    .withSuccessHandler(function(json) {
+      _phCreating = false;
+      var r = JSON.parse(json);
+      if (!r.success) { document.getElementById('ph-loading').textContent = 'Error: ' + r.error; return; }
+      loadPhilanthropy();
+    })
+    .withFailureHandler(function(err) { _phCreating = false; onError(err); })
+    .fmSaveForm(correctPin, JSON.stringify(payload), 'Officer');
+}
+
+function fmtHours(n) { return String(Math.round((Number(n) || 0) * 100) / 100); }
+
+function renderPhilanthropy() {
+  var r = phData, t = r.totals;
+  document.getElementById('ph-loading').style.display = 'none';
+  document.getElementById('ph-body').style.display = 'block';
+  document.getElementById('ph-closed').style.display = r.form.accepting ? 'none' : 'block';
+  var card = function(l, v, sub) { return '<div class="stat-card"><div class="label">' + l + '</div><div class="value">' + v + '</div>' + (sub ? '<div class="sub">' + sub + '</div>' : '') + '</div>'; };
+  document.getElementById('ph-stats').innerHTML =
+    card('Approved hours', fmtHours(t.approved), '') +
+    card('Pending review', fmtHours(t.pending), '') +
+    card('Members with hours', t.contributors, 'of ' + t.members);
+  var novShort = (CHAPTER_CONFIG.labels.label_am_short || 'AM');
+  document.getElementById('ph-tbody').innerHTML = r.members.map(function(m, i) {
+    var tag = m.type === 'novato' ? ' <span style="font-size:0.7rem;color:var(--muted)">' + esc(novShort) + '</span>' : '';
+    var has = m.entries.length > 0;
+    var row = '<tr' + (has ? ' style="cursor:pointer" onclick="phToggle(' + i + ')"' : '') + '>' +
+      '<td style="font-weight:600">' + esc(m.name) + tag + (has ? ' <span style="color:var(--muted);font-size:0.75rem">▾</span>' : '') + '</td>' +
+      '<td style="font-weight:700">' + fmtHours(m.approved) + '</td>' +
+      '<td>' + (m.pending ? '<span class="badge badge-flagged">' + fmtHours(m.pending) + '</span>' : '<span style="color:var(--muted)">0</span>') + '</td>' +
+      '<td style="font-size:0.82rem">' + m.entries.length + '</td></tr>';
+    if (!has) return row;
+    var entries = m.entries.map(function(e) {
+      var badge = e.status === 'approved' ? '<span class="badge badge-passed">Approved</span>'
+        : e.status === 'denied' ? '<span class="badge badge-rejected">Denied</span>'
+        : '<span class="badge badge-flagged">Pending</span>';
+      var btns = !e.reviewable ? ''
+        : e.status === 'pending'
+          ? '<button class="qa-btn" onclick="phReview(\'' + e.responseId + '\',\'approved\')">Approve</button> <button class="qa-btn" onclick="phReview(\'' + e.responseId + '\',\'denied\')">Deny</button>'
+          : '<button class="qa-btn" onclick="phReview(\'' + e.responseId + '\',\'pending\')">Undo</button>';
+      return '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--border)">' +
+        '<div style="flex:1;min-width:200px"><div style="font-weight:600;font-size:0.85rem">' + esc(e.activity || 'Activity') + '</div>' +
+          '<div style="font-size:0.78rem;color:var(--muted)">' + esc(e.date || '') + ' · ' + fmtHours(e.hours) + ' h</div>' +
+          (e.reviewNote ? '<div style="font-size:0.75rem;color:var(--muted)">Note: ' + esc(e.reviewNote) + '</div>' : '') + '</div>' +
+        '<div>' + phThumbs(e.photos) + '</div>' +
+        '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' + badge + ' ' + btns + '</div></div>';
+    }).join('');
+    return row + '<tr id="ph-e-' + i + '" style="display:none"><td colspan="4" style="background:#fafafa;padding:4px 16px">' + entries + '</td></tr>';
+  }).join('');
+}
+
+function phToggle(i) {
+  var el = document.getElementById('ph-e-' + i);
+  if (el) el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+}
+
+function phReview(responseId, decision) {
+  var note = '';
+  if (decision === 'denied') {
+    note = window.prompt('Reason for denying (optional, only officers see it):', '');
+    if (note === null) return;
+  }
+  var open = [];
+  document.querySelectorAll('#ph-tbody tr[id^="ph-e-"]').forEach(function(tr) { if (tr.style.display !== 'none') open.push(tr.id); });
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    fmRun(function(s) {
+      if (!s.success) { showToast('Error: ' + s.error); return; }
+      phData = s;
+      renderPhilanthropy();
+      open.forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = 'table-row'; });
+    }).fmPhilanthropySummary(correctPin);
+  }).fmReviewResponse(correctPin, responseId, decision, note, 'Officer');
+}
+
+function phCopyLink() { if (phData) fmCopyLink(phData.form.url); }
+
+function phOpenForm() {
+  if (!phData) return;
+  var id = phData.form.formId;
+  showSection('forms', document.querySelector('.ni[data-s="forms"]'));
+  setTimeout(function() { openFmDetail(id); }, 150);
 }
 
 // Load form URLs lazily on first expand of the forms manager section.

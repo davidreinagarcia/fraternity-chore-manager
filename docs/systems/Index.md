@@ -56,6 +56,9 @@ Si no lo tiene, créalo desde [`_template.md`](./_template.md) y añade la fila 
 | Form builder nativo | Hecho | `Forms.gs` + `OfficerDashboard.html` → Forms | [forms.md](./forms.md) |
 | Forms public page | Hecho | `FormApp.html` (`?app=form&f=<id>`) | [forms.md](./forms.md) |
 | Absence request form | Hecho | `Forms.gs` → `_fmExcusesForEvent()` | [forms.md](./forms.md) |
+| Philanthropy hours (form + página) | Hecho | `Forms.gs` → `fmPhilanthropySummary()` + `OfficerDashboard.html` → Philanthropy | [forms.md](./forms.md) |
+| Photo upload field (galería → Drive) | Hecho | `Forms.gs` → `_fmSavePhoto()` + `FormApp.html` | [forms.md](./forms.md) |
+| Party guest list form (solo el form) | Hecho; gestión de la lista pendiente | plantilla "Party guest list" del builder | [forms.md](./forms.md) |
 | Custom Forms (NM/RM, Google Forms) | Hecho | `CustomForms.gs` | — |
 | Form reminders | Hecho | `CustomForms.gs` → `sendFormReminders()` | — |
 | Response tracking | Hecho | `CustomForms.gs` → `getFormResponses()` | — |
@@ -78,5 +81,4 @@ Si no lo tiene, créalo desde [`_template.md`](./_template.md) y añade la fila 
 | Multi-day events | Planeado |
 | Unificación AM Events → Events unificado | Planeado |
 | Dues tracker | Planeado |
-| Philanthropy hours | Planeado |
 | License key validation (antes de primera venta) | Planeado |

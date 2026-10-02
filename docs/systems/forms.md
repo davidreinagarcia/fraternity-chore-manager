@@ -4,7 +4,7 @@ Motor genérico de formularios: los officers definen un form en el dashboard y l
 
 ## Estado
 
-Hecho — `Forms.gs` + `FormApp.html` + sección `sec-forms` en `OfficerDashboard.html`. Primer form encima: Absence request.
+Hecho — `Forms.gs` + `FormApp.html` + sección `sec-forms` en `OfficerDashboard.html`. Forms encima: Absence request, Philanthropy hours (con su página `sec-philanthropy`) y Party guest list (solo el form).
 
 ## Cómo funciona
 
@@ -16,7 +16,11 @@ Hecho — `Forms.gs` + `FormApp.html` + sección `sec-forms` en `OfficerDashboar
 
 ### Campos
 
-Tipos: `text`, `textarea`, `choice`, `multi`, `number`, `date`, `yesno`, `event`, `info` (solo texto). Máximo 40 campos. Los ids son `fN` y se conservan al editar, así que editar un form no rompe las respuestas existentes. `choice`/`multi` requieren 2 o más opciones (se deduplican). El campo `event` lista los próximos eventos con attendance distinta de `none` que encajen con el audience del form; se guarda como `{eventId,label}`.
+Tipos: `text`, `textarea`, `choice`, `multi`, `number`, `date`, `yesno`, `event`, `photo`, `list`, `info` (solo texto). Máximo 40 campos. Los ids son `fN` y se conservan al editar, así que editar un form no rompe las respuestas existentes. `choice`/`multi` requieren 2 o más opciones (se deduplican). El campo `event` lista los próximos eventos con attendance distinta de `none` que encajen con el audience del form; se guarda como `{eventId,label}`. Con `allEvents: true` (checkbox del builder) el picker lista todos los próximos eventos, también los sin attendance (fiestas); `fmGetPublicForm` devuelve `events` (estándar) y `eventsAll`.
+
+**`list`**: lista de nombres de texto libre (máx. 30 filas, 100 caracteres cada una, se descartan las vacías). Se guarda como array y se muestra unido con `; `.
+
+**`photo`**: fotos de la galería del móvil (máx. 6). El cliente las comprime a JPEG (lado máx. 1600 px, calidad 0.82) con canvas y las manda en un argumento aparte `photosJson` (`{fieldId:[{data}]}`) de `fmSubmitResponse`. El servidor valida (≥5 KB, ≤8 MB, magic bytes JPEG), las sube a Drive en `Form Uploads/<semestre>/<título del form>/` (bajo `SIGNATURES_PARENT_FOLDER_ID`, con permiso de lectura por link) **antes** de coger el lock, y guarda `[{id,url}]` en la respuesta. Si algo falla después de subir, las fotos se mandan a la papelera. También se trashean al borrar la respuesta, al borrar el form o al reemplazar en el sitio (`allow_multiple = N`).
 
 ### Página pública `?app=form&f=<form_id>`
 
@@ -38,15 +42,26 @@ Con `requires_review`, cada respuesta nace `pending` y un officer la aprueba o d
 
 Las excusas se **derivan** de las respuestas en `_fmExcusesForEvent(ss, eventId)`: aprobadas, o cualquier no denegada si el form no pide review. No hay un segundo estado que sincronizar. `getEventAttendanceData` (Events.gs) las devuelve y el roll call muestra "Excused: <motivo>" o "Absence request pending" junto al nombre.
 
+### Acción `philanthropy`
+
+`fmSaveForm` exige un campo `number` (horas, se fuerza `required`) y un campo `photo` (prueba, `required`) y guarda `{type:'philanthropy',hoursField,photoField,titleField,dateField}` (título y fecha = primer `text` y primer `date`). `fmSubmitResponse` exige horas > 0 y ≤ 100.
+
+`fmPhilanthropySummary(pin)` **deriva** todo de las respuestas (sin estado extra): horas aprobadas (o cualquiera no denegada si el form no pide review), pendientes, contribuyentes y entradas por miembro (con fotos), incluyendo miembros del roster con 0 horas. La sección Philanthropy del dashboard (`loadPhilanthropy()`) muestra totales, tabla por miembro con entradas desplegables, miniaturas (`drive.google.com/thumbnail`, con fallback a enlace "Open photo") y botones Approve/Deny/Undo. Si no existe ningún form con esta acción, la página lo **crea sola** desde la plantilla del cliente; borrarlo lo recrea al abrir la página (para retirarlo, ciérralo).
+
+### Party guest list
+
+Plantilla "Party guest list" del builder: picker de evento con `allEvents` + campo `list`. El anfitrión es el nombre elegido arriba en la página pública. Sin acción: de momento solo se recogen respuestas; la consolidación de la lista de invitados por evento queda para más adelante.
+
 ### Dashboard
 
-Sección Forms: lista (con contadores respondidos/audience y pendientes), detalle con tabla de respuestas, lista de no respondidos con botón de recordatorio, copiar link, cerrar/reabrir, exportar CSV (con guarda contra formula injection) y borrar. El builder es un modal con plantillas (Blank, Absence request), editor de preguntas con reordenar y opciones de audience, deadline, review y multiples envíos. El vocabulario de audience sale de `evAudienceLabels()` / `CHAPTER_CONFIG.labels`.
+Sección Forms: lista (con contadores respondidos/audience y pendientes), detalle con tabla de respuestas, lista de no respondidos con botón de recordatorio, copiar link, cerrar/reabrir, exportar CSV (con guarda contra formula injection) y borrar. El builder es un modal con plantillas (Blank, Absence request, Philanthropy hours, Party guest list), editor de preguntas con reordenar y opciones de audience, deadline, review y multiples envíos. El vocabulario de audience sale de `evAudienceLabels()` / `CHAPTER_CONFIG.labels`.
 
 ## Casos borde conocidos
 
 - **Identidad por nombre**: el miembro elige su nombre de una lista, sin autenticación. Alguien con el link puede enviar como otro miembro. Aceptado para una fraternidad (igual que las firmas AM); el officer ve quién envió y puede denegar.
 - **Roster visible**: cualquiera con el link ve los nombres del audience (igual que `SignatureApp`).
-- **Sin subida de fotos**: no hay campo de archivo todavía.
+- **Fotos**: solo JPEG (el cliente re-codifica todo), máx. 6 por campo. Los archivos son visibles para cualquiera con el link de Drive. Si falla una subida, nada se guarda.
+- **Philanthropy**: no hay objetivo de horas por semestre ni multas automáticas por no llegar.
 - **Testado solo contra mocks y harness local** (node + shim de `google.script.run`): lógica de servidor con tests vm, UI con navegador. Nunca contra la Sheet real, GmailApp ni el deploy. Si algo falla en producción, sospechar primero de la creación de los tabs (`_fmSheet`) y de los permisos de GmailApp.
 - Los forms semestrales NM/RM (`CustomForms.gs`) no usan este motor todavía.
 
@@ -54,5 +69,7 @@ Sección Forms: lista (con contadores respondidos/audience y pendientes), detall
 
 - Auto-fines para hermanos que falten a eventos mandatory: debe leer `_fmExcusesForEvent` para no multar a los excusados.
 - Migrar NM/RM al motor.
-- Más acciones por form (philanthropy hours, guest list, swap de chores) y campo de foto.
+- Gestión de la guest list (consolidar invitados por evento, check-in en la puerta).
+- Objetivo de horas de filantropía por semestre.
+- Más acciones por form (swap de chores).
 - Votaciones anónimas necesitan otro diseño (este motor guarda la identidad).
