@@ -8,11 +8,11 @@
   :root {
     --primary: <?= cfg.chapter.primary_color ?>;
     --gold: <?= cfg.chapter.accent_color ?>;
-    --bg: #202124;
-    --card: #292a2d;
-    --border: #3c4043;
-    --text: #e8eaed;
-    --muted: #9aa0a6;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --border: #dadce0;
+    --text: #202124;
+    --muted: #5f6368;
     --radius: 8px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,21 +24,25 @@
     padding-bottom: 48px;
   }
 
-  /* ---- Header ---- */
+  /* ---- Header: chapter colours + logo ---- */
   .header {
-    background: var(--card);
+    background: #fff;
+    border-top: 6px solid var(--primary);
     border-bottom: 1px solid var(--border);
     padding: 28px 20px 22px;
     text-align: center;
+    position: relative;
+  }
+  .header::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: var(--gold);
   }
   .header img {
-    height: 60px; width: auto; max-width: 260px;
+    height: 72px; width: auto; max-width: 260px;
     margin-bottom: 14px;
-    filter: brightness(0) invert(1);
   }
   .header h1 {
     font-size: 1.5rem; font-weight: 500;
-    color: var(--text); letter-spacing: 0;
+    color: var(--primary); letter-spacing: 0;
     margin-bottom: 4px;
   }
   .header p { font-size: 0.82rem; color: var(--muted); letter-spacing: 0.5px; }
@@ -63,11 +67,11 @@
     transition: border-color 0.15s, background 0.15s;
     -webkit-tap-highlight-color: transparent;
   }
-  .nav-card:hover  { border-color: var(--gold); background: #303134; }
+  .nav-card:hover  { border-color: var(--primary); background: #f8f9fa; }
   .nav-card:active { transform: scale(0.985); }
-  .nav-card .icon  { font-size: 1.9rem; width: 48px; text-align: center; flex-shrink: 0; }
+  .nav-card .icon  { font-size: 1.6rem; width: 48px; height: 48px; line-height: 48px; border-radius: 8px; text-align: center; flex-shrink: 0; background: color-mix(in srgb, var(--gold) 22%, #fff); }
   .nav-card .text  { flex: 1; min-width: 0; }
-  .nav-card .title { font-size: 1rem; font-weight: 700; color: var(--gold); margin-bottom: 3px; }
+  .nav-card .title { font-size: 1rem; font-weight: 500; color: var(--primary); margin-bottom: 3px; }
   .nav-card .sub   { font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
   .nav-card .arrow { color: var(--muted); font-size: 1.3rem; flex-shrink: 0; }
 
@@ -83,7 +87,7 @@
   <img src="<?= cfg.chapter.logo_url ?>" alt="<?= cfg.chapter.chapter_name ?>" onerror="this.style.display='none'">
   <? } ?>
   <h1><?= cfg.chapter.chapter_name.toUpperCase() ?></h1>
-  <p><?= cfg.labels.label_chore ?> Management System</p>
+  <p>GreekEasy Digital</p>
 </div>
 
 <div class="container">

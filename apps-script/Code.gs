@@ -76,6 +76,12 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
+function includeHome() {
+  var t = HtmlService.createTemplateFromFile('HomeButton');
+  t.baseUrl = ScriptApp.getService().getUrl();
+  return t.evaluate().getContent();
+}
+
 // ---- Column-map helpers (support both old + new member schema) ----
 
 // Build name→index map from a header row.
