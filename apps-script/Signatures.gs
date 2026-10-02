@@ -2,16 +2,12 @@
 // Signatures.gs — AM "signatures" system: an AM completes an
 // activity with a brother, submits proof (SignatureApp.html), and
 // earns points automatically via adjustAMPoints (Code.gs). Photos
-// land in Drive under Signatures Pics/<semester>/<AM name>/ for the
+// land in Drive under <AM officer label>/<semester>/Signatures/<AM name>/ for the
 // end-of-semester album. Points-per-signature is the 'signature_points'
 // config key, editable in Admin > Config Editor (seeded by ensureTabsExist).
 // ============================================================
 
 var SIGNATURE_HEADERS = ['sig_id', 'am_member_id', 'am_name', 'brother_name', 'activity', 'photo_url', 'semester', 'timestamp', 'points_awarded'];
-
-// 'Signatures Pics' lives inside this shared Drive folder (David's pick), not
-// the script's own Drive root — https://drive.google.com/drive/folders/1mTuoYc5Bk2NQhDL33EoiA8zyPAk0y_xx
-var SIGNATURES_PARENT_FOLDER_ID = '1mTuoYc5Bk2NQhDL33EoiA8zyPAk0y_xx';
 
 // AMs currently eligible to submit a signature (associate status only).
 function getActiveAMsForSignature() {
@@ -73,15 +69,11 @@ function processSignatureSubmission(amMemberId, brotherName, activity, photoBase
   }
 }
 
-// Signatures Pics/<semester>/<AM name>/ — auto-creates folders as needed, same
-// pattern as _savePhotoToDrive in PhotoCheck.gs. Two AMs sharing an identical
+// <AM officer label>/<semester>/Signatures/<AM name>/ under the Drive root (DriveStorage.gs). Two AMs sharing an identical
 // full name would share a folder here; rare enough not to special-case.
 function _saveSignaturePhotoToDrive(photoBlob, amName, semester) {
   try {
-    var parent = DriveApp.getFolderById(SIGNATURES_PARENT_FOLDER_ID);
-    var root = _getOrCreateFolder(parent, 'Signatures Pics');
-    var semF = _getOrCreateFolder(root, semester);
-    var amF  = _getOrCreateFolder(semF, amName || 'Unknown AM');
+    var amF = driveFolder('am', semester, ['Signatures', amName || 'Unknown AM']);
 
     var name = String(amName || 'am').replace(/[^A-Za-z0-9]/g, '_') + '__' + Date.now() + '.jpg';
     photoBlob.setName(name);

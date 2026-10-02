@@ -101,7 +101,7 @@ If upgrading from a version where AMs were stored in the `members` sheet:
 
 ### Upgrading to 1.4.0 (Signatures system)
 
-Signatures require a dedicated Drive folder. On first use of the Signatures app, the script creates a `Signatures Pics` folder inside the deploying user's shared Drive root automatically. No manual migration needed.
+Signatures require a Drive folder. Since the Drive storage update, officers pick one root folder in Admin > Drive Storage and the app builds `<AM officer label>/<semester>/Signatures/<AM name>/` inside it. With none picked, the first upload creates `<chapter name> Files` in the deploying user's My Drive automatically. No manual migration needed; photos uploaded earlier stay where they are.
 
 ### Upgrading to 1.5.0 (AM Event Points)
 

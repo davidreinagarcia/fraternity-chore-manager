@@ -142,9 +142,7 @@ function processPhotoSubmission(memberId, choreName, photoBase64, mimeType, clie
 
 function _savePhotoToDrive(photoBlob, memberId, choreName, semester, weekStart) {
   try {
-    const root = _getOrCreateFolder(DriveApp.getRootFolder(), 'ChorePhotos');
-    const semF = _getOrCreateFolder(root, semester);
-    const weekF= _getOrCreateFolder(semF, 'Week_' + weekStart);
+    const weekF = driveFolder('chores', semester, ['Week_' + weekStart]);
 
     const safe = choreName.replace(/[^A-Za-z0-9]/g, '_');
     const name = `${safe}__${memberId}__${Date.now()}.jpg`;

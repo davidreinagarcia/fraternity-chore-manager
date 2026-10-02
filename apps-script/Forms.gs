@@ -242,13 +242,11 @@ function _fmValidateAnswers(form, answers, eventOpts, photoCounts) {
 
 function _fmIsJpeg(bytes) { return bytes.length > 3 && (bytes[0] & 255) === 255 && (bytes[1] & 255) === 216; }
 
-// Form Uploads/<semester>/<form title>/ under the shared root folder; files are
+// Forms/<semester>/<form title>/ under the Drive root (DriveStorage.gs); files are
 // link-viewable like the signature photos.
 function _fmSavePhoto(bytes, form, memberName, n) {
   try {
-    var root = _getOrCreateFolder(DriveApp.getFolderById(SIGNATURES_PARENT_FOLDER_ID), 'Form Uploads');
-    var semF = _getOrCreateFolder(root, getConfigValue('semester') || 'Unknown Semester');
-    var formF = _getOrCreateFolder(semF, String(form.title).replace(/[\\/]/g, '-').substring(0, 60));
+    var formF = driveFolder('forms', getConfigValue('semester'), [String(form.title).substring(0, 60)]);
     var name = String(memberName || 'member').replace(/[^A-Za-z0-9]/g, '_') + '__' + Date.now() + '_' + n + '.jpg';
     var file = formF.createFile(Utilities.newBlob(bytes, 'image/jpeg', name));
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);

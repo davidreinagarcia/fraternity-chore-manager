@@ -20,7 +20,7 @@ Tipos: `text`, `textarea`, `choice`, `multi`, `number`, `date`, `yesno`, `event`
 
 **`list`**: lista de nombres de texto libre (máx. 30 filas, 100 caracteres cada una, se descartan las vacías). Se guarda como array y se muestra unido con `; `.
 
-**`photo`**: fotos de la galería del móvil (máx. 6). El cliente las comprime a JPEG (lado máx. 1600 px, calidad 0.82) con canvas y las manda en un argumento aparte `photosJson` (`{fieldId:[{data}]}`) de `fmSubmitResponse`. El servidor valida (≥5 KB, ≤8 MB, magic bytes JPEG), las sube a Drive en `Form Uploads/<semestre>/<título del form>/` (bajo `SIGNATURES_PARENT_FOLDER_ID`, con permiso de lectura por link) **antes** de coger el lock, y guarda `[{id,url}]` en la respuesta. Si algo falla después de subir, las fotos se mandan a la papelera. También se trashean al borrar la respuesta, al borrar el form o al reemplazar en el sitio (`allow_multiple = N`).
+**`photo`**: fotos de la galería del móvil (máx. 6). El cliente las comprime a JPEG (lado máx. 1600 px, calidad 0.82) con canvas y las manda en un argumento aparte `photosJson` (`{fieldId:[{data}]}`) de `fmSubmitResponse`. El servidor valida (≥5 KB, ≤8 MB, magic bytes JPEG), las sube a Drive en `Forms/<semestre>/<título del form>/` (dentro de la carpeta raíz, ver [drive-storage.md](./drive-storage.md), con permiso de lectura por link) **antes** de coger el lock, y guarda `[{id,url}]` en la respuesta. Si algo falla después de subir, las fotos se mandan a la papelera. También se trashean al borrar la respuesta, al borrar el form o al reemplazar en el sitio (`allow_multiple = N`).
 
 ### Página pública `?app=form&f=<form_id>`
 

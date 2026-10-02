@@ -1427,7 +1427,7 @@ function deleteMember(memberId) {
 
 // Config keys with their own dedicated, validated UI flow — excluded from the
 // generic Config Editor so there is exactly one place to change each of them.
-var CONFIG_EDITOR_HIDDEN_KEYS = ['officer_pin'];
+var CONFIG_EDITOR_HIDDEN_KEYS = ['officer_pin', 'drive_root_folder_id'];
 
 // Returns all key-value rows from the config sheet, excluding keys that have
 // their own dedicated editor elsewhere (see CONFIG_EDITOR_HIDDEN_KEYS).

@@ -27,7 +27,7 @@ AMs completan una actividad con un brother y la registran con foto via `?app=sig
 
 Flujo: AM selecciona su nombre del dropdown (desde `getActiveAMsForSignature`) → escribe el nombre del brother (campo libre, sin dropdown ni datalist — ~80 brothers es demasiado, y el roster "aún no está en sync") → adjunta foto (máx 10MB, solo imagen) → `processSignatureSubmission`.
 
-Fotos: Drive en `Signatures Pics/<semester>/<AM name>/`, auto-created. Para un álbum manual de fin de semestre.
+Fotos: Drive en `<label_am_officer>/<semester>/Signatures/<AM name>/` dentro de la carpeta raíz que eligen los officers, auto-created. Detalle en [drive-storage.md](./drive-storage.md). Para un álbum manual de fin de semestre.
 
 Tab `signatures`: `sig_id`, `am_member_id`, `am_name`, `brother_name`, `activity`, `photo_url`, `semester`, `timestamp`.
 

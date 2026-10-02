@@ -68,6 +68,7 @@ Si no lo tiene, créalo desde [`_template.md`](./_template.md) y añade la fila 
 | Sistema | Estado | Fuente | Doc |
 |---|---|---|---|
 | Setup wizard (nueva instalación) | Hecho | `SetupApp.html` + `Code.gs` → `initChapter()` | [`../DEPLOYMENT.md`](../DEPLOYMENT.md) |
+| Drive storage (carpeta raíz + estructura de fotos) | Hecho | `DriveStorage.gs` + `OfficerDashboard.html` → Admin → Drive Storage | [drive-storage.md](./drive-storage.md) |
 | Config editor (officer) | Hecho | `OfficerDashboard.html` → Admin → Config Editor | [config.md](./config.md) |
 | Officer handoff & PIN change | Hecho | `OfficerDashboard.html` → Admin → Officer Handoff | — |
 | Draft Night board | Hecho | `DraftApp.html` | — |

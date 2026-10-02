@@ -15,7 +15,7 @@ Ratios de distribución en `config/chore_ratios.json` (fuera del Apps Script, so
 
 ### Photo submission (miembro)
 
-`?app=submit` (`SubmitApp.html`) → `processSubmission()`. Sin Google login; mismo patrón no-auth que signatures. Foto máx 10MB. La foto se sube a Drive y se registra en el tab `submissions`.
+`?app=submit` (`SubmitApp.html`) → `processSubmission()`. Sin Google login; mismo patrón no-auth que signatures. Foto máx 10MB. La foto se sube a Drive (`<label_chore>s/<semestre>/Week_<fecha>/` dentro de la carpeta raíz, ver [drive-storage.md](./drive-storage.md)) y se registra en el tab `submissions`.
 
 ### Validación por Vision API
 

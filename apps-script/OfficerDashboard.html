@@ -954,6 +954,34 @@
         </div>
       </div>
 
+      <!-- Drive storage -->
+      <div class="admin-section">
+        <div class="admin-section-header" onclick="toggleAdminSection('admin-drive')">
+          <h2>Drive Storage</h2>
+          <span class="admin-section-toggle" id="admin-drive-toggle">▼</span>
+        </div>
+        <div class="admin-section-body" id="admin-drive-body" style="display:none">
+          <p style="font-size:0.82rem;color:var(--muted);line-height:1.6;margin-bottom:14px">Every photo the app collects (signatures, chores, form uploads) is saved inside one Drive folder you choose, organized by semester. The folder must be reachable by the Google account this app runs under, with Editor access.</p>
+          <div id="drv-loading" style="color:var(--muted);font-size:0.85rem">Loading...</div>
+          <div id="drv-body" style="display:none">
+            <div id="drv-current" style="background:#f8fafc;border-radius:8px;padding:16px;margin-bottom:16px"></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+              <div style="background:#f8fafc;border-radius:8px;padding:16px">
+                <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Use an existing folder</div>
+                <p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Open the folder in Google Drive, copy its link from the address bar and paste it here.</p>
+                <input type="text" id="drv-input" class="inline-input" style="width:100%;margin-bottom:10px" placeholder="https://drive.google.com/drive/folders/...">
+                <button class="btn-primary" id="drv-save-btn" onclick="driveSaveRoot(this)">Use this folder</button>
+              </div>
+              <div style="background:#f8fafc;border-radius:8px;padding:16px">
+                <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Create a new folder</div>
+                <p style="font-size:0.8rem;color:var(--muted);margin-bottom:10px;line-height:1.5">Creates a new folder in the Drive of the account this app runs under and builds the structure inside it.</p>
+                <button class="btn-outline" id="drv-create-btn" onclick="driveCreateRoot(this)">Create folder for me</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 3b. Custom Forms Manager -->
       <div class="admin-section">
         <div class="admin-section-header" onclick="toggleAdminSection('admin-forms');formsManagerOnExpand()">
@@ -2299,6 +2327,7 @@ function toggleAdminSection(id) {
     if (id === 'admin-chores')        loadAdminChores();
     else if (id === 'admin-config')   loadAdminConfig();
     else if (id === 'admin-links')    initShareLinks();
+    else if (id === 'admin-drive')    loadDriveStorage();
   }
 }
 
@@ -6072,6 +6101,64 @@ function saveFmFromModal() {
     .withFailureHandler(function(err) { btn.disabled = false; window.bfBusy(btn, false); onError(err); })
     .fmSaveForm(correctPin, JSON.stringify(payload), 'Officer');
 }
+
+// ---- Drive storage (Admin) ----
+function loadDriveStorage() {
+  document.getElementById('drv-loading').style.display = 'block';
+  document.getElementById('drv-body').style.display = 'none';
+  fmRun(function(r) {
+    if (!r.success) { document.getElementById('drv-loading').textContent = 'Error: ' + r.error; return; }
+    renderDriveStorage(r);
+  }).driveGetStorage(correctPin);
+}
+
+function renderDriveStorage(r) {
+  document.getElementById('drv-loading').style.display = 'none';
+  document.getElementById('drv-body').style.display = 'block';
+  var el = document.getElementById('drv-current');
+  if (!r.configured) {
+    el.innerHTML = '<strong style="font-size:0.9rem">No folder chosen yet</strong><div style="font-size:0.8rem;color:var(--muted);margin-top:4px;line-height:1.5">The first photo uploaded will create a folder in the app account\'s Drive automatically. Pick one below to decide where everything goes.</div>';
+    return;
+  }
+  if (r.broken) {
+    el.innerHTML = '<strong style="font-size:0.9rem;color:var(--red)">' + esc(r.error) + '</strong>';
+    return;
+  }
+  var link = function(u, t) { return u ? '<a href="' + esc(u) + '" target="_blank" rel="noopener" style="color:var(--primary);font-weight:600">' + esc(t) + '</a>' : '<span style="color:var(--muted)">' + esc(t) + ' (not created yet)</span>'; };
+  el.innerHTML = '<div style="font-size:0.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Current folder</div>' +
+    '<div style="font-size:1rem;font-weight:800;margin:2px 0 10px">' + link(r.rootUrl, r.rootName) + '</div>' +
+    '<div style="font-size:0.8rem;line-height:1.9">' + r.areas.map(function(a) {
+      return '📁 ' + link(a.url, a.name) + ' › ' + (a.semesterUrl ? link(a.semesterUrl, r.semester) : '<span style="color:var(--muted)">' + esc(r.semester) + ' (created with the first upload)</span>');
+    }).join('<br>') + '</div>' +
+    '<div style="margin-top:12px"><button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="driveRebuild(this)">Create this semester\'s folders</button></div>';
+}
+
+function driveCall(btn, fn, args) {
+  btn.disabled = true; window.bfBusy(btn, true);
+  var run = google.script.run
+    .withSuccessHandler(function(json) {
+      btn.disabled = false; window.bfBusy(btn, false);
+      var r = JSON.parse(json);
+      if (!r.success) { showToast('Error: ' + r.error); return; }
+      showToast(r.message || 'Done.');
+      renderDriveStorage(r);
+    })
+    .withFailureHandler(function(err) { btn.disabled = false; window.bfBusy(btn, false); onError(err); });
+  run[fn].apply(run, [correctPin].concat(args || []));
+}
+
+function driveSaveRoot(btn) {
+  var v = document.getElementById('drv-input').value.trim();
+  if (!v) { showToast('Paste the folder link first.'); return; }
+  driveCall(btn, 'driveSetRoot', [v]);
+}
+
+function driveCreateRoot(btn) {
+  if (!confirm('Create a new folder in Drive and use it from now on? Files already uploaded stay where they are.')) return;
+  driveCall(btn, 'driveCreateRoot');
+}
+
+function driveRebuild(btn) { driveCall(btn, 'driveBuildTree'); }
 
 // ---- Philanthropy page ----
 var phData = null;
