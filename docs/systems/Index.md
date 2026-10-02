@@ -73,6 +73,7 @@ Si no lo tiene, créalo desde [`_template.md`](./_template.md) y añade la fila 
 | Officer handoff & PIN change | Hecho | `OfficerDashboard.html` → Admin → Officer Handoff | — |
 | Draft Night board | Hecho | `DraftApp.html` | — |
 | QR generation | Hecho | `Code.gs` → `generateQRCodes()` | — |
+| Demo data (dev) | Hecho | `Seed.gs` → `loadDemoData()` / `removeDemoData()` | [demo-data.md](./demo-data.md) |
 
 ## Pendiente / no empezado
 
