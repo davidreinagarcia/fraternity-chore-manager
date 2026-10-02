@@ -15,7 +15,7 @@ Hecho. Probado con mocks (`DriveApp` simulado) y el dashboard en el harness loca
   Forms/<semestre>/<título del form>/                           fotos de campos `photo` de los forms
 ```
 
-Los nombres de carpeta de AM y chores salen de `CHAPTER_CONFIG.labels` (fallback: `Associate Members`, `Chore`), así que cada chapter ve su vocabulario. Si cambia el label, aparece una carpeta nueva; las antiguas no se mueven. Los nombres se limpian (`/` y `\` pasan a `-`, máx. 80 caracteres).
+Los nombres de carpeta de AM y chores salen de `CHAPTER_CONFIG.labels` (si el chapter no ha definido el label, vale el default central `LABEL_DEFAULTS` de `Code.gs`; el código de `DriveStorage.gs` no tiene ningún nombre de chapter escrito), así que cada chapter ve su vocabulario. Si cambia el label, aparece una carpeta nueva; las antiguas no se mueven. Los nombres se limpian (`/` y `\` pasan a `-`, máx. 80 caracteres).
 
 Todo pasa por `driveFolder(area, semestre, partes)` (`area` = `am` | `chores` | `forms`), que crea lo que falte con `_getOrCreateFolder`. Los semestres nuevos se crean solos con la primera subida; no hay que hacer nada al cambiar de semestre. Quien suba una foto nueva de un AM nuevo también crea su carpeta.
 

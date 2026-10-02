@@ -23,9 +23,9 @@ function _driveClean(name) {
 
 function _driveAreaName(area) {
   var L = (getChapterConfig().labels) || {};
-  if (area === 'am') return _driveClean(L.label_am_officer || 'Associate Members');
+  if (area === 'am') return _driveClean(L.label_am_officer || LABEL_DEFAULTS.label_am_officer);
   if (area === 'chores') {
-    var c = String(L.label_chore || 'Chore');
+    var c = String(L.label_chore || LABEL_DEFAULTS.label_chore);
     return _driveClean(/s$/i.test(c) ? c : /[^aeiou]y$/i.test(c) ? c.slice(0, -1) + 'ies' : c + 's');
   }
   return 'Forms';
