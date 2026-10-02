@@ -24,3 +24,4 @@ Hecho (2026-10-02). Solo estilo, el layout de cada app no cambió.
 - `HomeButton.html` (vía `includeHome()` en `Code.gs`, justo tras `<body>`) pinta un botón flotante circular abajo a la derecha que lleva a `?app=home` desde todas las apps salvo HomeApp. Toda app nueva debe llamar a `<?!= includeHome() ?>`.
 - HomeApp es ahora clara y usa la marca del chapter: franja superior `primary`, línea inferior `accent`, nombre en `primary`, logo (`logo_url`) con sus colores originales, iconos sobre tinte del accent.
 - Subtítulo de HomeApp: "GreekEasy Digital" (nombre comercial del producto, no es vocabulario del chapter).
+- Wordmark GreekEasy Digital en HomeApp: monograma ΓΕΔ en círculo doble (accent/primary), "GREEKEASY / DIGITAL" en Cinzel y grecas (meandro) en el accent a ambos lados, todo CSS puro (greca vía `mask` con SVG inline).
