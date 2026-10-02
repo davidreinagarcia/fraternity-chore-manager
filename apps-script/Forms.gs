@@ -412,6 +412,7 @@ function _fmCleanFields(raw) {
       if (field.options.length < 2) return { error: '"' + label + '" needs at least two options.' };
     }
     if (type === 'event' && f.allEvents) field.allEvents = true;
+    if (f.role === 'going' || f.role === 'slots') field.role = f.role;
     if (type !== 'info') answerable++;
     out.push(field);
   }
@@ -450,6 +451,17 @@ function fmSaveForm(pin, payloadJson, performedBy) {
       var tf = cf.fields.filter(function(f) { return f.type === 'text'; })[0];
       var df = cf.fields.filter(function(f) { return f.type === 'date'; })[0];
       action = { type: 'philanthropy', hoursField: hf.id, photoField: pf.id, titleField: tf ? tf.id : '', dateField: df ? df.id : '' };
+    }
+
+    if (p.action && p.action.type === 'service_event') {
+      var gf = cf.fields.filter(function(f) { return f.role === 'going' && f.type === 'yesno'; })[0];
+      if (!gf) return JSON.stringify({ success: false, error: 'A service event needs a going yes/no field.' });
+      gf.required = true;
+      var sf = cf.fields.filter(function(f) { return f.role === 'slots'; })[0];
+      var eventDate = String(p.action.eventDate || '').trim();
+      if (eventDate && (!/^\d{4}-\d{2}-\d{2}$/.test(eventDate) || _dFmt(_dParse(eventDate)) !== eventDate)) return JSON.stringify({ success: false, error: 'The event date is not valid.' });
+      var dh = Number(p.action.defaultHours);
+      action = { type: 'service_event', goingField: gf.id, slotField: sf ? sf.id : '', eventDate: eventDate, defaultHours: isFinite(dh) && dh > 0 && dh <= FM_MAX_HOURS ? dh : 0 };
     }
 
     var ss = getSpreadsheet();
@@ -637,53 +649,11 @@ function _fmExcusesForEvent(ss, eventId) {
 
 // ---- Philanthropy action -----------------------------------
 
-// Hours per member across every form whose action is 'philanthropy'. Approved
-// (or any non-denied when review is off) hours count; pending ones are shown
-// separately. Members with no submission are listed too, with zero hours.
+// Hours per member: philanthropy-form submissions plus hours awarded by the chair
+// for service events, scoped to the current semester. Built in Philanthropy.gs.
 function fmPhilanthropySummary(pin) {
   var denied = _fmDeny(pin); if (denied) return denied;
   try {
-    var ss = getSpreadsheet();
-    var forms = _fmReadForms(ss).filter(function(f) { return f.action.type === 'philanthropy'; });
-    if (!forms.length) return JSON.stringify({ success: true, hasForm: false });
-    var byKey = {};
-    var touch = function(key, name, type) {
-      if (!byKey[key]) byKey[key] = { key: key, name: name, type: type, approved: 0, pending: 0, entries: [] };
-      return byKey[key];
-    };
-    forms.forEach(function(f) {
-      _eventRoster(f.audience).forEach(function(m) { touch(m.type + ':' + m.memberId, m.name, m.type); });
-      var fieldById = {};
-      f.fields.forEach(function(x) { fieldById[x.id] = x; });
-      _fmReadResponses(ss, f.formId).forEach(function(r) {
-        var status = f.requiresReview ? (r.reviewStatus || 'pending') : 'approved';
-        var hours = Number(r.answers[f.action.hoursField]) || 0;
-        var m = touch(r.memberType + ':' + r.memberId, r.memberName, r.memberType);
-        if (status === 'approved') m.approved += hours;
-        else if (status === 'pending') m.pending += hours;
-        m.entries.push({
-          responseId: r.responseId, formId: f.formId, reviewable: f.requiresReview, submittedAt: r.submittedAt, status: status, hours: hours,
-          activity: f.action.titleField ? _fmAnswerText(fieldById[f.action.titleField] || {}, r.answers[f.action.titleField]) : '',
-          date: f.action.dateField ? String(r.answers[f.action.dateField] || '') : '',
-          photos: r.answers[f.action.photoField] || [], reviewNote: r.reviewNote
-        });
-      });
-    });
-    var members = Object.keys(byKey).map(function(k) { return byKey[k]; });
-    members.forEach(function(m) {
-      m.approved = Math.round(m.approved * 100) / 100;
-      m.pending = Math.round(m.pending * 100) / 100;
-      m.entries.sort(function(a, b) { return b.submittedAt.localeCompare(a.submittedAt); });
-    });
-    members.sort(function(a, b) { return (b.approved - a.approved) || (b.pending - a.pending) || a.name.localeCompare(b.name); });
-    var totalApproved = 0, totalPending = 0, contributors = 0;
-    members.forEach(function(m) { totalApproved += m.approved; totalPending += m.pending; if (m.approved > 0) contributors++; });
-    var primary = forms[0];
-    return JSON.stringify({
-      success: true, hasForm: true,
-      form: { formId: primary.formId, title: primary.title, url: _fmFormUrl(primary.formId), accepting: _fmIsAccepting(primary).ok },
-      totals: { approved: Math.round(totalApproved * 100) / 100, pending: Math.round(totalPending * 100) / 100, contributors: contributors, members: members.length },
-      members: members
-    });
+    return JSON.stringify(_phSummaryBuild(getSpreadsheet()));
   } catch (err) { logError('fmPhilanthropySummary', err); return JSON.stringify({ success: false, error: err.toString() }); }
 }

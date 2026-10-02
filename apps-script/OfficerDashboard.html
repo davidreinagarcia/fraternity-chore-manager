@@ -286,6 +286,21 @@
   .mode-opt:hover { background: var(--hover); }
   .mode-opt.on { border-color: var(--primary); background: var(--tint); }
   .mode-opt input { margin-top: 3px; }
+  .tbl-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 0 0 8px; }
+  .tbl-tools input { width: 240px; max-width: 100%; }
+  .tbl-tools .tbl-count { font-size: 0.75rem; color: var(--muted); }
+  .data-table th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
+  .data-table th.sort-asc::after { content: ' \25B2'; font-size: 0.6rem; color: var(--primary); }
+  .data-table th.sort-desc::after { content: ' \25BC'; font-size: 0.6rem; color: var(--primary); }
+  .ph-events { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; padding: 12px 16px; }
+  .ph-ev { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; cursor: pointer; background: #fff; }
+  .ph-ev:hover { background: var(--hover); border-color: var(--primary); }
+  .ph-ev .t { font-weight: 600; font-size: 0.92rem; }
+  .ph-ev .m { font-size: 0.78rem; color: var(--muted); }
+  .ph-chip { display: inline-block; font-size: 0.72rem; font-weight: 500; padding: 2px 8px; border-radius: 4px; background: #f1f3f4; color: var(--muted); }
+  .ph-chip.g { background: var(--green-bg); color: var(--green); }
+  .ph-chip.r { background: var(--red-bg); color: var(--red); }
+  .ph-chip.y { background: var(--yellow-bg); color: var(--yellow); }
   .config-group-label {
     font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
     color: var(--muted); margin-bottom: 6px;
@@ -506,6 +521,7 @@
     </div>
     <div class="ng"><div class="nl">OPERATIONS</div>
       <button class="ni" data-ap="admin-chores" onclick="showAdminPage('admin-chores')"><span class="ni-ic">🧹</span><span class="ni-lbl">Chore Manager</span></button>
+      <button class="ni" data-ap="admin-philanthropy" onclick="showAdminPage('admin-philanthropy')"><span class="ni-ic">🤝</span><span class="ni-lbl">Philanthropy</span></button>
       <button class="ni" data-ap="admin-semester" onclick="showAdminPage('admin-semester')"><span class="ni-ic">🎓</span><span class="ni-lbl">Semester Tools</span></button>
       <button class="ni" data-ap="admin-forms" onclick="showAdminPage('admin-forms')"><span class="ni-ic">📑</span><span class="ni-lbl">Custom Forms Manager</span></button>
     </div>
@@ -617,7 +633,7 @@
         <div id="mm-stats" style="padding:10px 16px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:10px"></div>
         <div class="card-body" style="overflow-x:auto">
           <div id="mm-loading" style="text-align:center;padding:30px;color:var(--muted)">Loading members...</div>
-          <table class="data-table" id="mm-table" style="display:none;min-width:900px">
+          <table class="data-table" id="mm-table" data-search="own" style="display:none;min-width:900px">
             <thead><tr>
               <th class="th-bk" onclick="sortTable('mm-table',0)"><?= cfg.labels.label_member_id ?></th>
               <th onclick="sortTable('mm-table',1)">Name</th>
@@ -651,7 +667,7 @@
           <span style="font-size:0.8rem;color:var(--muted)"><strong id="ams-count">0</strong> <?= cfg.labels.label_am_group ?></span>
         </div>
         <div class="card-body" style="overflow-x:auto">
-          <table class="data-table" id="mm-ams-table" style="min-width:820px">
+          <table class="data-table" id="mm-ams-table" data-search="own" style="min-width:820px">
             <thead><tr>
               <th>Status</th>
               <th><?= cfg.labels.label_bid_number ?></th>
@@ -711,7 +727,7 @@
             <span style="font-size:0.8rem;color:var(--muted);margin-left:auto"><strong id="am-list-count">0</strong> events</span>
           </div>
           <div class="card-body" style="overflow-x:auto;padding:12px 16px">
-            <table class="data-table" id="am-events-table" style="min-width:920px">
+            <table class="data-table" id="am-events-table" data-search="own" style="min-width:920px">
               <thead><tr>
                 <th style="width:130px">Date</th>
                 <th style="width:120px">Category</th>
@@ -740,7 +756,7 @@
           <span style="font-size:0.8rem;color:var(--muted)"><strong id="alumni-count">0</strong> alumni</span>
         </div>
         <div class="card-body" style="overflow-x:auto">
-          <table class="data-table" id="mm-alumni-table" style="min-width:700px">
+          <table class="data-table" id="mm-alumni-table" data-search="own" style="min-width:700px">
             <thead><tr>
               <th class="th-bk"><?= cfg.labels.label_member_id ?></th>
               <th>Name</th>
@@ -785,7 +801,7 @@
             <span style="font-size:0.8rem;color:var(--muted);margin-left:auto"><strong id="evs-list-count">0</strong> events</span>
           </div>
           <div class="card-body" style="overflow-x:auto;padding:12px 16px">
-            <table class="data-table" style="min-width:1000px">
+            <table class="data-table" data-search="own" style="min-width:1000px">
               <thead><tr>
                 <th style="width:130px">Date</th>
                 <th style="width:150px">Time</th>
@@ -806,12 +822,20 @@
     <div class="sec" id="sec-finance"><div class="container"><div class="coming-soon"><div class="cs-icon">💰</div><h2>Finance</h2><p>Dues tracker and financial dashboard — coming soon.</p></div></div></div>
     <!-- PHILANTHROPY SECTION -->
     <div class="sec" id="sec-philanthropy"><div class="container">
+      <div class="card" id="ph-events-card" style="margin-bottom:16px">
+        <div class="card-header">
+          <h2>📣 Service events</h2>
+          <button class="btn-primary" style="padding:6px 14px;font-size:0.8rem" onclick="phOpenEventModal()">+ Create new event</button>
+        </div>
+        <div id="ph-events"></div>
+      </div>
       <div class="card">
         <div class="card-header">
-          <h2>🤝 Philanthropy</h2>
+          <h2>🤝 Service hours</h2>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="phCopyLink()">Copy submission link</button>
             <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="phOpenForm()">Form &amp; responses</button>
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="openAdminPage('admin-philanthropy')">Philanthropy settings</button>
             <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="loadPhilanthropy()">Refresh</button>
           </div>
         </div>
@@ -819,8 +843,14 @@
         <div id="ph-body" style="display:none;padding:12px 16px">
           <div class="stats-row" id="ph-stats"></div>
           <div id="ph-closed" style="display:none;font-size:0.82rem;color:var(--muted);margin-bottom:10px">The submission form is closed, so members cannot log new hours. Reopen it from Form &amp; responses.</div>
-          <div style="overflow-x:auto"><table class="data-table" style="min-width:560px">
-            <thead><tr><th>Member</th><th style="width:110px">Approved hrs</th><th style="width:110px">Pending hrs</th><th style="width:90px">Entries</th></tr></thead>
+          <div id="ph-goal-note" style="display:none;font-size:0.82rem;color:var(--muted);margin-bottom:10px"></div>
+          <div class="tbl-tools">
+            <input type="search" id="ph-search" class="inline-input" placeholder="Search name..." oninput="phQuery=this.value;renderPhTable()">
+            <div id="ph-filters" style="display:flex;gap:4px"></div>
+            <span class="tbl-count" id="ph-count"></span>
+          </div>
+          <div style="overflow-x:auto"><table class="data-table" id="ph-table" data-search="own" style="min-width:600px">
+            <thead id="ph-thead"></thead>
             <tbody id="ph-tbody"></tbody>
           </table></div>
         </div>
@@ -909,7 +939,7 @@
           <div id="admin-chores-content" style="display:none">
             <div id="chore-mode-box" style="margin-bottom:20px"></div>
             <div style="overflow-x:auto">
-              <table class="data-table" id="chores-table">
+              <table class="data-table" id="chores-table" data-plain>
                 <thead>
                   <tr>
                     <th>Chore Name</th>
@@ -948,6 +978,40 @@
           <div class="admin-loading" id="admin-config-loading">Loading config...</div>
           <div id="admin-config-content" style="display:none">
             <div id="config-rows"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2b. Philanthropy -->
+      <div class="admin-section" data-ap="admin-philanthropy">
+        <div class="admin-section-header">
+          <h2>Philanthropy</h2>
+        </div>
+        <div class="admin-section-body">
+          <div class="admin-loading" id="admin-ph-loading">Loading settings...</div>
+          <div id="admin-ph-content" style="display:none">
+            <div class="config-key-name" style="margin-bottom:2px">Service hours required per semester</div>
+            <div class="config-help" style="max-width:none;margin-bottom:8px">Every member has to complete at least this many hours each semester. Use 0 for no requirement.</div>
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:22px">
+              <input type="number" id="ph-set-min" class="inline-input" min="0" max="500" step="0.5" style="width:110px"> <span style="font-size:0.85rem;color:var(--muted)">hours</span>
+            </div>
+            <div class="config-key-name" style="margin-bottom:2px">When the semester ends, members who did not reach their hours</div>
+            <div id="ph-set-action" style="display:flex;flex-direction:column;gap:8px;margin:8px 0 22px"></div>
+            <div class="config-key-name" style="margin-bottom:2px">Missed hours</div>
+            <label class="mode-opt" id="ph-set-carry-box" style="margin:8px 0 22px">
+              <input type="checkbox" id="ph-set-carry">
+              <span><b>Carry unmet hours over to the next semester</b><br><span class="config-help" style="max-width:none">If someone had to do 8 hours and did 4, they owe 8 + 4 = 12 next semester. Off means everyone starts the next semester with the plain minimum.</span></span>
+            </label>
+            <button class="btn-primary" onclick="phsSave()">Save settings</button>
+
+            <hr style="border:none;border-top:1px solid var(--border);margin:28px 0 20px">
+            <div class="config-key-name" style="margin-bottom:2px">Close the semester</div>
+            <div class="config-help" style="max-width:none;margin-bottom:10px" id="ph-close-help"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+              <button class="btn-outline" onclick="phsPreviewClose()">Check who falls short</button>
+              <button class="btn-danger" onclick="phsCloseSemester()">Close semester hours</button>
+            </div>
+            <div id="ph-close-preview"></div>
           </div>
         </div>
       </div>
@@ -1713,6 +1777,93 @@
   </div>
 </div>
 
+<!-- Philanthropy: create event -->
+<div class="modal-overlay" id="ph-ev-modal">
+  <div class="modal modal-ev">
+    <div class="ev-head"><h3>Create new event</h3></div>
+    <div class="ev-body">
+      <div class="ev-card">
+        <div class="ev-card-title">Event</div>
+        <div><label class="ev-lbl">Title</label><input type="text" id="phe-title" class="inline-input" style="width:100%" placeholder="e.g. Beach cleanup"></div>
+        <div><label class="ev-lbl">Description</label><textarea id="phe-desc" class="inline-input" style="width:100%" placeholder="What, where, what to bring"></textarea></div>
+        <div class="ev-grid">
+          <div><label class="ev-lbl">Event date (optional)</label><input type="date" id="phe-date" class="inline-input" style="width:100%"></div>
+          <div><label class="ev-lbl">Reply by (optional)</label><input type="date" id="phe-due" class="inline-input" style="width:100%"></div>
+          <div><label class="ev-lbl">Who can answer</label><select id="phe-audience" class="inline-input" style="width:100%"></select></div>
+          <div><label class="ev-lbl">Hours it is worth (suggested)</label><input type="number" id="phe-hours" class="inline-input" min="0" max="100" step="0.5" style="width:100%" placeholder="Optional"></div>
+        </div>
+        <div style="font-size:0.78rem;color:var(--muted)">Everyone picks their name and answers "Are you going?". Add anything else below.</div>
+      </div>
+      <div class="ev-card">
+        <div class="ev-card-title">Extra questions</div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
+          <input type="checkbox" id="phe-slots-on" style="width:16px;height:16px" onchange="document.getElementById('phe-slots-box').style.display=this.checked?'block':'none'"> Ask which time slots they can do
+        </label>
+        <div id="phe-slots-box" style="display:none">
+          <textarea id="phe-slots" class="inline-input" style="width:100%;min-height:80px" placeholder="One slot per line, e.g.&#10;9:00 to 11:00&#10;11:00 to 13:00&#10;13:00 to 15:00"></textarea>
+          <div style="font-size:0.75rem;color:var(--muted);margin-top:4px">They can tick every slot that works for them.</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem">
+          <input type="checkbox" id="phe-photo-on" style="width:16px;height:16px" onchange="document.getElementById('phe-photo-box').style.display=this.checked?'flex':'none'"> Ask them to upload a photo
+        </label>
+        <div id="phe-photo-box" style="display:none;gap:10px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="phe-photo-label" class="inline-input" style="flex:1;min-width:200px" placeholder="e.g. Signed waiver (photo)">
+          <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem"><input type="checkbox" id="phe-photo-req"> Required</label>
+        </div>
+        <div id="phe-extra" style="display:flex;flex-direction:column;gap:10px"></div>
+        <div><button type="button" class="btn-outline" style="padding:6px 14px;font-size:0.8rem" onclick="pheAddExtra()">+ Add another question</button></div>
+      </div>
+    </div>
+    <div class="ev-foot">
+      <div class="ev-foot-btns">
+        <span class="spacer"></span>
+        <button class="btn-outline" onclick="phCloseEventModal()">Cancel</button>
+        <button class="btn-primary" id="phe-save" onclick="phSaveEvent()">Create event</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Philanthropy: event detail -->
+<div class="modal-overlay" id="ph-evd-modal">
+  <div class="modal modal-ev" style="max-width:980px">
+    <div class="ev-head"><h3 id="phd-title">Event</h3><div id="phd-meta" style="font-size:0.82rem;color:var(--muted);margin-top:4px"></div></div>
+    <div class="ev-body">
+      <div id="phd-chips" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      <div class="ev-card">
+        <div class="ev-card-title">Assign service hours</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input type="number" id="phd-hours" class="inline-input" min="0" max="100" step="0.5" style="width:100px" placeholder="Hours">
+          <button class="btn-primary" style="padding:6px 14px;font-size:0.8rem" onclick="phdAssign('selected')">Assign to selected</button>
+          <button class="btn-outline" style="padding:6px 14px;font-size:0.8rem" onclick="phdAssign('going')">Assign to everyone going</button>
+          <span style="font-size:0.75rem;color:var(--muted)">Assigning again replaces the hours. Use 0 to remove them.</span>
+        </div>
+      </div>
+      <div>
+        <div class="tbl-tools">
+          <input type="search" id="phd-search" class="inline-input" placeholder="Search name..." oninput="phdQuery=this.value;renderPhdTable()">
+          <div id="phd-filters" style="display:flex;gap:4px"></div>
+          <span class="tbl-count" id="phd-count"></span>
+        </div>
+        <div style="overflow-x:auto"><table class="data-table" id="phd-table" data-search="own" style="min-width:640px">
+          <thead id="phd-thead"></thead>
+          <tbody id="phd-tbody"></tbody>
+        </table></div>
+        <div id="phd-pending" style="font-size:0.78rem;color:var(--muted);margin-top:10px"></div>
+      </div>
+    </div>
+    <div class="ev-foot">
+      <div class="ev-foot-btns">
+        <button class="btn-danger" onclick="phdDelete()">Trash event</button>
+        <button class="btn-outline" onclick="phdCopy()">Copy link</button>
+        <button class="btn-outline" id="phd-toggle" onclick="phdToggle()">Close replies</button>
+        <span class="spacer"></span>
+        <button class="btn-outline" onclick="phdClose()">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Forms: builder modal -->
 <div class="modal-overlay" id="fm-modal">
   <div class="modal modal-ev">
@@ -2251,6 +2402,102 @@ function sortTable(tableId, colIdx) {
   rows.forEach(r => tbody.appendChild(r));
 }
 
+// ---- Generic table search + sort ---------------------------
+// Every .data-table gets clickable headers and, unless it brings its own search
+// (data-search="own") or is a form grid (data-plain), a search box once it has
+// more than a few rows. Tables are re-rendered with innerHTML all over the page,
+// so the state lives here and is re-applied whenever the body changes.
+var _tblState = new WeakMap();
+var TBL_SEARCH_MIN_ROWS = 6;
+
+function _tblGroups(tbody) {
+  var groups = [];
+  Array.from(tbody.children).forEach(function(tr) {
+    if (tr.classList.contains('row-detail') && groups.length) { groups[groups.length - 1].detail.push(tr); return; }
+    groups.push({ tr: tr, detail: [], skip: tr.cells.length === 1 && tr.cells[0].colSpan > 1 });
+  });
+  return groups;
+}
+
+function _tblCell(tr, col) { return tr.cells[col] ? tr.cells[col].textContent.trim() : ''; }
+
+function _tblApply(table) {
+  var st = _tblState.get(table);
+  var tbody = table.tBodies[0];
+  if (!st || !tbody) return;
+  var groups = _tblGroups(tbody).filter(function(g) { return !g.skip; });
+  if (st.col !== null) {
+    var idx = groups.map(function(g, i) { return { g: g, i: i }; });
+    idx.sort(function(a, b) {
+      var av = _tblCell(a.g.tr, st.col), bv = _tblCell(b.g.tr, st.col);
+      var an = parseFloat(av), bn = parseFloat(bv);
+      var c = (!isNaN(an) && !isNaN(bn)) ? an - bn : av.localeCompare(bv, undefined, { numeric: true, sensitivity: 'base' });
+      return (c * st.dir) || (a.i - b.i);
+    });
+    var changed = idx.some(function(x, i) { return x.g !== groups[i]; });
+    if (changed) idx.forEach(function(x) { tbody.appendChild(x.g.tr); x.g.detail.forEach(function(d) { tbody.appendChild(d); }); });
+  }
+  var q = st.q.trim().toLowerCase();
+  var shown = 0;
+  groups.forEach(function(g) {
+    var hit = !q || g.tr.textContent.toLowerCase().indexOf(q) !== -1;
+    if (hit) { if (g.tr.dataset.tblHid) { g.tr.style.display = ''; delete g.tr.dataset.tblHid; } shown++; }
+    else { g.tr.style.display = 'none'; g.tr.dataset.tblHid = '1'; g.detail.forEach(function(d) { d.style.display = 'none'; }); }
+  });
+  if (st.tools) {
+    var show = st.search && (groups.length >= TBL_SEARCH_MIN_ROWS || q);
+    st.tools.style.display = show ? 'flex' : 'none';
+    st.count.textContent = q ? shown + ' of ' + groups.length : '';
+  }
+  st.obs.takeRecords();
+}
+
+function _tblEnhance(table) {
+  table.dataset.enh = '1';
+  var tbody = table.tBodies[0];
+  if (!tbody) return;
+  var st = { col: null, dir: 1, q: '', search: table.dataset.search !== 'own', tools: null, count: null };
+  _tblState.set(table, st);
+  var ths = table.querySelectorAll('thead th');
+  ths.forEach(function(th) {
+    if (th.hasAttribute('onclick') || th.classList.contains('no-sort') || !th.textContent.trim() || th.querySelector('input')) return;
+    if (/^actions?$/i.test(th.textContent.trim())) return;
+    th.classList.add('sortable');
+    th.addEventListener('click', function() {
+      var col = th.cellIndex;
+      if (st.col === col) st.dir = -st.dir; else { st.col = col; st.dir = 1; }
+      ths.forEach(function(h) { h.classList.remove('sort-asc', 'sort-desc'); });
+      th.classList.add(st.dir > 0 ? 'sort-asc' : 'sort-desc');
+      _tblApply(table);
+    });
+  });
+  if (st.search) {
+    var tools = document.createElement('div');
+    tools.className = 'tbl-tools';
+    tools.style.display = 'none';
+    tools.innerHTML = '<input type="search" class="inline-input" placeholder="Search this list..."><span class="tbl-count"></span>';
+    var host = table.parentElement && table.parentElement.style.overflowX === 'auto' ? table.parentElement : table;
+    host.parentElement.insertBefore(tools, host);
+    st.tools = tools;
+    st.count = tools.querySelector('.tbl-count');
+    tools.querySelector('input').addEventListener('input', function() { st.q = this.value; _tblApply(table); });
+  }
+  st.obs = new MutationObserver(function() { _tblApply(table); });
+  st.obs.observe(tbody, { childList: true });
+  _tblApply(table);
+}
+
+function _tblScan() {
+  document.querySelectorAll('table.data-table:not([data-enh]):not([data-plain])').forEach(_tblEnhance);
+}
+
+(function() {
+  var timer = null;
+  new MutationObserver(function() { clearTimeout(timer); timer = setTimeout(_tblScan, 120); })
+    .observe(document.documentElement, { childList: true, subtree: true });
+  document.addEventListener('DOMContentLoaded', _tblScan);
+})();
+
 // ---- Utils -------------------------------------------------
 function onError(err) { showToast('Error: ' + (err.message || err)); console.error(err); }
 
@@ -2381,6 +2628,7 @@ function showAdminPage(id) {
     else if (id === 'admin-links')    initShareLinks();
     else if (id === 'admin-drive')    loadDriveStorage();
     else if (id === 'admin-forms')    formsManagerOnExpand();
+    else if (id === 'admin-philanthropy') phsLoad();
   }
 }
 
@@ -6308,8 +6556,18 @@ function phCreateForm() {
 
 function fmtHours(n) { return String(Math.round((Number(n) || 0) * 100) / 100); }
 
+var phQuery = '', phFilter = 'all', phSort = { col: null, dir: 1 }, phOpen = {};
+
+function phRefresh() {
+  fmRun(function(s) {
+    if (!s.success) { showToast('Error: ' + s.error); return; }
+    phData = s;
+    renderPhilanthropy();
+  }).fmPhilanthropySummary(correctPin);
+}
+
 function renderPhilanthropy() {
-  var r = phData, t = r.totals;
+  var r = phData, t = r.totals, st = r.settings, goal = st.minHours > 0;
   document.getElementById('ph-loading').style.display = 'none';
   document.getElementById('ph-body').style.display = 'block';
   document.getElementById('ph-closed').style.display = r.form.accepting ? 'none' : 'block';
@@ -6317,39 +6575,105 @@ function renderPhilanthropy() {
   document.getElementById('ph-stats').innerHTML =
     card('Approved hours', fmtHours(t.approved), '') +
     card('Pending review', fmtHours(t.pending), '') +
-    card('Members with hours', t.contributors, 'of ' + t.members);
+    card('Members with hours', t.contributors, 'of ' + t.members) +
+    (goal ? card('Meet the minimum', t.meeting, 'of ' + (t.meeting + t.notMeeting)) + card('Still short', t.notMeeting, 'minimum ' + fmtHours(st.minHours) + ' h') : '');
+  var note = document.getElementById('ph-goal-note');
+  note.style.display = 'block';
+  note.innerHTML = goal
+    ? 'Each member needs <b>' + fmtHours(st.minHours) + ' hours</b> this semester' + (st.carryOver ? ' (plus any hours carried over from last semester).' : '.')
+    : 'No minimum set yet. Set one in <a href="#" onclick="openAdminPage(\'admin-philanthropy\');return false" style="color:var(--primary);font-weight:600">Philanthropy settings</a>.';
+  if (!goal && phFilter !== 'all') phFilter = 'all';
+  var fbtn = function(id, label) { return '<button class="btn-filter' + (phFilter === id ? ' active' : '') + '" onclick="phFilter=\'' + id + '\';renderPhilanthropy()">' + label + '</button>'; };
+  document.getElementById('ph-filters').innerHTML = goal ? fbtn('all', 'All') + fbtn('meets', 'Meets hours') + fbtn('not', 'Doesn\'t meet hours') : '';
+  var cols = [['name', 'Member', ''], ['approved', 'Approved hrs', 'width:110px']];
+  if (goal) cols.push(['required', 'Required hrs', 'width:110px'], ['remaining', 'Status', 'width:140px']);
+  cols.push(['pending', 'Pending hrs', 'width:110px'], ['entries', 'Entries', 'width:90px']);
+  document.getElementById('ph-thead').innerHTML = '<tr>' + cols.map(function(c) {
+    var cls = 'sortable' + (phSort.col === c[0] ? (phSort.dir > 0 ? ' sort-asc' : ' sort-desc') : '');
+    return '<th class="' + cls + '" style="' + c[2] + '" onclick="phSortBy(\'' + c[0] + '\')">' + c[1] + '</th>';
+  }).join('') + '</tr>';
+  renderPhTable();
+}
+
+function phSortBy(col) {
+  if (phSort.col === col) phSort.dir = -phSort.dir; else phSort = { col: col, dir: col === 'name' ? 1 : -1 };
+  renderPhilanthropy();
+}
+
+function renderPhTable() {
+  var st = phData.settings, goal = st.minHours > 0;
+  var q = phQuery.trim().toLowerCase();
+  var rows = phData.members.map(function(m, i) { return { m: m, i: i }; }).filter(function(x) {
+    if (q && x.m.name.toLowerCase().indexOf(q) === -1) return false;
+    if (phFilter === 'meets') return x.m.current && x.m.meets;
+    if (phFilter === 'not') return x.m.current && !x.m.meets;
+    return true;
+  });
+  if (phSort.col) {
+    var val = function(m) {
+      if (phSort.col === 'name') return m.name.toLowerCase();
+      if (phSort.col === 'entries') return m.entries.length;
+      return m[phSort.col];
+    };
+    rows.sort(function(a, b) {
+      var av = val(a.m), bv = val(b.m);
+      var c = typeof av === 'string' ? av.localeCompare(bv) : av - bv;
+      return (c || a.m.name.localeCompare(b.m.name)) * phSort.dir;
+    });
+  }
+  document.getElementById('ph-count').textContent = rows.length + ' of ' + phData.members.length;
   var novShort = (CHAPTER_CONFIG.labels.label_am_short || 'AM');
-  document.getElementById('ph-tbody').innerHTML = r.members.map(function(m, i) {
+  var ncols = goal ? 6 : 4;
+  document.getElementById('ph-tbody').innerHTML = rows.length ? rows.map(function(x) {
+    var m = x.m, i = x.i;
     var tag = m.type === 'novato' ? ' <span style="font-size:0.7rem;color:var(--muted)">' + esc(novShort) + '</span>' : '';
+    if (!m.current) tag += ' <span style="font-size:0.7rem;color:var(--muted)">no longer on the roster</span>';
     var has = m.entries.length > 0;
-    var row = '<tr' + (has ? ' style="cursor:pointer" onclick="phToggle(' + i + ')"' : '') + '>' +
-      '<td style="font-weight:600">' + esc(m.name) + tag + (has ? ' <span style="color:var(--muted);font-size:0.75rem">▾</span>' : '') + '</td>' +
+    var open = !!phOpen[m.key];
+    var statusCell = !goal ? '' : '<td>' + (!m.current ? '<span class="ph-chip">n/a</span>'
+      : m.meets ? '<span class="ph-chip g">Meets hours</span>'
+      : '<span class="ph-chip r">' + fmtHours(m.remaining) + ' h to go</span>') + '</td>';
+    var row = '<tr' + (has ? ' style="cursor:pointer" onclick="phToggle(\'' + m.key + '\')"' : '') + '>' +
+      '<td style="font-weight:600">' + esc(m.name) + tag + (has ? ' <span style="color:var(--muted);font-size:0.75rem">' + (open ? '▴' : '▾') + '</span>' : '') + '</td>' +
       '<td style="font-weight:700">' + fmtHours(m.approved) + '</td>' +
+      (goal ? '<td>' + fmtHours(m.required) + (m.carry ? ' <span style="font-size:0.7rem;color:var(--muted)">(+' + fmtHours(m.carry) + ' carried)</span>' : '') + '</td>' + statusCell : '') +
       '<td>' + (m.pending ? '<span class="badge badge-flagged">' + fmtHours(m.pending) + '</span>' : '<span style="color:var(--muted)">0</span>') + '</td>' +
       '<td style="font-size:0.82rem">' + m.entries.length + '</td></tr>';
-    if (!has) return row;
+    if (!has || !open) return row;
     var entries = m.entries.map(function(e) {
-      var badge = e.status === 'approved' ? '<span class="badge badge-passed">Approved</span>'
+      var badge = e.awardId ? '<span class="badge badge-passed">Awarded</span>'
+        : e.status === 'approved' ? '<span class="badge badge-passed">Approved</span>'
         : e.status === 'denied' ? '<span class="badge badge-rejected">Denied</span>'
         : '<span class="badge badge-flagged">Pending</span>';
-      var btns = !e.reviewable ? ''
+      var btns = e.awardId ? '<button class="qa-btn" onclick="phRemoveAwardUI(\'' + e.awardId + '\')">Remove</button>'
+        : !e.reviewable ? ''
         : e.status === 'pending'
           ? '<button class="qa-btn" onclick="phReview(\'' + e.responseId + '\',\'approved\')">Approve</button> <button class="qa-btn" onclick="phReview(\'' + e.responseId + '\',\'denied\')">Deny</button>'
           : '<button class="qa-btn" onclick="phReview(\'' + e.responseId + '\',\'pending\')">Undo</button>';
       return '<div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--border)">' +
         '<div style="flex:1;min-width:200px"><div style="font-weight:600;font-size:0.85rem">' + esc(e.activity || 'Activity') + '</div>' +
-          '<div style="font-size:0.78rem;color:var(--muted)">' + esc(e.date || '') + ' · ' + fmtHours(e.hours) + ' h</div>' +
+          '<div style="font-size:0.78rem;color:var(--muted)">' + esc(e.date || '') + ' · ' + fmtHours(e.hours) + ' h' + (e.awardedBy ? ' · by ' + esc(e.awardedBy) : '') + '</div>' +
           (e.reviewNote ? '<div style="font-size:0.75rem;color:var(--muted)">Note: ' + esc(e.reviewNote) + '</div>' : '') + '</div>' +
         '<div>' + phThumbs(e.photos) + '</div>' +
         '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' + badge + ' ' + btns + '</div></div>';
     }).join('');
-    return row + '<tr id="ph-e-' + i + '" style="display:none"><td colspan="4" style="background:#fafafa;padding:4px 16px">' + entries + '</td></tr>';
-  }).join('');
+    return row + '<tr class="row-detail"><td colspan="' + ncols + '" style="background:#fafafa;padding:4px 16px">' + entries + '</td></tr>';
+  }).join('') : '<tr><td colspan="' + ncols + '" class="empty-state">No one matches.</td></tr>';
+  renderPhEvents();
 }
 
-function phToggle(i) {
-  var el = document.getElementById('ph-e-' + i);
-  if (el) el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+function phToggle(key) {
+  phOpen[key] = !phOpen[key];
+  renderPhTable();
+}
+
+function phRemoveAwardUI(id) {
+  if (!confirm('Remove these awarded hours?')) return;
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    showToast('Hours removed.');
+    phRefresh();
+  }).phRemoveAward(correctPin, id);
 }
 
 function phReview(responseId, decision) {
@@ -6358,17 +6682,303 @@ function phReview(responseId, decision) {
     note = window.prompt('Reason for denying (optional, only officers see it):', '');
     if (note === null) return;
   }
-  var open = [];
-  document.querySelectorAll('#ph-tbody tr[id^="ph-e-"]').forEach(function(tr) { if (tr.style.display !== 'none') open.push(tr.id); });
   fmRun(function(r) {
     if (!r.success) { showToast('Error: ' + r.error); return; }
-    fmRun(function(s) {
-      if (!s.success) { showToast('Error: ' + s.error); return; }
-      phData = s;
-      renderPhilanthropy();
-      open.forEach(function(id) { var el = document.getElementById(id); if (el) el.style.display = 'table-row'; });
-    }).fmPhilanthropySummary(correctPin);
+    phRefresh();
   }).fmReviewResponse(correctPin, responseId, decision, note, 'Officer');
+}
+
+// ---- Service events ---------------------------------------
+
+function renderPhEvents() {
+  var box = document.getElementById('ph-events');
+  var evs = (phData && phData.events) || [];
+  if (!evs.length) {
+    box.innerHTML = '<div style="padding:16px;color:var(--muted);font-size:0.85rem">No events yet. Create one to see who is interested, then give hours to the people who showed up.</div>';
+    return;
+  }
+  box.innerHTML = '<div class="ph-events">' + evs.map(function(e) {
+    return '<div class="ph-ev" onclick="phOpenEvent(\'' + e.formId + '\')">' +
+      '<div class="t">' + esc(e.title) + '</div>' +
+      '<div class="m">' + (e.eventDate ? esc(e.eventDate) : 'No date set') + (e.accepting ? '' : ' · replies closed') + '</div>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<span class="ph-chip g">' + e.going + ' going</span>' +
+        '<span class="ph-chip">' + e.notGoing + ' not going</span>' +
+        (e.awardedPeople ? '<span class="ph-chip y">' + fmtHours(e.awardedHours) + ' h awarded</span>' : '') +
+      '</div></div>';
+  }).join('') + '</div>';
+}
+
+var pheExtra = [];
+function phOpenEventModal() {
+  var labels = evAudienceLabels();
+  document.getElementById('phe-audience').innerHTML = ['brothers', 'everyone'].map(function(a) { return '<option value="' + a + '">' + esc(labels[a]) + '</option>'; }).join('');
+  ['phe-title', 'phe-desc', 'phe-date', 'phe-due', 'phe-hours', 'phe-slots', 'phe-photo-label'].forEach(function(id) { document.getElementById(id).value = ''; });
+  ['phe-slots-on', 'phe-photo-on', 'phe-photo-req'].forEach(function(id) { document.getElementById(id).checked = false; });
+  document.getElementById('phe-slots-box').style.display = 'none';
+  document.getElementById('phe-photo-box').style.display = 'none';
+  pheExtra = [];
+  pheRenderExtra();
+  var btn = document.getElementById('phe-save');
+  btn.disabled = false; window.bfBusy(btn, false);
+  document.getElementById('ph-ev-modal').classList.add('open');
+}
+
+function phCloseEventModal() { document.getElementById('ph-ev-modal').classList.remove('open'); }
+
+function pheAddExtra() { pheSyncExtra(); pheExtra.push({ label: '', type: 'text', options: '', required: false }); pheRenderExtra(); }
+function pheDelExtra(i) { pheSyncExtra(); pheExtra.splice(i, 1); pheRenderExtra(); }
+
+function pheSyncExtra() {
+  pheExtra.forEach(function(q, i) {
+    var l = document.getElementById('phe-q-l-' + i); if (!l) return;
+    q.label = l.value;
+    q.type = document.getElementById('phe-q-t-' + i).value;
+    q.options = document.getElementById('phe-q-o-' + i).value;
+    q.required = document.getElementById('phe-q-r-' + i).checked;
+  });
+}
+
+function pheRenderExtra() {
+  var types = [['text', 'Short answer'], ['textarea', 'Long answer'], ['yesno', 'Yes / No'], ['choice', 'Pick one'], ['multi', 'Pick several'], ['number', 'Number'], ['date', 'Date']];
+  document.getElementById('phe-extra').innerHTML = pheExtra.map(function(q, i) {
+    var opt = q.type === 'choice' || q.type === 'multi';
+    return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:#fff">' +
+      '<input type="text" id="phe-q-l-' + i + '" class="inline-input" style="flex:1;min-width:180px" placeholder="Question" value="' + esc(q.label) + '">' +
+      '<select id="phe-q-t-' + i + '" class="inline-input" onchange="pheSyncExtra();pheRenderExtra()">' + types.map(function(t) { return '<option value="' + t[0] + '"' + (q.type === t[0] ? ' selected' : '') + '>' + t[1] + '</option>'; }).join('') + '</select>' +
+      '<input type="text" id="phe-q-o-' + i + '" class="inline-input" style="flex:1;min-width:160px;' + (opt ? '' : 'display:none') + '" placeholder="Options, separated by commas" value="' + esc(q.options) + '">' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:0.8rem"><input type="checkbox" id="phe-q-r-' + i + '"' + (q.required ? ' checked' : '') + '> Required</label>' +
+      '<button type="button" class="qa-btn" onclick="pheDelExtra(' + i + ')">Remove</button></div>';
+  }).join('');
+}
+
+function phSaveEvent() {
+  pheSyncExtra();
+  var title = document.getElementById('phe-title').value.trim();
+  if (!title) { showToast('Give the event a title.'); return; }
+  var slots = document.getElementById('phe-slots-on').checked ? document.getElementById('phe-slots').value.split('\n').map(function(x) { return x.trim(); }).filter(Boolean) : [];
+  if (document.getElementById('phe-slots-on').checked && slots.length < 2) { showToast('Add at least two time slots, or untick the time slot question.'); return; }
+  var photoOn = document.getElementById('phe-photo-on').checked;
+  var extra = pheExtra.filter(function(q) { return q.label.trim(); }).map(function(q) {
+    return { label: q.label.trim(), type: q.type, required: q.required, options: String(q.options || '').split(',').map(function(x) { return x.trim(); }).filter(Boolean) };
+  });
+  var bad = extra.filter(function(q) { return (q.type === 'choice' || q.type === 'multi') && q.options.length < 2; })[0];
+  if (bad) { showToast('"' + bad.label + '" needs at least two options.'); return; }
+  var payload = {
+    title: title, description: document.getElementById('phe-desc').value.trim(), eventDate: document.getElementById('phe-date').value,
+    dueDate: document.getElementById('phe-due').value, audience: document.getElementById('phe-audience').value,
+    defaultHours: document.getElementById('phe-hours').value, slots: slots, extra: extra,
+    askPhoto: photoOn, photoLabel: document.getElementById('phe-photo-label').value.trim() || 'Attach a photo', photoRequired: document.getElementById('phe-photo-req').checked
+  };
+  var btn = document.getElementById('phe-save');
+  fmRun(function(r) {
+    btn.disabled = false; window.bfBusy(btn, false);
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    phCloseEventModal();
+    showToast('Event created. Link copied.');
+    fmCopyLink(r.url);
+    phRefresh();
+  }).phCreateEvent(correctPin, JSON.stringify(payload), 'Officer');
+}
+
+var phdCur = null, phdPeople = [], phdQuery = '', phdFilter = 'all', phdSel = {}, phdHours = {}, phdSort = { col: null, dir: 1 };
+
+function phOpenEvent(formId) {
+  phdQuery = ''; phdFilter = 'all'; phdSel = {}; phdHours = {}; phdSort = { col: null, dir: 1 };
+  document.getElementById('phd-search').value = '';
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    phdLoad(r);
+    document.getElementById('ph-evd-modal').classList.add('open');
+  }).phGetEvent(correctPin, formId);
+}
+
+function phdLoad(r) {
+  phdCur = r.event; phdPeople = r.people;
+  phdPeople.forEach(function(p) { if (phdHours[p.key] === undefined && p.awarded) phdHours[p.key] = p.awarded; });
+  var e = phdCur;
+  document.getElementById('phd-title').textContent = e.title;
+  document.getElementById('phd-meta').innerHTML = (e.eventDate ? esc(e.eventDate) + ' · ' : '') + esc(e.description || '');
+  var going = phdPeople.filter(function(p) { return p.going; }).length;
+  document.getElementById('phd-chips').innerHTML =
+    '<span class="ph-chip g">' + going + ' going</span><span class="ph-chip">' + (phdPeople.length - going) + ' not going</span>' +
+    '<span class="ph-chip y">' + r.notResponded.length + ' no reply yet</span>' + (e.accepting ? '' : '<span class="ph-chip r">Replies closed</span>');
+  document.getElementById('phd-toggle').textContent = e.status === 'open' ? 'Close replies' : 'Reopen replies';
+  document.getElementById('phd-pending').textContent = r.notResponded.length ? 'No reply yet: ' + r.notResponded.join(', ') : 'Everyone has replied.';
+  document.getElementById('phd-hours').placeholder = e.defaultHours ? 'Hours (' + e.defaultHours + ' suggested)' : 'Hours';
+  renderPhdTable(true);
+}
+
+function phdSortBy(col) {
+  if (phdSort.col === col) phdSort.dir = -phdSort.dir; else phdSort = { col: col, dir: 1 };
+  renderPhdTable(true);
+}
+
+function renderPhdTable(withHead) {
+  var q = phdQuery.trim().toLowerCase();
+  var fbtn = function(id, label) { return '<button class="btn-filter' + (phdFilter === id ? ' active' : '') + '" onclick="phdFilter=\'' + id + '\';renderPhdTable(true)">' + label + '</button>'; };
+  document.getElementById('phd-filters').innerHTML = fbtn('all', 'All') + fbtn('going', 'Going') + fbtn('not', 'Not going') + fbtn('awarded', 'Hours given') + fbtn('none', 'No hours yet');
+  var rows = phdPeople.filter(function(p) {
+    if (q && p.name.toLowerCase().indexOf(q) === -1) return false;
+    if (phdFilter === 'going') return p.going;
+    if (phdFilter === 'not') return !p.going;
+    if (phdFilter === 'awarded') return p.awarded > 0;
+    if (phdFilter === 'none') return !p.awarded;
+    return true;
+  });
+  if (phdSort.col) {
+    rows.sort(function(a, b) {
+      var av = phdSort.col === 'name' ? a.name.toLowerCase() : phdSort.col === 'answer' ? Number(a.going) : a.awarded;
+      var bv = phdSort.col === 'name' ? b.name.toLowerCase() : phdSort.col === 'answer' ? Number(b.going) : b.awarded;
+      var c = typeof av === 'string' ? av.localeCompare(bv) : av - bv;
+      return (c || a.name.localeCompare(b.name)) * phdSort.dir;
+    });
+  }
+  var allSel = rows.length && rows.every(function(p) { return phdSel[p.key]; });
+  var th = function(col, label) {
+    var cls = 'sortable' + (phdSort.col === col ? (phdSort.dir > 0 ? ' sort-asc' : ' sort-desc') : '');
+    return '<th class="' + cls + '" onclick="phdSortBy(\'' + col + '\')">' + label + '</th>';
+  };
+  document.getElementById('phd-thead').innerHTML = '<tr><th style="width:34px"><input type="checkbox"' + (allSel ? ' checked' : '') + ' onchange="phdSelAll(this.checked)"></th>' +
+    th('name', 'Name') + th('answer', 'Answer') + '<th>Details</th>' + th('hours', 'Hours given') + '<th style="width:150px">Set hours</th></tr>';
+  document.getElementById('phd-count').textContent = rows.length + ' of ' + phdPeople.length;
+  document.getElementById('phd-tbody').innerHTML = rows.length ? rows.map(function(p) {
+    var det = p.details.map(function(d) { return '<div style="font-size:0.78rem"><span style="color:var(--muted)">' + esc(d.label) + ':</span> ' + esc(d.text) + '</div>'; }).join('') +
+      (p.photos.length ? phThumbs(p.photos) : '');
+    var hv = phdHours[p.key] === undefined ? '' : phdHours[p.key];
+    return '<tr><td><input type="checkbox"' + (phdSel[p.key] ? ' checked' : '') + ' onchange="phdSel[\'' + p.key + '\']=this.checked"></td>' +
+      '<td style="font-weight:600">' + esc(p.name) + '</td>' +
+      '<td>' + (p.going ? '<span class="ph-chip g">Going</span>' : '<span class="ph-chip">Not going</span>') + '</td>' +
+      '<td>' + (det || '<span style="color:var(--muted);font-size:0.78rem">No extra answers</span>') + '</td>' +
+      '<td>' + (p.awarded ? '<span class="ph-chip y">' + fmtHours(p.awarded) + ' h</span>' : '<span style="color:var(--muted)">0</span>') + '</td>' +
+      '<td style="white-space:nowrap"><input type="number" class="inline-input" min="0" max="100" step="0.5" style="width:70px" value="' + esc(hv) + '" oninput="phdHours[\'' + p.key + '\']=this.value"> ' +
+      '<button class="qa-btn" onclick="phdAssignOne(\'' + p.key + '\',this)">Save</button></td></tr>';
+  }).join('') : '<tr><td colspan="6" class="empty-state">' + (phdPeople.length ? 'No one matches.' : 'No replies yet.') + '</td></tr>';
+}
+
+function phdSelAll(on) {
+  var q = phdQuery.trim().toLowerCase();
+  phdPeople.forEach(function(p) {
+    var vis = (!q || p.name.toLowerCase().indexOf(q) !== -1) && (phdFilter === 'all' || (phdFilter === 'going' && p.going) || (phdFilter === 'not' && !p.going) || (phdFilter === 'awarded' && p.awarded > 0) || (phdFilter === 'none' && !p.awarded));
+    if (vis) phdSel[p.key] = on;
+  });
+  renderPhdTable(true);
+}
+
+function phdSend(awards, btn) {
+  fmRun(function(r) {
+    if (btn) window.bfBusy(btn, false);
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    showToast(r.message);
+    phdHours = {};
+    fmRun(function(g) { if (g.success) phdLoad(g); }).phGetEvent(correctPin, phdCur.formId);
+    phRefresh();
+  }).phAwardHours(correctPin, phdCur.formId, JSON.stringify(awards), 'Officer');
+}
+
+function phdAssignOne(key, btn) {
+  var h = Number(phdHours[key]);
+  if (phdHours[key] === undefined || phdHours[key] === '' || !isFinite(h) || h < 0) { showToast('Type the hours first.'); return; }
+  phdSend([{ key: key, hours: h }], btn);
+}
+
+function phdAssign(mode) {
+  var raw = document.getElementById('phd-hours').value;
+  var h = Number(raw);
+  if (raw === '' || !isFinite(h) || h < 0) { showToast('Type the hours to give first.'); return; }
+  var keys = mode === 'going' ? phdPeople.filter(function(p) { return p.going; }).map(function(p) { return p.key; })
+    : phdPeople.filter(function(p) { return phdSel[p.key]; }).map(function(p) { return p.key; });
+  if (!keys.length) { showToast(mode === 'going' ? 'Nobody has said they are going.' : 'Tick at least one person first.'); return; }
+  if (!confirm((h === 0 ? 'Remove the hours of ' : 'Give ' + h + ' hours to ') + keys.length + ' ' + (keys.length === 1 ? 'person' : 'people') + '?')) return;
+  phdSend(keys.map(function(k) { return { key: k, hours: h }; }), null);
+}
+
+function phdCopy() { if (phdCur) fmCopyLink(phdCur.url); }
+
+function phdToggle() {
+  var next = phdCur.status === 'open' ? 'closed' : 'open';
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    showToast(r.message);
+    fmRun(function(g) { if (g.success) phdLoad(g); }).phGetEvent(correctPin, phdCur.formId);
+    phRefresh();
+  }).fmSetStatus(correctPin, phdCur.formId, next);
+}
+
+function phdDelete() {
+  if (!confirm('Trash "' + phdCur.title + '"? The form and every reply are deleted. Hours already given to people stay on their record (remove them from the hours list if needed).')) return;
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    showToast('Event trashed.');
+    phdClose();
+    phRefresh();
+  }).phDeleteEvent(correctPin, phdCur.formId);
+}
+
+function phdClose() { document.getElementById('ph-evd-modal').classList.remove('open'); }
+
+// ---- Admin > Philanthropy settings ------------------------
+
+function phsLoad() {
+  fmRun(function(r) {
+    if (!r.success) { document.getElementById('admin-ph-loading').textContent = 'Error: ' + r.error; return; }
+    var s = r.settings;
+    document.getElementById('ph-set-min').value = s.minHours;
+    document.getElementById('ph-set-carry').checked = s.carryOver;
+    document.getElementById('ph-set-carry-box').classList.toggle('on', s.carryOver);
+    document.getElementById('ph-set-carry').onchange = function() { document.getElementById('ph-set-carry-box').classList.toggle('on', this.checked); };
+    var L = CHAPTER_CONFIG.labels;
+    var opt = function(val, title, desc) {
+      return '<label class="mode-opt' + (s.shortfallAction === val ? ' on' : '') + '"><input type="radio" name="ph-action" value="' + val + '"' + (s.shortfallAction === val ? ' checked' : '') +
+        ' onchange="document.querySelectorAll(\'#ph-set-action .mode-opt\').forEach(function(l){l.classList.toggle(\'on\',l.querySelector(\'input\').checked)})">' +
+        '<span><b>' + esc(title) + '</b><br><span class="config-help" style="max-width:none">' + esc(desc) + '</span></span></label>';
+    };
+    document.getElementById('ph-set-action').innerHTML =
+      opt('none', 'Nothing happens', 'Their hours are just recorded. No status change.') +
+      opt('probation', 'Place on ' + (L.label_probation || 'Probation').toLowerCase(), 'They are put on chapter ' + (L.label_probation || 'probation').toLowerCase() + ' when you close the semester.') +
+      opt('suspension', 'Place on ' + (L.label_suspension || 'Suspension').toLowerCase(), 'They are suspended when you close the semester.');
+    document.getElementById('ph-close-help').textContent = (s.semesterStart ? 'Hours are currently counted since ' + new Date(s.semesterStart).toLocaleDateString() + '. ' : 'Hours are counted from the beginning. ') +
+      'Closing applies the choice above to every active member who is short, stores what they still owe if carry-over is on, and starts a new hours count from today. It cannot be undone, so check the list first.';
+    document.getElementById('admin-ph-loading').style.display = 'none';
+    document.getElementById('admin-ph-content').style.display = 'block';
+  }).phGetSettings(correctPin);
+}
+
+function phsSave() {
+  var chosen = document.querySelector('input[name="ph-action"]:checked');
+  var payload = { minHours: document.getElementById('ph-set-min').value || 0, shortfallAction: chosen ? chosen.value : 'none', carryOver: document.getElementById('ph-set-carry').checked };
+  fmRun(function(r) {
+    showToast(r.success ? r.message : 'Error: ' + r.error);
+    if (r.success) { phData = null; phsLoad(); }
+  }).phSaveSettings(correctPin, JSON.stringify(payload), 'Officer');
+}
+
+function phsPreviewClose() {
+  fmRun(function(r) {
+    var box = document.getElementById('ph-close-preview');
+    if (!r.success) { box.textContent = 'Error: ' + r.error; return; }
+    if (!r.hasForm) { box.textContent = 'No philanthropy form yet. Open the Philanthropy page first.'; return; }
+    if (!(r.settings.minHours > 0)) { box.innerHTML = '<span style="color:var(--muted);font-size:0.85rem">No minimum is set, so nobody falls short.</span>'; return; }
+    if (!r.shortfalls.length) { box.innerHTML = '<span class="ph-chip g">Everyone meets the minimum.</span>'; return; }
+    box.innerHTML = '<div style="font-size:0.85rem;margin-bottom:6px"><b>' + r.shortfalls.length + '</b> short, ' + r.meeting + ' meet the minimum:</div>' +
+      '<div style="overflow-x:auto"><table class="data-table" style="max-width:520px"><thead><tr><th>Member</th><th>Done</th><th>Required</th><th>Short by</th></tr></thead><tbody>' +
+      r.shortfalls.map(function(m) { return '<tr><td>' + esc(m.name) + '</td><td>' + fmtHours(m.approved) + '</td><td>' + fmtHours(m.required) + '</td><td>' + fmtHours(m.remaining) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  }).phPreviewClose(correctPin);
+}
+
+function phsCloseSemester() {
+  var L = CHAPTER_CONFIG.labels;
+  var chosen = document.querySelector('input[name="ph-action"]:checked');
+  var act = chosen ? chosen.value : 'none';
+  var what = act === 'probation' ? 'put on ' + (L.label_probation || 'probation').toLowerCase() : act === 'suspension' ? 'suspended' : 'left as they are';
+  if (!confirm('Close the semester hours? Members who are short will be ' + what + ', and a new hours count starts today. Settings you have not saved are ignored. This cannot be undone.')) return;
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    showToast(r.short + ' short' + (r.action !== 'none' ? ', ' + r.applied + ' updated' + (r.skipped ? ', ' + r.skipped + ' already flagged' : '') : '') + (r.carried ? ', ' + r.carried + ' carry hours over' : '') + '.');
+    phData = null;
+    document.getElementById('ph-close-preview').innerHTML = '';
+    phsLoad();
+  }).phCloseSemester(correctPin, 'Officer');
 }
 
 function phCopyLink() { if (phData) fmCopyLink(phData.form.url); }

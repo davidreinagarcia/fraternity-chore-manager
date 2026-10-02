@@ -48,6 +48,14 @@ Las excusas se **derivan** de las respuestas en `_fmExcusesForEvent(ss, eventId)
 
 `fmPhilanthropySummary(pin)` **deriva** todo de las respuestas (sin estado extra): horas aprobadas (o cualquiera no denegada si el form no pide review), pendientes, contribuyentes y entradas por miembro (con fotos), incluyendo miembros del roster con 0 horas. La sección Philanthropy del dashboard (`loadPhilanthropy()`) muestra totales, tabla por miembro con entradas desplegables, miniaturas (`drive.google.com/thumbnail`, con fallback a enlace "Open photo") y botones Approve/Deny/Undo. Si no existe ningún form con esta acción, la página lo **crea sola** desde la plantilla del cliente; borrarlo lo recrea al abrir la página (para retirarlo, ciérralo).
 
+### Acción `service_event`
+
+La crea `phCreateEvent` (Philanthropy.gs), no la plantilla del builder. Ver [philanthropy.md](./philanthropy.md). `_fmCleanFields` conserva `field.role` (`going` / `slots`) y `fmSaveForm` exige un campo `yesno` con role `going` y valida `eventDate` y `defaultHours`.
+
+### Selector de nombre (`NamePicker.html`)
+
+Componente compartido (CSS + JS, `NamePicker.create(host, {placeholder, onChange})`) que sustituye al `<select>` y al buscador limitado de 8 resultados. Se abre al enfocar con la lista completa, filtra mientras escribes (sin acentos, por prefijo de cualquier palabra, luego por subcadena), navega con flechas, Enter y Escape, y al salir autoselecciona si el texto coincide exacto con un único nombre. API: `setItems`, `getValue`, `getName`, `clear`, `setDisabled`. Editar el texto tras elegir borra la selección. En `FormApp` rellena `whoKey`; en `SubmitApp` y `SignatureApp` sustituye a `member-select` / `am-select`. Para otra página: `<?!= include('NamePicker') ?>`.
+
 ### Party guest list
 
 Plantilla "Party guest list" del builder: picker de evento con `allEvents` + campo `list`. El anfitrión es el nombre elegido arriba en la página pública. Sin acción: de momento solo se recogen respuestas; la consolidación de la lista de invitados por evento queda para más adelante.
@@ -61,7 +69,8 @@ Sección Forms: lista (con contadores respondidos/audience y pendientes), detall
 - **Identidad por nombre**: el miembro elige su nombre de una lista, sin autenticación. Alguien con el link puede enviar como otro miembro. Aceptado para una fraternidad (igual que las firmas AM); el officer ve quién envió y puede denegar.
 - **Roster visible**: cualquiera con el link ve los nombres del audience (igual que `SignatureApp`).
 - **Fotos**: solo JPEG (el cliente re-codifica todo), máx. 6 por campo. Los archivos son visibles para cualquiera con el link de Drive. Si falla una subida, nada se guarda.
-- **Philanthropy**: no hay objetivo de horas por semestre ni multas automáticas por no llegar.
+- **Philanthropy**: objetivo de horas, consecuencias de fin de semestre y eventos de servicio viven en [philanthropy.md](./philanthropy.md).
+- **Selector de nombre**: todas las páginas públicas (`FormApp`, `SubmitApp`, `SignatureApp`) usan `NamePicker.html` (ver abajo).
 - **Testado solo contra mocks y harness local** (node + shim de `google.script.run`): lógica de servidor con tests vm, UI con navegador. Nunca contra la Sheet real, GmailApp ni el deploy. Si algo falla en producción, sospechar primero de la creación de los tabs (`_fmSheet`) y de los permisos de GmailApp.
 - Los forms semestrales NM/RM (`CustomForms.gs`) no usan este motor todavía.
 
@@ -70,6 +79,5 @@ Sección Forms: lista (con contadores respondidos/audience y pendientes), detall
 - Auto-fines para hermanos que falten a eventos mandatory: debe leer `_fmExcusesForEvent` para no multar a los excusados.
 - Migrar NM/RM al motor.
 - Gestión de la guest list (consolidar invitados por evento, check-in en la puerta).
-- Objetivo de horas de filantropía por semestre.
 - Más acciones por form (swap de chores).
 - Votaciones anónimas necesitan otro diseño (este motor guarda la identidad).

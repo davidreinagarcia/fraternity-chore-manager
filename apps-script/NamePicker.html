@@ -1,0 +1,161 @@
+<style>
+  .np { position: relative; }
+  .np-input {
+    width: 100%; padding: 14px 16px; box-sizing: border-box;
+    border: 2px solid #e2e8f0; border-radius: 4px;
+    font-size: 1rem; color: var(--text, #1e293b);
+    background: #f8fafc; font-family: inherit;
+  }
+  .np-input:focus { outline: none; border-color: var(--primary, #1a73e8); background: #fff; }
+  .np-input:disabled { opacity: 0.6; cursor: not-allowed; }
+  .np.np-picked .np-input { font-weight: 600; }
+  .np-list {
+    position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px; z-index: 60;
+    max-height: 260px; overflow-y: auto; display: none;
+    background: #fff; border: 2px solid #e2e8f0; border-radius: 4px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+  }
+  .np.np-open .np-list { display: block; }
+  .np-opt { padding: 12px 14px; font-size: 0.95rem; cursor: pointer; border-bottom: 1px solid #f1f5f9; }
+  .np-opt:last-child { border-bottom: none; }
+  .np-opt.np-active { background: #eef2ff; }
+  .np-opt b { font-weight: 800; }
+  .np-none { padding: 12px 14px; color: var(--muted, #64748b); font-size: 0.85rem; }
+</style>
+<script>
+var NamePicker = (function() {
+  function norm(s) {
+    s = String(s == null ? '' : s).toLowerCase();
+    try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+    return s;
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function score(item, q, tokens) {
+    var n = item._n;
+    if (n.indexOf(q) === 0) return 0;
+    var words = n.split(/[\s\-']+/);
+    var allPrefix = tokens.every(function(t) { return words.some(function(w) { return w.indexOf(t) === 0; }); });
+    if (allPrefix) return 1;
+    if (n.indexOf(q) !== -1) return 2;
+    return -1;
+  }
+
+  function create(host, opts) {
+    opts = opts || {};
+    var items = [], shown = [], active = -1, pickedId = '', pickedName = '';
+    host.innerHTML = '<div class="np"><input type="text" class="np-input" autocomplete="off" autocapitalize="words" spellcheck="false" role="combobox" aria-autocomplete="list" aria-expanded="false"><div class="np-list" role="listbox"></div></div>';
+    var root = host.firstChild, input = root.querySelector('.np-input'), list = root.querySelector('.np-list');
+    input.placeholder = opts.placeholder || 'Type to search your name...';
+
+    function emit() { if (opts.onChange) opts.onChange(pickedId, pickedName); }
+    function open() { root.classList.add('np-open'); input.setAttribute('aria-expanded', 'true'); }
+    function close() { root.classList.remove('np-open'); input.setAttribute('aria-expanded', 'false'); active = -1; }
+
+    function highlight(name, q) {
+      var i = norm(name).indexOf(q);
+      if (!q || i < 0) return esc(name);
+      return esc(name.slice(0, i)) + '<b>' + esc(name.slice(i, i + q.length)) + '</b>' + esc(name.slice(i + q.length));
+    }
+
+    function render() {
+      var raw = pickedId ? '' : input.value;
+      var q = norm(raw).trim();
+      var tokens = q.split(/\s+/).filter(Boolean);
+      if (!q) {
+        shown = items.slice();
+      } else {
+        shown = items.map(function(it, i) { return { it: it, s: score(it, q, tokens), i: i }; })
+          .filter(function(x) { return x.s >= 0; })
+          .sort(function(a, b) { return a.s - b.s || a.i - b.i; })
+          .map(function(x) { return x.it; });
+      }
+      if (!shown.length) {
+        list.innerHTML = '<div class="np-none">' + esc(items.length ? 'No match. Check the spelling, or ask an officer if you are not on the list.' : (opts.emptyText || 'No names available.')) + '</div>';
+        active = -1;
+        return;
+      }
+      list.innerHTML = shown.map(function(it, i) {
+        return '<div class="np-opt' + (i === active ? ' np-active' : '') + '" role="option" data-i="' + i + '">' + highlight(it.name, q) + '</div>';
+      }).join('');
+    }
+
+    function setActive(i) {
+      var opts_ = list.querySelectorAll('.np-opt');
+      if (!opts_.length) return;
+      active = (i + opts_.length) % opts_.length;
+      opts_.forEach(function(o, k) { o.classList.toggle('np-active', k === active); });
+      var a = opts_[active];
+      if (a && a.scrollIntoView) { var t = a.offsetTop, b = t + a.offsetHeight; if (t < list.scrollTop) list.scrollTop = t; else if (b > list.scrollTop + list.clientHeight) list.scrollTop = b - list.clientHeight; }
+    }
+
+    function pick(it) {
+      pickedId = it.id; pickedName = it.name;
+      input.value = it.name;
+      root.classList.add('np-picked');
+      close();
+      emit();
+    }
+
+    function unpick() {
+      if (!pickedId) return;
+      pickedId = ''; pickedName = '';
+      root.classList.remove('np-picked');
+      emit();
+    }
+
+    input.addEventListener('focus', function() {
+      if (input.disabled) return;
+      if (pickedId) { try { input.select(); } catch (e) {} }
+      render(); open();
+    });
+    input.addEventListener('click', function() { if (!input.disabled) { render(); open(); } });
+    input.addEventListener('input', function() { unpick(); active = 0; render(); open(); setActive(0); });
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); if (!root.classList.contains('np-open')) { render(); open(); } setActive(active + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active < 0 ? -1 : active - 1); }
+      else if (e.key === 'Enter') {
+        if (root.classList.contains('np-open')) {
+          e.preventDefault();
+          var it = active >= 0 ? shown[active] : (shown.length === 1 ? shown[0] : null);
+          if (it) pick(it);
+        }
+      }
+      else if (e.key === 'Escape') { close(); }
+    });
+    input.addEventListener('blur', function() {
+      setTimeout(function() {
+        if (!pickedId) {
+          var q = norm(input.value).trim();
+          if (q) {
+            var exact = items.filter(function(it) { return it._n === q; });
+            if (exact.length === 1) { pick(exact[0]); return; }
+          }
+        }
+        close();
+      }, 120);
+    });
+    list.addEventListener('mousedown', function(e) { e.preventDefault(); });
+    list.addEventListener('click', function(e) {
+      var o = e.target.closest ? e.target.closest('.np-opt') : null;
+      if (o && shown[+o.dataset.i]) { pick(shown[+o.dataset.i]); input.blur(); }
+    });
+    document.addEventListener('click', function(e) { if (!root.contains(e.target)) close(); });
+
+    return {
+      setItems: function(arr) {
+        items = (arr || []).map(function(a) { return { id: String(a.id), name: String(a.name), _n: norm(a.name).trim() }; });
+        if (pickedId && !items.some(function(it) { return it.id === pickedId; })) { unpick(); input.value = ''; }
+        render();
+      },
+      getValue: function() { return pickedId; },
+      getName: function() { return pickedName; },
+      clear: function() { pickedId = ''; pickedName = ''; input.value = ''; root.classList.remove('np-picked'); close(); render(); emit(); },
+      setDisabled: function(on, placeholder) { input.disabled = !!on; if (placeholder != null) input.placeholder = placeholder; if (on) close(); },
+      setPlaceholder: function(p) { input.placeholder = p; },
+      focus: function() { input.focus(); }
+    };
+  }
+  return { create: create };
+})();
+</script>

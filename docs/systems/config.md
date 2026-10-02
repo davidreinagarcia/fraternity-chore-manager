@@ -25,6 +25,10 @@ Devuelve un objeto con tres secciones:
 
 `officer_pin` está excluido del Config Editor (`getConfig()` no lo devuelve, `saveConfig()` lo rechaza). Solo se cambia via Officer Handoff → Change PIN (exige PIN actual).
 
+### Claves de Philanthropy
+
+Se editan en Admin → Philanthropy (no en el Config Editor): `philanthropy_min_hours`, `philanthropy_shortfall_action` (`none|probation|suspension`), `philanthropy_carry_over` (`true|false`), `philanthropy_semester_start` (epoch ms, lo fija el cierre de semestre) y `philanthropy_carry` (JSON clave de miembro a horas pendientes). Ver [philanthropy.md](./philanthropy.md).
+
 ### Template vars en HTML
 
 `doGet()` inyecta vars en tiempo de render:

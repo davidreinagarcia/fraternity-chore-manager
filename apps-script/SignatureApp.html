@@ -139,6 +139,7 @@
 </style>
 <?!= include('ButtonFeedback') ?>
 <?!= include('Theme') ?>
+<?!= include('NamePicker') ?>
 </head>
 <body>
 <?!= includeHome() ?>
@@ -156,9 +157,7 @@
   <div id="form-area">
     <div class="section">
       <label>Your Name (AM)</label>
-      <select id="am-select">
-        <option value="">Loading AMs...</option>
-      </select>
+      <div id="am-picker"></div>
     </div>
 
     <div class="section">
@@ -208,29 +207,25 @@
 <script>
 let selectedFile = null;
 
+var amPicker = NamePicker.create(document.getElementById('am-picker'), {
+  placeholder: 'Type to search your name...',
+  onChange: function() { checkSubmitReady(); }
+});
+amPicker.setDisabled(true, 'Loading AMs...');
+
 window.addEventListener('load', function() {
   google.script.run
     .withSuccessHandler(function(json) {
       var ams = JSON.parse(json);
-      var sel = document.getElementById('am-select');
       if (!ams || ams.length === 0) {
-        sel.innerHTML = '<option value="">No AMs found — contact an officer</option>';
-        sel.disabled = true;
+        amPicker.setDisabled(true, 'No AMs found, contact an officer');
         return;
       }
-      sel.innerHTML = '<option value="">Select your name...</option>';
-      ams.forEach(function(am) {
-        var opt = document.createElement('option');
-        opt.value = am.id;
-        opt.textContent = am.name;
-        sel.appendChild(opt);
-      });
-      sel.addEventListener('change', checkSubmitReady);
+      amPicker.setItems(ams.map(function(am) { return { id: am.id, name: am.name }; }));
+      amPicker.setDisabled(false, 'Type to search your name...');
     })
     .withFailureHandler(function(e) {
-      var sel = document.getElementById('am-select');
-      sel.innerHTML = '<option value="">Error loading names — try refreshing</option>';
-      sel.disabled = true;
+      amPicker.setDisabled(true, 'Error loading names, try refreshing');
       console.error(e);
     })
     .getActiveAMsForSignature();
@@ -284,7 +279,7 @@ function handlePhoto(event) {
 }
 
 function checkSubmitReady() {
-  const hasAM      = !!document.getElementById('am-select').value;
+  const hasAM      = !!amPicker.getValue();
   const hasBrother = !!document.getElementById('brother-input').value.trim();
   const hasActivity= !!document.getElementById('activity-input').value.trim();
   const hasPhoto   = !!selectedFile;
@@ -292,7 +287,7 @@ function checkSubmitReady() {
 }
 
 function submitForm() {
-  const amId    = document.getElementById('am-select').value;
+  const amId    = amPicker.getValue();
   const brother = document.getElementById('brother-input').value.trim();
   const activity= document.getElementById('activity-input').value.trim();
   if (!amId || !brother || !activity || !selectedFile) return;
@@ -350,7 +345,7 @@ function resetForm() {
   document.getElementById('preview-wrap').style.display = 'none';
   document.getElementById('photo-area').classList.remove('has-photo');
   document.getElementById('photo-area').querySelector('p').textContent = 'Tap to take a photo or upload';
-  document.getElementById('am-select').value = '';
+  amPicker.clear();
   document.getElementById('brother-input').value = '';
   document.getElementById('activity-input').value = '';
   document.getElementById('submit-btn').disabled = true;

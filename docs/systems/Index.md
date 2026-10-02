@@ -57,6 +57,10 @@ Si no lo tiene, créalo desde [`_template.md`](./_template.md) y añade la fila 
 | Forms public page | Hecho | `FormApp.html` (`?app=form&f=<id>`) | [forms.md](./forms.md) |
 | Absence request form | Hecho | `Forms.gs` → `_fmExcusesForEvent()` | [forms.md](./forms.md) |
 | Philanthropy hours (form + página) | Hecho | `Forms.gs` → `fmPhilanthropySummary()` + `OfficerDashboard.html` → Philanthropy | [forms.md](./forms.md) |
+| Philanthropy: objetivo, cierre de semestre, carry-over | Hecho (sin probar en real) | `Philanthropy.gs` + Admin → Philanthropy | [philanthropy.md](./philanthropy.md) |
+| Philanthropy: eventos de servicio (form de interés + horas) | Hecho (sin probar en real) | `Philanthropy.gs` → `phCreateEvent()` | [philanthropy.md](./philanthropy.md) |
+| Selector de nombre buscable (todas las páginas públicas) | Hecho | `NamePicker.html` | [forms.md](./forms.md) |
+| Tablas buscables y ordenables (dashboard) | Hecho | `OfficerDashboard.html` → `_tblEnhance()` | [philanthropy.md](./philanthropy.md) |
 | Photo upload field (galería → Drive) | Hecho | `Forms.gs` → `_fmSavePhoto()` + `FormApp.html` | [forms.md](./forms.md) |
 | Party guest list form (solo el form) | Hecho; gestión de la lista pendiente | plantilla "Party guest list" del builder | [forms.md](./forms.md) |
 | Custom Forms (NM/RM, Google Forms) | Hecho | `CustomForms.gs` | — |

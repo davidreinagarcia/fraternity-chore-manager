@@ -10,11 +10,13 @@ Hecho (2026-10-02). Sustituye a los acordeones (dropdowns) que había antes dent
 
 - Al pulsar **Admin** en la barra principal, `showSection('admin')` añade la clase `admin-mode` a `#dash-layout`: se oculta `#sb` y aparece `#sb-admin`, una barra lateral propia con:
   - Botón **Back to dashboard** arriba (`exitAdmin()` vuelve a la última sección abierta, `_lastSection`).
-  - Una entrada por página, agrupadas en General (Share Links, Config Editor, Drive Storage), Operations (Chore Manager, Semester Tools, Custom Forms Manager) y Access (Officer Handoff).
+  - Una entrada por página, agrupadas en General (Share Links, Config Editor, Drive Storage), Operations (Chore Manager, Philanthropy, Semester Tools, Custom Forms Manager) y Access (Officer Handoff).
 - Cada página es un `.admin-section[data-ap="admin-xxx"]`; solo una tiene la clase `on`. `showAdminPage(id)` cambia de página, actualiza el título de la topbar ("Admin: <página>") y carga los datos la primera vez (`_adminSectionsLoaded`).
 - `openAdminPage(id)` abre Admin directamente en una página (lo usa el enlace "Semester forms" de la sección Forms).
 - Se recuerda la última página (`_adminPage`) al volver a entrar en Admin.
 - Auto-Split Members (antes una tarjeta suelta arriba de Admin) vive ahora dentro de la página Chore Manager.
+
+- Philanthropy (`admin-philanthropy`): objetivo de horas, acción de fin de semestre, carry-over y botón de cierre. Detalle en [philanthropy.md](./philanthropy.md). También se abre desde el botón "Philanthropy settings" de la sección Philanthropy (`openAdminPage('admin-philanthropy')`).
 
 ## Para añadir una página nueva
 
