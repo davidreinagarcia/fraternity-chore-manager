@@ -80,8 +80,13 @@
   .container { max-width:1280px; margin:0 auto; padding:20px; }
 
   /* ---- Sidebar ---- */
-  #sb { width:var(--sw); flex-shrink:0; height:100vh; overflow-y:auto; background:var(--primary); display:flex; flex-direction:column; transition:width 0.2s; border-right:2px solid var(--gold); overflow-x:hidden; }
+  #sb, #sb-admin { width:var(--sw); flex-shrink:0; height:100vh; overflow-y:auto; background:var(--primary); display:flex; flex-direction:column; transition:width 0.2s; border-right:2px solid var(--gold); overflow-x:hidden; }
   #sb.col { width:var(--swc); }
+  #sb-admin { display:none; }
+  #dash-layout.admin-mode #sb { display:none; }
+  #dash-layout.admin-mode #sb-admin { display:flex; }
+  #sb-admin .sb-back { width:calc(100% - 16px); margin:12px 8px 0; border:1px solid rgba(255,255,255,0.25); }
+  #sb-admin .sb-back .ni-ic { font-size:1.05rem; }
   .sb-hdr { padding:20px 16px 14px; display:flex; align-items:center; gap:10px; border-bottom:1px solid rgba(255,255,255,0.12); flex-shrink:0; }
   .sb-logo { height:34px; width:auto; flex-shrink:0; }
   .sb-chapter { color:#fff; font-size:0.78rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:opacity 0.15s; }
@@ -230,14 +235,13 @@
 
   /* ---- Admin sections ---- */
   .admin-section { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 20px; overflow: hidden; }
+  .admin-section { display: none; }
+  .admin-section.on { display: block; }
   .admin-section-header {
     padding: 16px 20px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; justify-content: space-between;
-    cursor: pointer; user-select: none;
   }
-  .admin-section-header:hover { background: #fafbff; }
   .admin-section-header h2 { font-size: 1rem; font-weight: 700; }
-  .admin-section-toggle { font-size: 0.85rem; color: var(--muted); transition: transform 0.15s; }
   .admin-section-body { padding: 20px; }
   .admin-loading { text-align: center; padding: 24px; color: var(--muted); font-size: 0.85rem; }
   .inline-input {
@@ -457,6 +461,28 @@
       <button class="ni" data-s="admin" onclick="showSection('admin',this)"><span class="ni-ic">⚙️</span><span class="ni-lbl">Admin</span></button>
     </div>
     <button class="tog" id="sb-tog" onclick="toggleSidebar()">◀</button>
+  </nav>
+  <nav id="sb-admin">
+    <div class="sb-hdr">
+      <? if (cfg.chapter.logo_url) { ?>
+      <img class="sb-logo" src="<?= cfg.chapter.logo_url ?>" alt="<?= cfg.chapter.chapter_name ?>" onerror="this.style.display='none'">
+      <? } ?>
+      <span class="sb-chapter"><?= cfg.chapter.chapter_name ?></span>
+    </div>
+    <button class="ni sb-back" onclick="exitAdmin()"><span class="ni-ic">←</span><span class="ni-lbl">Back to dashboard</span></button>
+    <div class="ng"><div class="nl">GENERAL</div>
+      <button class="ni" data-ap="admin-links" onclick="showAdminPage('admin-links')"><span class="ni-ic">🔗</span><span class="ni-lbl">Share Links</span></button>
+      <button class="ni" data-ap="admin-config" onclick="showAdminPage('admin-config')"><span class="ni-ic">🔧</span><span class="ni-lbl">Config Editor</span></button>
+      <button class="ni" data-ap="admin-drive" onclick="showAdminPage('admin-drive')"><span class="ni-ic">📁</span><span class="ni-lbl">Drive Storage</span></button>
+    </div>
+    <div class="ng"><div class="nl">OPERATIONS</div>
+      <button class="ni" data-ap="admin-chores" onclick="showAdminPage('admin-chores')"><span class="ni-ic">🧹</span><span class="ni-lbl">Chore Manager</span></button>
+      <button class="ni" data-ap="admin-semester" onclick="showAdminPage('admin-semester')"><span class="ni-ic">🎓</span><span class="ni-lbl">Semester Tools</span></button>
+      <button class="ni" data-ap="admin-forms" onclick="showAdminPage('admin-forms')"><span class="ni-ic">📑</span><span class="ni-lbl">Custom Forms Manager</span></button>
+    </div>
+    <div class="ng"><div class="nl">ACCESS</div>
+      <button class="ni" data-ap="admin-handoff" onclick="showAdminPage('admin-handoff')"><span class="ni-ic">🔑</span><span class="ni-lbl">Officer Handoff</span></button>
+    </div>
   </nav>
   <div id="dash-main">
     <div id="topbar">
@@ -791,7 +817,7 @@
           <div class="card-header">
             <h2>📝 Forms</h2>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="showSection('admin',document.querySelector('.ni[data-s=admin]'));setTimeout(function(){toggleAdminSection('admin-forms');formsManagerOnExpand();},120)">Semester forms (Google Forms)</button>
+              <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="openAdminPage('admin-forms')">Semester forms (Google Forms)</button>
               <button class="btn-primary" style="padding:6px 14px;font-size:0.8rem" onclick="openFmModal('')">+ New form</button>
             </div>
           </div>
@@ -837,22 +863,12 @@
     <div class="sec" id="sec-admin"><div class="container">
     <div id="tab-admin">
 
-      <!-- Quick actions -->
-      <div class="admin-grid" style="margin-bottom:20px">
-        <div class="admin-card">
-          <h3>Auto-Split Members</h3>
-          <p>Randomly distribute all unassigned active members into open chore slots.</p>
-          <button class="btn-primary" onclick="callAutoSplit()">Run Auto-Split</button>
-        </div>
-      </div>
-
       <!-- 0. Share Links -->
-      <div class="admin-section">
-        <div class="admin-section-header" onclick="toggleAdminSection('admin-links')">
+      <div class="admin-section" data-ap="admin-links">
+        <div class="admin-section-header">
           <h2>Share Links</h2>
-          <span class="admin-section-toggle" id="admin-links-toggle">▼</span>
         </div>
-        <div class="admin-section-body" id="admin-links-body" style="display:none">
+        <div class="admin-section-body" id="admin-links-body">
           <p style="font-size:0.82rem;color:var(--muted);margin-bottom:16px">Copy these URLs to share with members or bookmark for officers. All links go to the same base URL with different <code>?app=</code> parameters.</p>
           <div id="share-links-list">
             <div style="text-align:center;padding:20px;color:var(--muted)">Loading links...</div>
@@ -861,12 +877,18 @@
       </div>
 
       <!-- 1. Chore Manager -->
-      <div class="admin-section">
-        <div class="admin-section-header" onclick="toggleAdminSection('admin-chores')">
+      <div class="admin-section" data-ap="admin-chores">
+        <div class="admin-section-header">
           <h2>Chore Manager</h2>
-          <span class="admin-section-toggle" id="admin-chores-toggle">▼</span>
         </div>
-        <div class="admin-section-body" id="admin-chores-body" style="display:none">
+        <div class="admin-section-body" id="admin-chores-body">
+          <div class="admin-grid" style="margin-bottom:20px">
+            <div class="admin-card">
+              <h3>Auto-Split Members</h3>
+              <p>Randomly distribute all unassigned active members into open chore slots.</p>
+              <button class="btn-primary" onclick="callAutoSplit()">Run Auto-Split</button>
+            </div>
+          </div>
           <div class="admin-loading" id="admin-chores-loading">Loading chores...</div>
           <div id="admin-chores-content" style="display:none">
             <div style="overflow-x:auto">
@@ -901,12 +923,11 @@
       </div>
 
       <!-- 2. Config Editor -->
-      <div class="admin-section">
-        <div class="admin-section-header" onclick="toggleAdminSection('admin-config')">
+      <div class="admin-section" data-ap="admin-config">
+        <div class="admin-section-header">
           <h2>Config Editor</h2>
-          <span class="admin-section-toggle" id="admin-config-toggle">▼</span>
         </div>
-        <div class="admin-section-body" id="admin-config-body" style="display:none">
+        <div class="admin-section-body" id="admin-config-body">
           <div class="admin-loading" id="admin-config-loading">Loading config...</div>
           <div id="admin-config-content" style="display:none">
             <div id="config-rows"></div>
@@ -915,12 +936,11 @@
       </div>
 
       <!-- 3. Semester Tools -->
-      <div class="admin-section">
-        <div class="admin-section-header" onclick="toggleAdminSection('admin-semester')">
+      <div class="admin-section" data-ap="admin-semester">
+        <div class="admin-section-header">
           <h2>Semester Tools</h2>
-          <span class="admin-section-toggle" id="admin-semester-toggle">▼</span>
         </div>
-        <div class="admin-section-body" id="admin-semester-body" style="display:none">
+        <div class="admin-section-body" id="admin-semester-body">
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
             <div style="background:var(--green-bg);border-radius:4px;padding:16px;border:1px solid #bbf7d0">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px;color:var(--green)">Semester Sync</div>
@@ -957,12 +977,11 @@
       </div>
 
       <!-- Drive storage -->
-      <div class="admin-section">
-        <div class="admin-section-header" onclick="toggleAdminSection('admin-drive')">
+      <div class="admin-section" data-ap="admin-drive">
+        <div class="admin-section-header">
           <h2>Drive Storage</h2>
-          <span class="admin-section-toggle" id="admin-drive-toggle">▼</span>
         </div>
-        <div class="admin-section-body" id="admin-drive-body" style="display:none">
+        <div class="admin-section-body" id="admin-drive-body">
           <p style="font-size:0.82rem;color:var(--muted);line-height:1.6;margin-bottom:14px">Every photo the app collects (signatures, chores, form uploads) is saved inside one Drive folder you choose, organized by semester. The folder must be reachable by the Google account this app runs under, with Editor access.</p>
           <div id="drv-loading" style="color:var(--muted);font-size:0.85rem">Loading...</div>
           <div id="drv-body" style="display:none">
@@ -985,12 +1004,11 @@
       </div>
 
       <!-- 3b. Custom Forms Manager -->
-      <div class="admin-section">
-        <div class="admin-section-header" onclick="toggleAdminSection('admin-forms');formsManagerOnExpand()">
+      <div class="admin-section" data-ap="admin-forms">
+        <div class="admin-section-header">
           <h2>Custom Forms Manager</h2>
-          <span class="admin-section-toggle" id="admin-forms-toggle">▼</span>
         </div>
-        <div class="admin-section-body" id="admin-forms-body" style="display:none">
+        <div class="admin-section-body" id="admin-forms-body">
 
           <!-- Collection window controls -->
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:20px">
@@ -1063,12 +1081,11 @@
       </div>
 
       <!-- 4. Officer Handoff -->
-      <div class="admin-section">
-        <div class="admin-section-header" onclick="toggleAdminSection('admin-handoff')">
+      <div class="admin-section" data-ap="admin-handoff">
+        <div class="admin-section-header">
           <h2>Officer Handoff</h2>
-          <span class="admin-section-toggle" id="admin-handoff-toggle">▼</span>
         </div>
-        <div class="admin-section-body" id="admin-handoff-body" style="display:none">
+        <div class="admin-section-body" id="admin-handoff-body">
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
             <div style="background:#f8fafc;border-radius:4px;padding:16px">
               <div style="font-size:0.9rem;font-weight:700;margin-bottom:6px">Generate Handoff Report</div>
@@ -1895,15 +1912,19 @@ function toggleSidebar() {
 }
 
 var _sectionTitles = {chores:'Chores',members:'Members',events:'Events & Attendance',finance:'Finance',philanthropy:'Philanthropy',forms:'Forms',admin:'Admin'};
+var _lastSection = 'members';
 function showSection(id, btn) {
   document.querySelectorAll('.sec').forEach(function(s) { s.classList.remove('on'); });
-  document.querySelectorAll('.ni').forEach(function(n) { n.classList.remove('on'); });
+  document.querySelectorAll('#sb .ni').forEach(function(n) { n.classList.remove('on'); });
   var sec = document.getElementById('sec-' + id);
   if (sec) sec.classList.add('on');
   if (btn) { btn.classList.add('on'); }
-  else { var m = document.querySelector('.ni[data-s="' + id + '"]'); if (m) m.classList.add('on'); }
+  else { var m = document.querySelector('#sb .ni[data-s="' + id + '"]'); if (m) m.classList.add('on'); }
   var t = document.getElementById('topbar-title');
   if (t) t.textContent = _sectionTitles[id] || id;
+  document.getElementById('dash-layout').classList.toggle('admin-mode', id === 'admin');
+  if (id !== 'admin') _lastSection = id;
+  if (id === 'admin') showAdminPage(_adminPage);
   if (id === 'members') initMemberManager();
   if (id === 'events') loadEvents();
   if (id === 'forms') loadForms();
@@ -2271,8 +2292,7 @@ var MODULE_KEY_LABELS = {
 };
 var ADVANCED_CONFIG_HELP = {};
 var _adminSectionsLoaded = {};
-
-function initAdminTab() { /* sections lazy-load on first expand */ }
+var _adminPage = 'admin-links';
 
 function initShareLinks() {
   var base = BASE_URL;
@@ -2318,19 +2338,34 @@ function copyLink(encodedUrl, btn) {
   }
 }
 
-function toggleAdminSection(id) {
-  var body   = document.getElementById(id + '-body');
-  var toggle = document.getElementById(id + '-toggle');
-  var isOpen = body.style.display !== 'none';
-  body.style.display = isOpen ? 'none' : 'block';
-  toggle.textContent = isOpen ? '▼' : '▲';
-  if (!isOpen && !_adminSectionsLoaded[id]) {
+function showAdminPage(id) {
+  _adminPage = id;
+  document.querySelectorAll('.admin-section').forEach(function(p) { p.classList.toggle('on', p.getAttribute('data-ap') === id); });
+  var title = '';
+  document.querySelectorAll('#sb-admin .ni[data-ap]').forEach(function(n) {
+    var on = n.getAttribute('data-ap') === id;
+    n.classList.toggle('on', on);
+    if (on) title = n.querySelector('.ni-lbl').textContent;
+  });
+  document.getElementById('topbar-title').textContent = 'Admin: ' + title;
+  document.getElementById('ct').scrollTop = 0;
+  if (!_adminSectionsLoaded[id]) {
     _adminSectionsLoaded[id] = true;
     if (id === 'admin-chores')        loadAdminChores();
     else if (id === 'admin-config')   loadAdminConfig();
     else if (id === 'admin-links')    initShareLinks();
     else if (id === 'admin-drive')    loadDriveStorage();
+    else if (id === 'admin-forms')    formsManagerOnExpand();
   }
+}
+
+function openAdminPage(id) {
+  _adminPage = id;
+  showSection('admin');
+}
+
+function exitAdmin() {
+  showSection(_lastSection || 'members');
 }
 
 // ---- Chore Manager ----------------------------------------
