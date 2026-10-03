@@ -34,6 +34,7 @@ Actualizado (2026-10-03). Refactorización visual completa eliminando el look "v
 - Cero `box-shadow` en cards o botones. Sin `border-radius` > 6px (modales pueden usar 6px, el resto 4px).
 - Badges de estado: clase `badge badge-*`, representados como dot (6px `::before`) + texto semántico, sin background pastel.
 - Chips de métricas (`mm-stat-chip`): outlined con borde semántico, sin relleno.
+- Chips de philanthropy (`ph-chip.g/r/y`): también outlined sin relleno. Usar `!important` en `background` porque el cascade de GAS no garantiza que Theme gane sobre el `<style>` del app si ambos tienen la misma especificidad.
 - Números en tablas y stat-cards: siempre `font-variant-numeric: tabular-nums`.
 
 ## Botón Home y marca
