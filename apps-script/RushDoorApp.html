@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><?= cfg.labels.label_rush ?> check-in — <?= cfg.chapter.chapter_name ?></title>
+<style>
+  :root {
+    --primary: <?= cfg.chapter.primary_color ?>;
+    --gold: <?= cfg.chapter.accent_color ?>;
+    --green: #16a34a;
+    --red: #dc2626;
+    --card-bg: #ffffff;
+    --text: #1a202c;
+    --muted: #64748b;
+    --radius: 16px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--primary); min-height: 100vh;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 20px 16px 40px;
+    font-family: 'Segoe UI', -apple-system, Arial, sans-serif;
+  }
+  .card { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px 24px; width: 100%; max-width: 480px; }
+  .header { text-align: center; margin-bottom: 22px; }
+  .header .badge {
+    display: inline-block; background: var(--primary); color:#fff;
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 1px;
+    padding: 4px 12px; border-radius: 8px; margin-bottom: 10px; text-transform: uppercase;
+  }
+  .header h1 { font-size: 1.5rem; font-weight: 800; line-height: 1.2; margin-bottom: 6px; }
+  .header .desc { font-size: 0.88rem; color: var(--muted); line-height: 1.45; }
+
+  .section { margin-bottom: 18px; }
+  .section > label.lbl {
+    display: block; font-size: 0.8rem; font-weight: 700; color: var(--muted);
+    letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .section .req { color: var(--red); }
+  .section .opt-tag { font-weight: 500; text-transform: none; letter-spacing: 0; color: #94a3b8; }
+
+  select, input[type="text"], input[type="tel"], input[type="email"] {
+    width: 100%; padding: 13px 14px; border: 2px solid #e2e8f0; border-radius: 4px;
+    font-size: 1rem; color: var(--text); background: #f8fafc; font-family: inherit;
+  }
+  select {
+    cursor: pointer; appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2364748b' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+  }
+  select:focus, input:focus { outline: none; border-color: var(--primary); }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; opacity: 0; }
+
+  #submit-btn {
+    width: 100%; padding: 16px; background: var(--primary); color:#fff;
+    border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 800; cursor: pointer; margin-top: 8px;
+  }
+  #submit-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+  #err { display: none; margin-bottom: 14px; padding: 10px 14px; border-radius: 4px; background: #fef2f2; color: var(--red); font-size: 0.85rem; font-weight: 600; }
+
+  .state { text-align: center; padding: 20px 0; }
+  .state .icon { font-size: 3.2rem; margin-bottom: 10px; }
+  .state .title { font-size: 1.5rem; font-weight: 800; margin-bottom: 8px; }
+  .state .msg { font-size: 0.95rem; color: var(--muted); line-height: 1.5; }
+  .btn-alt { width: 100%; padding: 12px; border: 2px solid var(--primary); color: var(--primary); background: white; border-radius: 4px; font-size: 0.9rem; font-weight: 700; cursor: pointer; margin-top: 16px; }
+</style>
+<?!= include('ButtonFeedback') ?>
+<?!= include('Theme') ?>
+</head>
+<body>
+<?!= includeHome() ?>
+<div class="card">
+  <div class="header">
+    <? if (cfg.chapter.logo_url) { ?>
+    <img src="<?= cfg.chapter.logo_url ?>" alt="<?= cfg.chapter.chapter_name ?>" style="height:52px;width:auto;margin-bottom:10px" onerror="this.style.display='none'">
+    <? } ?>
+    <div class="badge"><?= cfg.chapter.chapter_name ?></div>
+    <h1>Welcome!</h1>
+    <div class="desc">Sign in so we know who stopped by.</div>
+  </div>
+
+  <div id="form-area" style="display:none">
+    <div class="section">
+      <label class="lbl" for="in-name">Full name <span class="req">*</span></label>
+      <input type="text" id="in-name" maxlength="80" autocomplete="off" autocapitalize="words">
+    </div>
+    <div class="section">
+      <label class="lbl" for="in-year">Year <span class="req">*</span></label>
+      <select id="in-year"></select>
+    </div>
+    <div class="section">
+      <label class="lbl" for="in-phone">Phone number <span class="req">*</span></label>
+      <input type="tel" id="in-phone" maxlength="30" inputmode="tel" autocomplete="off">
+    </div>
+    <div class="section">
+      <label class="lbl" for="in-ig">Instagram or other social <span class="opt-tag">(optional)</span></label>
+      <input type="text" id="in-ig" maxlength="100" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="@username">
+    </div>
+    <div class="section">
+      <label class="lbl" for="in-email">Email <span class="opt-tag">(optional)</span></label>
+      <input type="email" id="in-email" maxlength="120" autocomplete="off" autocapitalize="none" spellcheck="false">
+    </div>
+    <div class="hp" aria-hidden="true"><label>Leave empty <input type="text" id="in-hp" tabindex="-1" autocomplete="off"></label></div>
+    <div id="err"></div>
+    <button id="submit-btn" onclick="submitCheckin()">Check in</button>
+  </div>
+
+  <div id="state" class="state" style="display:none">
+    <div class="icon" id="state-icon"></div>
+    <div class="title" id="state-title"></div>
+    <div class="msg" id="state-msg"></div>
+    <button class="btn-alt" id="again-btn" style="display:none" onclick="resetForm()">Next person</button>
+  </div>
+</div>
+
+<script>
+var RESET_MS = 4000;
+var resetTimer = null, busy = false;
+
+function el(id) { return document.getElementById(id); }
+
+function showState(icon, title, msg, again, againLabel) {
+  el('form-area').style.display = 'none';
+  el('state').style.display = 'block';
+  el('state-icon').textContent = icon;
+  el('state-title').textContent = title;
+  el('state-msg').textContent = msg || '';
+  el('again-btn').textContent = againLabel || 'Next person';
+  el('again-btn').style.display = again ? 'block' : 'none';
+}
+
+function showForm() {
+  el('state').style.display = 'none';
+  el('form-area').style.display = 'block';
+}
+
+function setErr(msg) {
+  var e = el('err');
+  e.textContent = msg || '';
+  e.style.display = msg ? 'block' : 'none';
+}
+
+function fillYears(opts) {
+  var h = '<option value="">Select your year...</option>';
+  (opts || []).forEach(function(y) { h += '<option>' + String(y).replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</option>'; });
+  el('in-year').innerHTML = h;
+}
+
+function clearFields() {
+  ['in-name', 'in-phone', 'in-ig', 'in-email', 'in-hp'].forEach(function(id) { el(id).value = ''; });
+  el('in-year').value = '';
+  setErr('');
+}
+
+function resetForm() {
+  if (resetTimer) { clearTimeout(resetTimer); resetTimer = null; }
+  clearFields();
+  loadDoor();
+}
+
+function loadDoor() {
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (!r.success) { showState('❌', 'Could not load', r.error, true, 'Try again'); return; }
+      if (!r.open) {
+        showState('🔒', 'Check-in is closed', 'Check-in is not open right now. Ask a brother at the door.', true, 'Check again');
+        return;
+      }
+      var cur = el('in-year').value;
+      fillYears(r.yearOptions);
+      el('in-year').value = cur;
+      showForm();
+    })
+    .withFailureHandler(function() { showState('❌', 'Could not load', 'Check your connection and try again.', true, 'Try again'); })
+    .rushGetDoorInfo();
+}
+
+function submitCheckin() {
+  if (busy) return;
+  var name = el('in-name').value.trim(), year = el('in-year').value, phone = el('in-phone').value.trim();
+  if (name.length < 2) { setErr('Please enter your full name.'); return; }
+  if (!year) { setErr('Pick your year.'); return; }
+  if (phone.replace(/\D/g, '').length < 7) { setErr('Please enter your phone number.'); return; }
+  setErr('');
+  busy = true;
+  var btn = el('submit-btn');
+  btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      busy = false; btn.disabled = false;
+      var r = JSON.parse(json);
+      if (!r.success) { setErr(r.error || 'Something went wrong. Please try again.'); return; }
+      var first = r.firstName ? ', ' + r.firstName : '';
+      if (r.returning) showState('👋', 'Welcome back' + first + '!', 'Glad to see you again.', true);
+      else showState('✅', 'Welcome' + first + '!', "You're signed in. Make yourself at home.", true);
+      clearFields();
+      resetTimer = setTimeout(resetForm, RESET_MS);
+    })
+    .withFailureHandler(function() {
+      busy = false; btn.disabled = false;
+      setErr('Could not reach the server. Check the connection and try again.');
+    })
+    .rushSubmitCheckin(JSON.stringify({
+      name: name, year: year, phone: phone,
+      instagram: el('in-ig').value.trim(), email: el('in-email').value.trim(), hp: el('in-hp').value
+    }));
+}
+
+window.addEventListener('load', loadDoor);
+</script>
+</body>
+</html>

@@ -68,6 +68,8 @@ Link de acceso: `?app=officer` (el dashboard que David usa).
 | `form` | FormApp | respuesta pública a un form del form builder (`&f=<form_id>`) |
 | `setup` | SetupApp | setup wizard nuevas instalaciones |
 | `draft` | DraftApp | Draft Night board |
+| `rush` | RushApp | tablero de hermanos de Rush (PNMs + comentarios en vivo) |
+| `rushdoor` | RushDoorApp | formulario de check-in de PNMs en la puerta |
 
 ## Reglas de código
 

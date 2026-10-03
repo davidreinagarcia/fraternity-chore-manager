@@ -394,6 +394,12 @@ function doGet(e) {
         tmpl = HtmlService.createTemplateFromFile('FormApp');
         tmpl.formId = e.parameter.f || '';
         break;
+      case 'rush':
+        tmpl = HtmlService.createTemplateFromFile('RushApp');
+        break;
+      case 'rushdoor':
+        tmpl = HtmlService.createTemplateFromFile('RushDoorApp');
+        break;
       case 'officer':
         tmpl = HtmlService.createTemplateFromFile('OfficerDashboard');
         break;
@@ -1538,7 +1544,15 @@ var LABEL_DEFAULTS = {
   label_university_email: 'University Email',
   label_suspension:   'Suspension',
   label_probation:    'Probation',
-  label_semester:     'Semester'
+  label_semester:     'Semester',
+  label_rush:         'Rush',
+  label_rush_chair:   'Rush Chair',
+  label_pnm:          'PNM',
+  label_pnm_full:     'Possible New Member',
+  label_bid:          'Bid',
+  label_flush:        'Flush',
+  label_flushed:      'Flushed',
+  label_chapter_meeting: 'Chapter'
 };
 
 var MODULE_DEFAULTS = {
@@ -1548,7 +1562,8 @@ var MODULE_DEFAULTS = {
   module_signatures:          true,
   module_university_fields:   false,
   module_academic_suspension: true,
-  module_officer_roles:       true
+  module_officer_roles:       true,
+  module_rush:                true
 };
 
 var OPTIONS_DEFAULTS = {

@@ -49,6 +49,14 @@ Si no lo tiene, créalo desde [`_template.md`](./_template.md) y añade la fila 
 | Google Calendar sync (one-way push) | Hecho | `Events.gs` → `syncPendingEvents()` | [events.md](./events.md) |
 | Google Calendar sync (two-way pull) | Hecho | `EventsTwoWay.gs` → `pullCalendarChanges()` | [events.md](./events.md) |
 
+## Rush
+
+| Sistema | Estado | Fuente | Doc |
+|---|---|---|---|
+| Check-in de puerta (PNMs) | Hecho (sin probar en real) | `RushDoorApp.html` (`?app=rushdoor`) + `Rush.gs` → `rushSubmitCheckin()` | [rush.md](./rush.md) |
+| Tablero de hermanos + comentarios | Hecho (sin probar en real) | `RushApp.html` (`?app=rush`) + `Rush.gs` → `rushPoll()` | [rush.md](./rush.md) |
+| Dashboard Rush (visitas, bids, aceptados, welcome) | Hecho (sin probar en real) | `OfficerDashboard.html` → Rush + `Rush.gs` | [rush.md](./rush.md) |
+
 ## Forms
 
 | Sistema | Estado | Fuente | Doc |

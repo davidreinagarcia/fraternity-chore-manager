@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><?= cfg.labels.label_rush ?> board — <?= cfg.chapter.chapter_name ?></title>
+<style>
+  :root {
+    --primary: <?= cfg.chapter.primary_color ?>;
+    --gold: <?= cfg.chapter.accent_color ?>;
+    --green: #16a34a;
+    --red: #dc2626;
+    --card-bg: #ffffff;
+    --text: #1a202c;
+    --muted: #64748b;
+    --radius: 16px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--primary); min-height: 100vh;
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 16px 12px 60px;
+    font-family: 'Segoe UI', -apple-system, Arial, sans-serif; color: var(--text);
+  }
+  .wrap { width: 100%; max-width: 640px; }
+  .panel { background: var(--card-bg); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px 18px; margin-bottom: 12px; }
+  .header { text-align: center; }
+  .header .badge {
+    display: inline-block; background: var(--primary); color:#fff;
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 1px;
+    padding: 4px 12px; border-radius: 8px; margin-bottom: 8px; text-transform: uppercase;
+  }
+  .header h1 { font-size: 1.35rem; font-weight: 800; line-height: 1.2; }
+  .header .desc { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+
+  .lbl { display: block; font-size: 0.78rem; font-weight: 700; color: var(--muted); letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 8px; }
+  input[type="text"], input[type="password"], textarea {
+    width: 100%; padding: 12px 14px; border: 2px solid #e2e8f0; border-radius: 4px;
+    font-size: 1rem; color: var(--text); background: #f8fafc; font-family: inherit;
+  }
+  textarea { min-height: 72px; resize: vertical; }
+  input:focus, textarea:focus { outline: none; border-color: var(--primary); }
+  .btn { padding: 12px 18px; background: var(--primary); color:#fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 800; cursor: pointer; font-family: inherit; }
+  .btn:disabled { background: #94a3b8; cursor: not-allowed; }
+  .btn-block { width: 100%; margin-top: 10px; }
+  .link-btn { background: none; border: none; color: var(--primary); font-weight: 700; font-size: 0.82rem; cursor: pointer; font-family: inherit; padding: 2px 4px; }
+  .err { display: none; margin-top: 10px; padding: 9px 12px; border-radius: 4px; background: #fef2f2; color: var(--red); font-size: 0.83rem; font-weight: 600; }
+
+  .who { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.88rem; }
+  .who b { font-weight: 800; }
+
+  .tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .tools input { flex: 1; min-width: 140px; }
+  .seg { display: inline-flex; border: 2px solid #e2e8f0; border-radius: 8px; overflow: hidden; flex: none; }
+  .seg button { padding: 10px 14px; border: none; background: #fff; font-weight: 700; font-size: 0.85rem; color: var(--muted); cursor: pointer; font-family: inherit; }
+  .seg button.on { background: var(--primary); color: #fff; }
+  .count { font-size: 0.78rem; color: #94a3b8; margin-top: 8px; }
+
+  .pnm { background: var(--card-bg); border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 10px; overflow: hidden; }
+  .pnm-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; }
+  .pnm-main { flex: 1; min-width: 0; }
+  .pnm-name { font-size: 1.05rem; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
+  .pnm-meta { font-size: 0.78rem; color: var(--muted); margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .chip { display: inline-block; font-size: 0.68rem; font-weight: 800; padding: 2px 8px; border-radius: 999px; letter-spacing: 0.3px; vertical-align: middle; margin-left: 6px; }
+  .chip.new { background: #dcfce7; color: #166534; }
+  .chip.back { background: #fef3c7; color: #92400e; }
+  .pnm-cc { flex: none; text-align: center; min-width: 38px; font-size: 0.7rem; color: var(--muted); }
+  .pnm-cc b { display: block; font-size: 1.05rem; color: var(--text); }
+  .pnm-body { display: none; border-top: 1px solid #f1f5f9; padding: 14px 16px 16px; background: #fcfcfd; }
+  .pnm.open .pnm-body { display: block; }
+  .pnm-info { font-size: 0.82rem; color: var(--muted); margin-bottom: 12px; line-height: 1.6; }
+  .pnm-info a { color: var(--primary); font-weight: 700; text-decoration: none; }
+  .cm { padding: 9px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 8px; }
+  .cm-top { font-size: 0.74rem; color: var(--muted); margin-bottom: 3px; }
+  .cm-top b { color: var(--text); }
+  .cm-text { font-size: 0.92rem; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .cm-none { font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px; }
+  .post { margin-top: 10px; }
+  .post-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 10px; }
+  .post-hint { font-size: 0.74rem; color: #94a3b8; }
+
+  .empty { text-align: center; padding: 28px 10px; color: var(--muted); font-size: 0.92rem; line-height: 1.5; background: var(--card-bg); border-radius: 12px; }
+  .live { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 6px; vertical-align: middle; }
+  .live.off { background: #f59e0b; }
+  .status { font-size: 0.75rem; color: var(--muted); text-align: center; margin-top: 4px; }
+</style>
+<?!= include('ButtonFeedback') ?>
+<?!= include('Theme') ?>
+<?!= include('NamePicker') ?>
+</head>
+<body>
+<?!= includeHome() ?>
+<div class="wrap">
+  <div class="panel header">
+    <? if (cfg.chapter.logo_url) { ?>
+    <img src="<?= cfg.chapter.logo_url ?>" alt="<?= cfg.chapter.chapter_name ?>" style="height:46px;width:auto;margin-bottom:8px" onerror="this.style.display='none'">
+    <? } ?>
+    <div class="badge"><?= cfg.chapter.chapter_name ?></div>
+    <h1 id="h-title"><?= cfg.labels.label_rush ?> board</h1>
+    <div class="desc">Who just walked in, and what you thought of them.</div>
+  </div>
+
+  <div id="loading" class="panel" style="text-align:center;color:#64748b">Loading...</div>
+
+  <div id="gate" class="panel" style="display:none">
+    <label class="lbl" for="code-in">Access code</label>
+    <input type="password" id="code-in" autocomplete="off" onkeydown="if(event.key==='Enter')submitCode()">
+    <div class="err" id="gate-err"></div>
+    <button class="btn btn-block" id="code-btn" onclick="submitCode()">Open board</button>
+  </div>
+
+  <div id="board" style="display:none">
+    <div class="panel" id="who-panel">
+      <div id="who-set" class="who" style="display:none">
+        <div>Commenting as <b id="who-name"></b></div>
+        <button class="link-btn" onclick="changeWho()">Not you?</button>
+      </div>
+      <div id="who-pick" style="display:none">
+        <label class="lbl">Who are you?</label>
+        <div id="who-picker"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="tools">
+        <input type="text" id="search" placeholder="Search by name..." autocomplete="off" oninput="onSearch()">
+        <div class="seg"><button id="f-today" class="on" onclick="setFilter('today')">Today</button><button id="f-all" onclick="setFilter('all')">All</button></div>
+      </div>
+      <div class="count" id="count"></div>
+    </div>
+
+    <div id="list"></div>
+  </div>
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+var LABELS = <?!= JSON.stringify(cfg.labels).replace(/</g, '\\u003c') ?>;
+var POLL_MS = 15000;
+var LS_CODE = 'rush_code', LS_WHO = 'rush_who';
+
+var code = '', roster = [], whoKey = '', whoName = '', whoPicker = null;
+var pnms = [], today = '', token = '', filter = 'today', query = '';
+var openId = '', drafts = {}, posting = {}, pollTimer = null, polling = false, boardReady = false, lastOk = 0;
+
+function el(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function lsGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+function lsSet(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} }
+function norm(s) {
+  s = String(s == null ? '' : s).toLowerCase();
+  try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+  return s;
+}
+function parseDate(d) { var p = String(d).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+function fmtDay(d) { try { return parseDate(d).toLocaleDateString([], { weekday: 'short', month: 'numeric', day: 'numeric' }); } catch (e) { return d; } }
+function fmtTime(iso) { try { return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } }
+function fmtStamp(iso) {
+  try {
+    var d = new Date(iso), n = new Date();
+    var same = d.toDateString() === n.toDateString();
+    return same ? fmtTime(iso) : d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + fmtTime(iso);
+  } catch (e) { return ''; }
+}
+function igHandle(s) {
+  var t = String(s || '').trim().toLowerCase();
+  if (!t) return '';
+  var m = t.match(/(?:instagram\.com|instagr\.am)\/([a-z0-9._]+)/);
+  if (m) return m[1];
+  return t.replace(/^@+/, '').replace(/\s+/g, '');
+}
+function igHtml(raw) {
+  if (!raw) return '';
+  var h = igHandle(raw);
+  if (/^[a-z0-9._]{1,30}$/.test(h)) return '<a href="https://www.instagram.com/' + h + '/" target="_blank" rel="noopener">@' + esc(h) + '</a>';
+  return esc(raw);
+}
+
+function show(id, on) { el(id).style.display = on ? 'block' : 'none'; }
+function setErr(id, msg) { var e = el(id); e.textContent = msg || ''; e.style.display = msg ? 'block' : 'none'; }
+
+// ---- access ----
+function start() {
+  code = lsGet(LS_CODE);
+  google.script.run
+    .withSuccessHandler(function(json) { handleAccess(JSON.parse(json), false); })
+    .withFailureHandler(function() { el('loading').textContent = 'Could not load. Check your connection and refresh.'; })
+    .rushBoardAccess(code);
+}
+
+function submitCode() {
+  var v = el('code-in').value.trim();
+  if (!v) { setErr('gate-err', 'Enter the access code.'); return; }
+  code = v;
+  var btn = el('code-btn'); btn.disabled = true; setErr('gate-err', '');
+  google.script.run
+    .withSuccessHandler(function(json) { btn.disabled = false; handleAccess(JSON.parse(json), true); })
+    .withFailureHandler(function() { btn.disabled = false; setErr('gate-err', 'Could not reach the server. Try again.'); })
+    .rushBoardAccess(code);
+}
+
+function handleAccess(r, fromGate) {
+  show('loading', false);
+  if (!r.success) { show('gate', false); show('loading', true); el('loading').textContent = r.error || 'Could not load the board.'; return; }
+  if (!r.authorized) {
+    lsSet(LS_CODE, '');
+    show('board', false); show('gate', true);
+    if (fromGate) setErr('gate-err', 'Wrong access code.');
+    return;
+  }
+  lsSet(LS_CODE, code);
+  show('gate', false);
+  roster = r.roster || [];
+  initWho();
+  show('board', true);
+  boardReady = true;
+  token = '';
+  poll(true);
+  schedulePoll();
+}
+
+// ---- identity ----
+function initWho() {
+  whoPicker = NamePicker.create(el('who-picker'), {
+    placeholder: 'Type to search your name...',
+    onChange: function(id, name) {
+      if (!id) return;
+      whoKey = id; whoName = name;
+      lsSet(LS_WHO, id);
+      renderWho();
+      render();
+    }
+  });
+  whoPicker.setItems(roster.map(function(m) { return { id: m.key, name: m.name }; }));
+  var saved = lsGet(LS_WHO);
+  var m = roster.filter(function(x) { return x.key === saved; })[0];
+  if (m) { whoKey = m.key; whoName = m.name; } else { whoKey = ''; whoName = ''; lsSet(LS_WHO, ''); }
+  renderWho();
+}
+function renderWho() {
+  show('who-set', !!whoKey);
+  show('who-pick', !whoKey);
+  el('who-name').textContent = whoName;
+}
+function changeWho() {
+  whoKey = ''; whoName = ''; lsSet(LS_WHO, '');
+  if (whoPicker) whoPicker.clear();
+  renderWho();
+  render();
+}
+
+// ---- polling ----
+function schedulePoll() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(function() { if (!document.hidden) poll(false); }, POLL_MS);
+}
+document.addEventListener('visibilitychange', function() { if (!document.hidden && boardReady) poll(false); });
+
+function poll(force) {
+  if (polling) return;
+  polling = true;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      polling = false;
+      var r = JSON.parse(json);
+      if (!r.success) {
+        if (/access code/i.test(r.error || '')) { lsSet(LS_CODE, ''); boardReady = false; show('board', false); show('gate', true); setErr('gate-err', 'The access code changed. Enter the new one.'); return; }
+        setStatus(false); return;
+      }
+      lastOk = Date.now();
+      setStatus(true);
+      if (!r.changed) return;
+      token = r.token; today = r.today; pnms = r.pnms || [];
+      render();
+    })
+    .withFailureHandler(function() { polling = false; setStatus(false); })
+    .rushPoll(code, force ? '' : token);
+}
+function setStatus(ok) {
+  el('status').innerHTML = '<span class="live' + (ok ? '' : ' off') + '"></span>' + (ok ? 'Live. Updates automatically.' : 'Connection problem, retrying...');
+}
+
+// ---- list ----
+function lastArrival(p) {
+  var v = p.visits[p.visits.length - 1];
+  return v ? v.at : '';
+}
+function visibleList() {
+  var q = norm(query).trim();
+  var list = pnms.filter(function(p) {
+    if (filter === 'today' && !p.visits.some(function(v) { return v.date === today; })) return false;
+    if (q && norm(p.name + ' ' + (p.instagram || '')).indexOf(q) === -1) return false;
+    return true;
+  });
+  list.sort(function(a, b) { var x = lastArrival(a), y = lastArrival(b); return x < y ? 1 : x > y ? -1 : 0; });
+  return list;
+}
+
+function cardHtml(p) {
+  var isOpen = openId === p.id;
+  var todayVisit = p.visits.filter(function(v) { return v.date === today; })[0];
+  var first = p.visits.length <= 1;
+  var chip = '';
+  if (todayVisit && first) chip = '<span class="chip new">NEW</span>';
+  else if (todayVisit) chip = '<span class="chip back">BACK</span>';
+  var meta = [];
+  if (p.year) meta.push(esc(p.year));
+  if (todayVisit) meta.push('in at ' + fmtTime(todayVisit.at));
+  else if (p.visits.length) meta.push('last seen ' + fmtDay(p.visits[p.visits.length - 1].date));
+  var h = '<div class="pnm' + (isOpen ? ' open' : '') + '" data-id="' + esc(p.id) + '">';
+  h += '<div class="pnm-head" onclick="toggleCard(\'' + esc(p.id) + '\')">';
+  h += '<div class="pnm-main"><div class="pnm-name">' + esc(p.name) + chip + '</div>';
+  h += '<div class="pnm-meta">' + meta.map(function(m) { return '<span>' + m + '</span>'; }).join('') + '</div></div>';
+  h += '<div class="pnm-cc"><b>' + p.comments.length + '</b>' + (p.comments.length === 1 ? 'note' : 'notes') + '</div>';
+  h += '</div>';
+  if (isOpen) {
+    h += '<div class="pnm-body">';
+    var info = [];
+    var ig = igHtml(p.instagram);
+    if (ig) info.push('Social: ' + ig);
+    if (p.visits.length) info.push('Visits (' + p.visits.length + '): ' + p.visits.map(function(v) { return esc(fmtDay(v.date)); }).join(', '));
+    if (info.length) h += '<div class="pnm-info">' + info.join('<br>') + '</div>';
+    if (!p.comments.length) h += '<div class="cm-none">No comments yet. Be the first.</div>';
+    p.comments.forEach(function(c) {
+      h += '<div class="cm"><div class="cm-top"><b>' + esc(c.author) + '</b> · ' + esc(fmtStamp(c.at)) + '</div><div class="cm-text">' + esc(c.text) + '</div></div>';
+    });
+    h += '<div class="post">';
+    if (!whoKey) {
+      h += '<div class="post-hint">Pick your name at the top to leave a comment.</div>';
+    } else {
+      h += '<textarea id="draft-' + esc(p.id) + '" maxlength="1000" placeholder="What did you think of ' + esc(p.name.split(' ')[0]) + '?" data-draft="' + esc(p.id) + '">' + esc(drafts[p.id] || '') + '</textarea>';
+      h += '<div class="post-row"><span class="post-hint">Read aloud in ' + esc(LABELS.label_chapter_meeting || 'chapter') + '</span>';
+      h += '<button class="btn" id="post-' + esc(p.id) + '"' + (posting[p.id] ? ' disabled' : '') + ' onclick="postComment(\'' + esc(p.id) + '\')">Post</button></div>';
+    }
+    h += '</div></div>';
+  }
+  return h + '</div>';
+}
+
+function render() {
+  if (!boardReady) return;
+  var ae = document.activeElement, keep = null;
+  if (ae && ae.getAttribute && ae.getAttribute('data-draft')) keep = { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd };
+  var list = visibleList();
+  var host = el('list');
+  if (!list.length) {
+    var msg = query ? 'Nobody matches that search.' : (filter === 'today'
+      ? 'Nobody has signed in today yet. New ' + esc(LABELS.label_pnm || 'PNM') + 's will show up here as they arrive.'
+      : 'No ' + esc(LABELS.label_pnm || 'PNM') + 's on the list yet.');
+    host.innerHTML = '<div class="empty">' + msg + '</div>';
+  } else {
+    host.innerHTML = list.map(cardHtml).join('');
+  }
+  el('count').textContent = list.length + (list.length === 1 ? ' person' : ' people') + (filter === 'today' ? ' today' : ' on the list');
+  if (keep) {
+    var t = document.getElementById(keep.id);
+    if (t) { t.focus(); try { t.setSelectionRange(keep.s, keep.e); } catch (e) {} }
+  }
+}
+
+document.addEventListener('input', function(ev) {
+  var id = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-draft');
+  if (id) drafts[id] = ev.target.value;
+});
+
+function toggleCard(id) { openId = openId === id ? '' : id; render(); }
+function setFilter(f) {
+  filter = f;
+  el('f-today').className = f === 'today' ? 'on' : '';
+  el('f-all').className = f === 'all' ? 'on' : '';
+  render();
+}
+function onSearch() { query = el('search').value; render(); }
+
+function postComment(id) {
+  var text = (drafts[id] || '').trim();
+  if (!text) { if (window.alert) alert('Write a comment first.'); return; }
+  if (!whoKey || posting[id]) return;
+  posting[id] = true;
+  var btn = el('post-' + id);
+  if (btn) btn.disabled = true;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      posting[id] = false;
+      var r = JSON.parse(json);
+      if (!r.success) { alert(r.error || 'Could not post the comment.'); render(); return; }
+      drafts[id] = '';
+      polling = false;
+      poll(true);
+    })
+    .withFailureHandler(function() { posting[id] = false; alert('Could not reach the server. Your comment is still in the box, try again.'); render(); })
+    .rushAddComment(code, whoKey, id, text);
+}
+
+window.addEventListener('load', start);
+</script>
+</body>
+</html>

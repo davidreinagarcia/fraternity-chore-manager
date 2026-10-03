@@ -29,6 +29,10 @@ Devuelve un objeto con tres secciones:
 
 Se editan en Admin → Philanthropy (no en el Config Editor): `philanthropy_min_hours`, `philanthropy_shortfall_action` (`none|probation|suspension`), `philanthropy_carry_over` (`true|false`), `philanthropy_semester_start` (epoch ms, lo fija el cierre de semestre) y `philanthropy_carry` (JSON clave de miembro a horas pendientes). Ver [philanthropy.md](./philanthropy.md).
 
+### Claves de Rush
+
+Labels `label_rush`, `label_rush_chair`, `label_pnm`, `label_pnm_full`, `label_bid`, `label_flush`, `label_flushed`, `label_chapter_meeting` y flag `module_rush`; se editan en Setup/Config. Las claves de funcionamiento (`rush_open`, `rush_code`, `rush_year_options`, `rush_welcome_*`) se editan desde Rush → Settings. Ver [rush.md](./rush.md).
+
 ### Template vars en HTML
 
 `doGet()` inyecta vars en tiempo de render:
@@ -47,4 +51,5 @@ Activar/desactivar features grandes via `module_*` keys. El dashboard oculta sec
 ## Relacionado con
 
 - [am-system.md](./am-system.md) — `signature_points`, vocab labels de AMs.
+- [rush.md](./rush.md) — labels y flag del módulo Rush.
 - [events.md](./events.md) — `events_calendar_id`, `events_twoway`, `events_calendar_last`.

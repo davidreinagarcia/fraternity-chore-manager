@@ -194,6 +194,45 @@
   .stat-card .value { font-size: 2rem; font-weight: 800; color: var(--primary); }
   .stat-card .sub   { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
 
+  /* ---- Rush ---- */
+  .rush-bar { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:14px 18px; border-bottom:1px solid var(--border); }
+  .rush-link { display:flex; align-items:center; gap:10px; padding:10px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .rush-link:last-child { border-bottom:none; }
+  .rush-link .rl-main { flex:1; min-width:200px; }
+  .rush-link .rl-t { font-weight:700; font-size:0.88rem; }
+  .rush-link .rl-u { font-size:0.7rem; color:#94a3b8; word-break:break-all; font-family:monospace; margin-top:2px; }
+  .rush-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+  .rush-toolbar .inline-input { min-width:160px; }
+  .rush-sub { font-size:0.74rem; color:var(--muted); line-height:1.5; }
+  .rush-sub a { color:var(--primary); text-decoration:none; font-weight:600; }
+  .rush-mx { border-collapse:separate; border-spacing:0; font-size:0.82rem; }
+  .rush-mx th, .rush-mx td { padding:6px 8px; border-bottom:1px solid var(--border); text-align:center; white-space:nowrap; }
+  .rush-mx th { font-size:0.74rem; color:var(--muted); font-weight:700; }
+  .rush-mx th:first-child, .rush-mx td:first-child { position:sticky; left:0; background:#fff; text-align:left; z-index:1; min-width:160px; font-weight:600; }
+  .rush-cell { width:32px; height:26px; border:1px solid var(--border); border-radius:4px; background:#fff; cursor:pointer; color:transparent; font-size:0.85rem; }
+  .rush-cell.on { background:var(--green-bg); border-color:#86efac; color:var(--green); font-weight:800; }
+  .rush-cell:hover { border-color:var(--primary); }
+  .rush-chip { display:inline-flex; align-items:center; gap:6px; background:#f1f5f9; border-radius:999px; padding:3px 6px 3px 10px; font-size:0.78rem; margin:0 6px 6px 0; }
+  .rush-chip button { border:none; background:none; cursor:pointer; color:var(--muted); font-size:0.8rem; }
+  .rush-cm { border:1px solid var(--border); border-radius:8px; padding:8px 12px; margin-bottom:8px; }
+  .rush-cm-top { font-size:0.74rem; color:var(--muted); display:flex; justify-content:space-between; gap:8px; margin-bottom:2px; }
+  .rush-cm-text { font-size:0.9rem; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .rush-h { font-size:0.74rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.4px; margin:14px 0 8px; }
+  .rush-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+  .rush-form-grid label { display:block; font-size:0.72rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:4px; }
+  .rush-form-grid .full { grid-column:1 / -1; }
+  .rush-ch { display:none; position:fixed; inset:0; z-index:700; background:var(--primary); color:#fff; flex-direction:column; }
+  .rush-ch.open { display:flex; }
+  .rush-ch-top { display:flex; align-items:center; justify-content:space-between; padding:14px 22px; gap:12px; flex-wrap:wrap; }
+  .rush-ch-main { flex:1; overflow-y:auto; padding:10px 6vw 30px; max-width:980px; width:100%; margin:0 auto; }
+  .rush-ch-name { font-size:clamp(2rem,6vw,3.6rem); font-weight:800; line-height:1.1; overflow-wrap:anywhere; }
+  .rush-ch-meta { opacity:0.8; margin:8px 0 22px; font-size:1.05rem; }
+  .rush-ch-cm { background:rgba(255,255,255,0.14); border-radius:12px; padding:14px 18px; margin-bottom:12px; font-size:clamp(1.1rem,2.4vw,1.6rem); line-height:1.4; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .rush-ch-cm small { display:block; font-size:0.8rem; opacity:0.7; margin-top:6px; }
+  .rush-ch-nav { display:flex; gap:12px; padding:14px 22px; }
+  .rush-ch-nav button { flex:1; padding:16px; border:none; border-radius:10px; font-size:1.1rem; font-weight:800; cursor:pointer; background:#fff; color:var(--primary); }
+  @media (max-width: 600px) { .rush-form-grid { grid-template-columns:1fr; } }
+
   /* ---- Admin panel ---- */
   .admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 16px; }
   .admin-card { background: var(--card); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
@@ -495,6 +534,7 @@
       <button class="ni on" data-s="members" onclick="showSection('members',this)"><span class="ni-ic">👥</span><span class="ni-lbl">Members</span></button>
       <button class="ni" data-s="chores" onclick="showSection('chores',this)"><span class="ni-ic">📋</span><span class="ni-lbl">Chores</span></button>
       <button class="ni" data-s="events" onclick="showSection('events',this)"><span class="ni-ic">📅</span><span class="ni-lbl">Events</span></button>
+      <button class="ni mod-rush" data-s="rush" onclick="showSection('rush',this)"><span class="ni-ic">🚪</span><span class="ni-lbl"><?= cfg.labels.label_rush ?></span></button>
     </div>
     <div class="ng"><div class="nl">FINANCE</div>
       <button class="ni" data-s="finance" onclick="showSection('finance',this)"><span class="ni-ic">💰</span><span class="ni-lbl">Finance</span></button>
@@ -854,6 +894,76 @@
             <tbody id="ph-tbody"></tbody>
           </table></div>
         </div>
+      </div>
+    </div></div>
+    <!-- RUSH SECTION -->
+    <div class="sec" id="sec-rush"><div class="container">
+      <div id="rush-loading" style="text-align:center;color:var(--muted);padding:40px 0">Loading...</div>
+      <div id="rush-body" style="display:none">
+        <div class="card" id="rush-top"></div>
+        <div class="stats-row" id="rush-stats"></div>
+        <div class="sub-nav" id="rush-tabs">
+          <button class="sub-btn active" data-rt="pnms" onclick="rushShowTab('pnms')"></button>
+          <button class="sub-btn" data-rt="visits" onclick="rushShowTab('visits')">Visits by day</button>
+          <button class="sub-btn" data-rt="bids" onclick="rushShowTab('bids')"></button>
+          <button class="sub-btn" data-rt="accepted" onclick="rushShowTab('accepted')"></button>
+          <button class="sub-btn" data-rt="closed" onclick="rushShowTab('closed')"></button>
+        </div>
+
+        <div class="sub-pane active" id="rush-pane-pnms"><div class="card"><div style="padding:14px 18px">
+          <div class="rush-toolbar">
+            <input type="search" class="inline-input" id="rush-q" placeholder="Search name, phone, social..." oninput="rushQuery=this.value;renderRushPnms()">
+            <div style="display:flex;gap:4px" id="rush-filters">
+              <button class="btn-filter active" data-rf="all" onclick="rushSetFilter('all')">All</button>
+              <button class="btn-filter" data-rf="today" onclick="rushSetFilter('today')">Here today</button>
+              <button class="btn-filter" data-rf="returning" onclick="rushSetFilter('returning')">Returning</button>
+            </div>
+            <select class="inline-input" id="rush-sort" onchange="rushSort=this.value;renderRushPnms()">
+              <option value="latest">Latest arrival</option>
+              <option value="name">Name</option>
+              <option value="visits">Most visits</option>
+              <option value="comments">Most comments</option>
+            </select>
+            <span class="tbl-count" id="rush-count"></span>
+            <span style="flex:1"></span>
+            <button class="btn-primary" id="rush-add-btn" style="padding:7px 14px;font-size:0.82rem" onclick="rushOpenPnm('')">+ Add</button>
+          </div>
+          <div style="overflow-x:auto"><table class="data-table" data-plain style="min-width:720px">
+            <thead><tr><th>Name</th><th>Year</th><th>Visits</th><th>Today</th><th>Comments</th><th>Actions</th></tr></thead>
+            <tbody id="rush-pnm-tbody"></tbody>
+          </table></div>
+        </div></div></div>
+
+        <div class="sub-pane" id="rush-pane-visits"><div class="card"><div style="padding:14px 18px">
+          <div class="rush-toolbar">
+            <span class="rush-sub" style="flex:1;min-width:200px">Click a cell to mark or unmark someone for that day. People who check in through the form are marked automatically.</span>
+            <label style="font-size:0.8rem;display:flex;align-items:center;gap:6px"><input type="checkbox" id="rush-mx-all" onchange="rushMxAll=this.checked;renderRushMatrix()"> Include removed</label>
+            <input type="date" class="inline-input" id="rush-mx-day">
+            <button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" id="rush-mx-add" onclick="rushAddDay()">Add day</button>
+          </div>
+          <div style="overflow-x:auto" id="rush-matrix"></div>
+        </div></div></div>
+
+        <div class="sub-pane" id="rush-pane-bids"><div class="card"><div style="padding:14px 18px">
+          <div style="overflow-x:auto"><table class="data-table" data-plain style="min-width:640px">
+            <thead><tr><th>Name</th><th>Year</th><th>Held by</th><th>Given</th><th>Actions</th></tr></thead>
+            <tbody id="rush-bids-tbody"></tbody>
+          </table></div>
+        </div></div></div>
+
+        <div class="sub-pane" id="rush-pane-accepted"><div class="card"><div style="padding:14px 18px">
+          <div style="overflow-x:auto"><table class="data-table" data-plain style="min-width:720px">
+            <thead><tr><th>Name</th><th>Year</th><th>Contact</th><th>Accepted</th><th>Welcome message</th><th>Actions</th></tr></thead>
+            <tbody id="rush-acc-tbody"></tbody>
+          </table></div>
+        </div></div></div>
+
+        <div class="sub-pane" id="rush-pane-closed"><div class="card"><div style="padding:14px 18px">
+          <div style="overflow-x:auto"><table class="data-table" data-plain style="min-width:640px">
+            <thead><tr><th>Name</th><th>Status</th><th>Year</th><th>Visits</th><th>Actions</th></tr></thead>
+            <tbody id="rush-closed-tbody"></tbody>
+          </table></div>
+        </div></div></div>
       </div>
     </div></div>
     <!-- FORMS SECTION -->
@@ -1439,6 +1549,107 @@
       <button class="btn-primary" onclick="downloadQr()">Download PNG</button>
     </div>
   </div>
+</div>
+
+<!-- Rush: person modal (add / edit / detail) -->
+<div class="modal-overlay" id="rush-pnm-modal">
+  <div class="modal" style="width:700px;max-height:92vh;overflow-y:auto">
+    <h3 id="rush-pnm-title">Person</h3>
+    <div class="rush-form-grid">
+      <div class="full"><label for="rp-name">Full name</label><input type="text" class="inline-input" id="rp-name" maxlength="80" style="width:100%"></div>
+      <div><label for="rp-year">Year</label><select class="inline-input" id="rp-year" style="width:100%"></select></div>
+      <div><label for="rp-phone">Phone</label><input type="text" class="inline-input" id="rp-phone" maxlength="30" style="width:100%"></div>
+      <div><label for="rp-ig">Instagram / social</label><input type="text" class="inline-input" id="rp-ig" maxlength="100" style="width:100%"></div>
+      <div><label for="rp-email">Email</label><input type="text" class="inline-input" id="rp-email" maxlength="120" style="width:100%"></div>
+      <div class="full" id="rp-today-wrap"><label style="text-transform:none;font-size:0.85rem;color:var(--text);font-weight:600;display:flex;gap:8px;align-items:center"><input type="checkbox" id="rp-today" checked> Mark as here today</label></div>
+    </div>
+    <div id="rush-pnm-dyn"></div>
+    <div class="modal-btns" style="margin-top:14px;align-items:center">
+      <button class="btn-danger" id="rp-delete" style="margin-right:auto;background:#fff;color:var(--red);border:1px solid var(--red)" onclick="rushDeletePerson()">Delete</button>
+      <button class="btn-outline" onclick="rushClosePnm()">Close</button>
+      <button class="btn-primary" id="rp-save" onclick="rushSavePnm()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rush: bid holder modal -->
+<div class="modal-overlay" id="rush-bid-modal">
+  <div class="modal" style="width:420px">
+    <h3 id="rush-bid-title">Bid</h3>
+    <p style="font-size:0.84rem;color:var(--muted);margin-bottom:10px" id="rush-bid-sub">Who is holding this bid? Pick a name or type one. You can leave it blank.</p>
+    <input type="text" class="inline-input" id="rush-bid-owner" list="rush-bid-names" maxlength="80" style="width:100%;margin-bottom:16px" autocomplete="off">
+    <datalist id="rush-bid-names"></datalist>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="rushCloseBid()">Cancel</button>
+      <button class="btn-primary" onclick="rushConfirmBid()" id="rush-bid-ok">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rush: welcome message modal -->
+<div class="modal-overlay" id="rush-welcome-modal">
+  <div class="modal" style="width:640px;max-height:92vh;overflow-y:auto">
+    <h3 id="rush-w-title">Welcome message</h3>
+    <div id="rush-w-note" style="font-size:0.82rem;margin-bottom:10px"></div>
+    <label class="rush-sub" for="rush-w-subject" style="display:block;font-weight:700;margin-bottom:4px">SUBJECT</label>
+    <input type="text" class="inline-input" id="rush-w-subject" maxlength="150" style="width:100%;margin-bottom:10px">
+    <label class="rush-sub" for="rush-w-body" style="display:block;font-weight:700;margin-bottom:4px">MESSAGE</label>
+    <textarea class="inline-input" id="rush-w-body" style="width:100%;min-height:220px;margin-bottom:14px;resize:vertical"></textarea>
+    <div class="modal-btns" style="flex-wrap:wrap">
+      <button class="btn-outline" onclick="rushCloseWelcome()">Close</button>
+      <button class="btn-outline" onclick="rushCopyWelcome()">Copy message</button>
+      <button class="btn-outline" onclick="rushMarkWelcomed()">Mark as sent</button>
+      <button class="btn-primary" id="rush-w-send" onclick="rushSendWelcome()">Send email</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rush: settings modal -->
+<div class="modal-overlay" id="rush-settings-modal">
+  <div class="modal" style="width:620px;max-height:92vh;overflow-y:auto">
+    <h3>Settings</h3>
+    <div class="rush-form-grid">
+      <div class="full"><label for="rs-code">Access code for the brothers board (optional)</label>
+        <input type="text" class="inline-input" id="rs-code" maxlength="40" style="width:100%" autocomplete="off">
+        <div class="rush-sub" style="margin-top:4px">Leave blank to let anyone with the link in. Anyone can read names and comments on the board, so use a code if the link might travel.</div></div>
+      <div class="full"><label for="rs-years">Year options on the check-in form</label>
+        <input type="text" class="inline-input" id="rs-years" style="width:100%">
+        <div class="rush-sub" style="margin-top:4px">Comma separated, for example: Freshman, Sophomore, Junior, Senior, Other</div></div>
+      <div class="full"><label for="rs-subject">Welcome email subject</label>
+        <input type="text" class="inline-input" id="rs-subject" maxlength="150" style="width:100%"></div>
+      <div class="full"><label for="rs-body">Welcome email message</label>
+        <textarea class="inline-input" id="rs-body" style="width:100%;min-height:170px;resize:vertical"></textarea>
+        <div class="rush-sub" style="margin-top:4px">Placeholders: {name}, {first_name}, {chapter}, {new_member}, {link}. Leave both blank to use the default text.</div></div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="rushCloseSettings()">Cancel</button>
+      <button class="btn-primary" onclick="rushSaveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rush: QR modal -->
+<div class="modal-overlay" id="rush-qr-modal">
+  <div class="modal" style="width:360px">
+    <h3 style="margin-bottom:4px" id="rush-qr-title">QR Code</h3>
+    <p style="font-size:0.78rem;color:var(--muted);margin-bottom:16px;word-break:break-all" id="rush-qr-sub"></p>
+    <div style="background:white;border:1px solid var(--border);border-radius:4px;padding:12px;display:flex;justify-content:center;margin-bottom:16px"><div id="rush-qr-wrap"></div></div>
+    <div class="modal-btns">
+      <button class="btn-outline" onclick="document.getElementById('rush-qr-modal').classList.remove('open')">Close</button>
+      <button class="btn-primary" onclick="rushDownloadQr()">Download PNG</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rush: chapter reading view -->
+<div class="rush-ch" id="rush-chapter">
+  <div class="rush-ch-top">
+    <div style="font-weight:800" id="rush-ch-pos"></div>
+    <label style="font-size:0.88rem;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="rush-ch-only" checked onchange="rushChBuild(true)"> Only people with comments</label>
+    <button class="btn-outline" style="color:#fff;border-color:#fff;background:transparent" onclick="rushChClose()">Close</button>
+  </div>
+  <div class="rush-ch-main" id="rush-ch-main"></div>
+  <div class="rush-ch-nav"><button onclick="rushChStep(-1)">&larr; Previous</button><button onclick="rushChStep(1)">Next &rarr;</button></div>
 </div>
 
 <!-- Mark Complete Modal -->
@@ -2039,6 +2250,7 @@ var LBL = CHAPTER_CONFIG.labels;
   if (!m.module_meal_plan)  rules.push('.col-meal { display:none!important }');
   if (!m.module_associates) rules.push('.mod-associates { display:none!important }');
   if (!m.module_signatures) rules.push('.mod-signatures { display:none!important }');
+  if (!m.module_rush)       rules.push('.mod-rush { display:none!important }');
   if (!m.module_officer_roles)        rules.push('.mod-officer { display:none!important }');
   if (!m.module_academic_suspension)  rules.push('.mod-acad-susp { display:none!important }');
   if (rules.length) {
@@ -2079,7 +2291,7 @@ function toggleSidebar() {
   tog.textContent = sb.classList.contains('col') ? '▶' : '◀';
 }
 
-var _sectionTitles = {chores:'Chores',members:'Members',events:'Events & Attendance',finance:'Finance',philanthropy:'Philanthropy',forms:'Forms',admin:'Admin'};
+var _sectionTitles = {chores:'Chores',members:'Members',events:'Events & Attendance',rush:(LBL.label_rush || 'Rush'),finance:'Finance',philanthropy:'Philanthropy',forms:'Forms',admin:'Admin'};
 var _lastSection = 'members';
 function showSection(id, btn) {
   document.querySelectorAll('.sec').forEach(function(s) { s.classList.remove('on'); });
@@ -2097,6 +2309,7 @@ function showSection(id, btn) {
   if (id === 'events') loadEvents();
   if (id === 'forms') loadForms();
   if (id === 'philanthropy') loadPhilanthropy();
+  if (id === 'rush') rushOnShow(); else rushStopPoll();
 }
 
 // ---- Dashboard init ----------------------------------------
@@ -2532,7 +2745,8 @@ var CHAPTER_IDENTITY_LABELS = {
 };
 var VOCAB_KEYS = ['label_chore','label_fine','label_am_group','label_new_member','label_am_short','label_active_member','label_brotherhood','label_bid_number','label_am_officer','label_am_points',
                   'label_pledge_class','label_member_id','label_university_email',
-                  'label_suspension','label_probation','label_semester'];
+                  'label_suspension','label_probation','label_semester',
+                  'label_rush','label_rush_chair','label_pnm','label_pnm_full','label_bid','label_flush','label_flushed','label_chapter_meeting'];
 var VOCAB_KEY_LABELS = {
   label_chore:        { label: 'Chore',               help: 'What a task is called. Default: "Chore".' },
   label_fine:         { label: 'Fine',                help: 'What a penalty is called. Default: "Fine".' },
@@ -2549,10 +2763,18 @@ var VOCAB_KEY_LABELS = {
   label_university_email:{ label: 'University Email',    help: 'Org-issued email field label. Default: "University Email".' },
   label_suspension:      { label: 'Suspension',          help: 'Default: "Suspension".' },
   label_probation:    { label: 'Probation',           help: 'Default: "Probation".' },
-  label_semester:     { label: 'Semester Term',       help: 'What a term is called. Default: "Semester".' }
+  label_semester:     { label: 'Semester Term',       help: 'What a term is called. Default: "Semester".' },
+  label_rush:         { label: 'Rush',                help: 'What recruitment is called. Default: "Rush".' },
+  label_rush_chair:   { label: 'Rush Chair',          help: 'Officer in charge of recruitment. Default: "Rush Chair".' },
+  label_pnm:          { label: 'PNM (short)',         help: 'A recruit, short form. Default: "PNM".' },
+  label_pnm_full:     { label: 'PNM (full)',          help: 'A recruit, full name. Default: "Possible New Member".' },
+  label_bid:          { label: 'Bid',                 help: 'The invitation to join. Default: "Bid".' },
+  label_flush:        { label: 'Flush (action)',      help: 'Removing a recruit from the list. Default: "Flush".' },
+  label_flushed:      { label: 'Flushed (state)',     help: 'Past tense of the above. Default: "Flushed".' },
+  label_chapter_meeting: { label: 'Chapter Meeting',  help: 'Weekly meeting where comments are read aloud. Default: "Chapter".' }
 };
 var MODULE_KEYS = ['module_housing','module_meal_plan','module_associates','module_signatures',
-                   'module_university_fields','module_academic_suspension','module_officer_roles'];
+                   'module_university_fields','module_academic_suspension','module_officer_roles','module_rush'];
 var MODULE_KEY_LABELS = {
   module_housing:             { label: 'Housing',             help: 'Room number, living-in-house fields.' },
   module_meal_plan:           { label: 'Meal Plan',           help: 'Meal plan tracking on member profiles.' },
@@ -2560,7 +2782,8 @@ var MODULE_KEY_LABELS = {
   module_signatures:          { label: 'Signatures',          help: 'AMs log activities with brothers for points.' },
   module_university_fields:   { label: 'University Fields',   help: 'University ID, campus card, university username fields.' },
   module_academic_suspension: { label: 'Academic Suspension', help: 'Separate academic suspension flag.' },
-  module_officer_roles:       { label: 'Officer Roles',       help: 'Track officer role on member roster.' }
+  module_officer_roles:       { label: 'Officer Roles',       help: 'Track officer role on member roster.' },
+  module_rush:                { label: 'Rush',                help: 'Recruitment tools: door check-in, brothers board, bids.' }
 };
 var ADVANCED_CONFIG_HELP = {};
 var _adminSectionsLoaded = {};
@@ -2574,7 +2797,9 @@ function initShareLinks() {
     { label: 'My Compliance',      url: base + '?app=member',    desc: 'Member history view' },
     { label: 'Submit Signature',   url: base + '?app=signature', desc: 'AMs log activities with brothers' },
     { label: 'Officer Dashboard',  url: base + '?app=officer',   desc: 'Officers only — keep private' },
-    { label: 'Draft Night Board',  url: base + '?app=draft&mode=display', desc: 'TV display mode' }
+    { label: 'Draft Night Board',  url: base + '?app=draft&mode=display', desc: 'TV display mode' },
+    { label: 'Rush Door Check-in', url: base + '?app=rushdoor',  desc: 'Open on the laptop at the door during rush' },
+    { label: 'Rush Brothers Board', url: base + '?app=rush',     desc: 'Brothers see who walked in and comment' }
   ];
   var html = links.map(function(l) {
     return '<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">' +
@@ -6999,6 +7224,551 @@ function formsManagerOnExpand() {
   }
 }
 
+
+// ---- Rush ----------------------------------------------------
+var RUSH_PLACEHOLDER = '[new member form link goes here]';
+var rushData = null, rushToken = '', rushSem = '', rushTab = 'pnms', rushQuery = '', rushFilter = 'all', rushSort = 'latest';
+var rushBusy = false, rushReload = false, rushTimer = null;
+var rushDetailId = '', rushBidId = '', rushBidMode = '', rushWelcomeId = '', rushWelcomeInfo = null;
+var rushExtraDays = [], rushMxAll = false, rushCh = { i: 0, id: '', list: [] }, rushQrUrl = '';
+
+function rEl(id) { return document.getElementById(id); }
+function rushWord(k, d) { return LBL[k] || d; }
+function rushBy() { return 'Officer'; }
+function rushReadOnly() { return !!rushData && rushData.semester !== rushData.currentSemester; }
+function rushNorm(s) {
+  s = String(s == null ? '' : s).toLowerCase();
+  try { s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (e) {}
+  return s;
+}
+function rushDay(d) {
+  var p = String(d).split('-'), dt = new Date(+p[0], +p[1] - 1, +p[2]);
+  return isNaN(dt) ? d : dt.toLocaleDateString([], { weekday: 'short', month: 'numeric', day: 'numeric' });
+}
+function rushTime(iso) {
+  var d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+function rushStamp(iso) { return iso ? fmWhen(iso) : ''; }
+function rushById(id) { return rushData ? rushData.pnms.filter(function(p) { return p.id === id; })[0] : null; }
+function rushTodayVisit(p) { return p.visits.filter(function(v) { return v.date === rushData.today; })[0]; }
+function rushLast(p) { var v = p.visits[p.visits.length - 1]; return v ? v.at : ''; }
+function rushIg(raw) {
+  if (!raw) return '';
+  var t = String(raw).trim().toLowerCase(), m = t.match(/(?:instagram\.com|instagr\.am)\/([a-z0-9._]+)/);
+  var h = m ? m[1] : t.replace(/^@+/, '').replace(/\s+/g, '');
+  if (/^[a-z0-9._]{1,30}$/.test(h)) return '<a href="https://www.instagram.com/' + h + '/" target="_blank" rel="noopener">@' + esc(h) + '</a>';
+  return esc(raw);
+}
+function rushContact(p) {
+  var bits = [];
+  if (p.phone) bits.push(esc(p.phone));
+  if (p.instagram) bits.push(rushIg(p.instagram));
+  if (p.email) bits.push(esc(p.email));
+  return bits.join(' · ');
+}
+function rushCall(ok) {
+  return google.script.run
+    .withSuccessHandler(function(j) { ok(JSON.parse(j)); })
+    .withFailureHandler(function(e) { rushBusy = false; onError(e); });
+}
+
+// ---- load / poll ----
+function rushOnShow() {
+  loadRush(false);
+  rushStopPoll();
+  rushTimer = setInterval(function() {
+    if (document.hidden || document.body.className !== 'dash') return;
+    if (!rEl('sec-rush').classList.contains('on')) return;
+    loadRush(false);
+  }, 10000);
+}
+function rushStopPoll() { if (rushTimer) { clearInterval(rushTimer); rushTimer = null; } }
+
+function loadRush(force) {
+  if (document.body.className !== 'dash') return;
+  if (rushBusy) { if (force) rushReload = true; return; }
+  rushBusy = true;
+  rushCall(function(r) {
+    rushBusy = false;
+    if (!r.success) {
+      if (!rushData) { rEl('rush-loading').style.display = 'block'; rEl('rush-loading').textContent = 'Error: ' + r.error; }
+      else showToast('Error: ' + r.error);
+    } else if (!r.unchanged) {
+      rushData = r; rushToken = r.token; rushSem = r.semester;
+      rEl('rush-loading').style.display = 'none';
+      rEl('rush-body').style.display = 'block';
+      renderRush();
+    }
+    if (rushReload) { rushReload = false; loadRush(true); }
+  }).rushGetDashboard(correctPin, rushSem, force ? '' : rushToken);
+}
+
+function rushAction(fn, okMsg) {
+  return function(r) {
+    if (!r.success) showToast('Error: ' + r.error);
+    else if (okMsg) showToast(okMsg);
+    loadRush(true);
+    if (fn) fn(r);
+  };
+}
+
+// ---- render ----
+function renderRush() {
+  var d = rushData;
+  var P = rushWord('label_pnm', 'PNM'), B = rushWord('label_bid', 'Bid'), F = rushWord('label_flushed', 'Flushed');
+  var c = { active: 0, bid: 0, accepted: 0, declined: 0, flushed: 0, here: 0, unwelcomed: 0 };
+  d.pnms.forEach(function(p) {
+    c[p.status] = (c[p.status] || 0) + 1;
+    if (rushTodayVisit(p)) c.here++;
+    if (p.status === 'accepted' && !p.welcomeSentAt) c.unwelcomed++;
+  });
+
+  renderRushTop();
+  rEl('rush-stats').innerHTML =
+    rushStat('On the list', c.active, P + 's still in play') +
+    rushStat('Here today', c.here, 'checked in or marked') +
+    rushStat(B + 's out', c.bid, 'waiting for an answer') +
+    rushStat('Accepted', c.accepted, c.unwelcomed ? c.unwelcomed + ' not welcomed yet' : 'all welcomed') +
+    rushStat('Declined / ' + F.toLowerCase(), c.declined + c.flushed, c.declined + ' declined, ' + c.flushed + ' ' + F.toLowerCase());
+  var tabs = { pnms: P + 's (' + c.active + ')', bids: B + 's (' + c.bid + ')', accepted: 'Accepted (' + c.accepted + ')', closed: F + ' / Declined (' + (c.flushed + c.declined) + ')' };
+  Object.keys(tabs).forEach(function(k) { rEl('rush-tabs').querySelector('[data-rt="' + k + '"]').textContent = tabs[k]; });
+  rEl('rush-add-btn').style.display = rushReadOnly() ? 'none' : '';
+  rEl('rush-mx-day').max = d.today;
+  renderRushPnms(); renderRushMatrix(); renderRushBids(); renderRushAccepted(); renderRushClosed();
+  if (rEl('rush-pnm-modal').classList.contains('open') && rushDetailId) renderRushDyn();
+  if (rEl('rush-chapter').classList.contains('open')) rushChBuild(false);
+}
+
+function rushStat(label, value, sub) {
+  return '<div class="stat-card"><div class="label">' + esc(label) + '</div><div class="value">' + value + '</div><div class="sub">' + esc(sub) + '</div></div>';
+}
+
+function rushLinkRow(title, desc, kind) {
+  var url = BASE_URL + (kind === 'door' ? '?app=rushdoor' : '?app=rush');
+  return '<div class="rush-link"><div class="rl-main"><div class="rl-t">' + esc(title) + '</div><div class="rush-sub">' + esc(desc) + '</div><div class="rl-u">' + esc(url) + '</div></div>' +
+    '<button class="qa-btn" onclick="fmCopyLink(\'' + url + '\')">Copy link</button> ' +
+    '<button class="qa-btn" onclick="window.open(\'' + url + '\',\'_blank\')">Open</button> ' +
+    '<button class="qa-btn" onclick="rushShowQr(\'' + kind + '\')">QR</button></div>';
+}
+
+function renderRushTop() {
+  var d = rushData, s = d.settings, R = rushWord('label_rush', 'Rush'), P = rushWord('label_pnm', 'PNM');
+  var sem = '';
+  if (d.semesters.length > 1) {
+    sem = '<select class="inline-input" onchange="rushPickSemester(this.value)" title="' + esc(rushWord('label_semester', 'Semester')) + '">' +
+      d.semesters.map(function(x) { return '<option' + (x === d.semester ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>';
+  }
+  var door = s.open
+    ? '<span class="badge badge-passed">Check-in open</span><span class="rush-sub">' + esc(P) + 's can sign in at the door.</span><button class="qa-btn" onclick="rushSetOpen(false)">Close check-in</button>'
+    : '<span class="badge badge-rejected">Check-in closed</span><span class="rush-sub">The door form is off. Open it when ' + esc(R.toLowerCase()) + ' starts.</span><button class="btn-primary" style="padding:6px 14px;font-size:0.8rem" onclick="rushSetOpen(true)">Open check-in</button>';
+  rEl('rush-top').innerHTML =
+    '<div class="card-header"><h2>🚪 ' + esc(R) + '</h2><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' + sem +
+      '<button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="rushChOpen()">Chapter view</button>' +
+      '<button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="rushOpenSettings()">Settings</button>' +
+      '<button class="btn-outline" style="padding:6px 12px;font-size:0.8rem" onclick="loadRush(true)">Refresh</button></div></div>' +
+    (rushReadOnly() ? '<div class="rush-bar" style="background:var(--yellow-bg)"><span class="rush-sub">You are looking at ' + esc(d.semester) + '. Adding people and editing visits is only possible in ' + esc(d.currentSemester) + '.</span></div>' : '') +
+    '<div class="rush-bar">' + door + '</div>' +
+    rushLinkRow('Door check-in form', 'Keep this open on the laptop at the door, or show the QR so ' + P + 's sign in on their phone.', 'door') +
+    rushLinkRow('Brothers board', 'Everyone in the chapter sees who just walked in and leaves comments.' + (s.code ? ' Access code: ' + s.code : ' No access code set.'), 'board');
+}
+
+// ---- PNMs tab ----
+function rushShowTab(t) {
+  rushTab = t;
+  document.querySelectorAll('#rush-tabs .sub-btn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-rt') === t); });
+  ['pnms', 'visits', 'bids', 'accepted', 'closed'].forEach(function(k) { rEl('rush-pane-' + k).classList.toggle('active', k === t); });
+}
+function rushSetFilter(f) {
+  rushFilter = f;
+  document.querySelectorAll('#rush-filters .btn-filter').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-rf') === f); });
+  renderRushPnms();
+}
+function rushPickSemester(v) { rushSem = v; rushData = null; rEl('rush-body').style.display = 'none'; rEl('rush-loading').style.display = 'block'; rEl('rush-loading').textContent = 'Loading...'; loadRush(true); }
+
+function renderRushPnms() {
+  var q = rushNorm(rushQuery).trim(), qd = q.replace(/\D/g, '');
+  var list = rushData.pnms.filter(function(p) {
+    if (p.status !== 'active') return false;
+    if (rushFilter === 'today' && !rushTodayVisit(p)) return false;
+    if (rushFilter === 'returning' && p.visits.length < 2) return false;
+    if (q) {
+      var hay = rushNorm(p.name + ' ' + p.instagram + ' ' + p.email);
+      var ok = hay.indexOf(q) !== -1 || (qd.length >= 3 && String(p.phone).replace(/\D/g, '').indexOf(qd) !== -1);
+      if (!ok) return false;
+    }
+    return true;
+  });
+  list.sort(function(a, b) {
+    if (rushSort === 'name') return a.name.localeCompare(b.name);
+    if (rushSort === 'visits') return b.visits.length - a.visits.length || a.name.localeCompare(b.name);
+    if (rushSort === 'comments') return b.comments.length - a.comments.length || a.name.localeCompare(b.name);
+    var x = rushLast(a), y = rushLast(b);
+    return x < y ? 1 : x > y ? -1 : a.name.localeCompare(b.name);
+  });
+  rEl('rush-count').textContent = list.length + ' shown';
+  var ro = rushReadOnly();
+  rEl('rush-pnm-tbody').innerHTML = list.length ? list.map(function(p) {
+    var tv = rushTodayVisit(p), id = esc(p.id);
+    var here = tv ? '<span class="badge badge-passed">Here · ' + esc(rushTime(tv.at)) + '</span>'
+      : (ro ? '' : '<button class="qa-btn" onclick="rushMarkHere(\'' + id + '\')">Mark here</button>');
+    var last = p.visits.length ? 'last ' + rushDay(p.visits[p.visits.length - 1].date) : 'no visits';
+    return '<tr><td><a href="#" style="font-weight:700;color:var(--primary);text-decoration:none" onclick="rushOpenPnm(\'' + id + '\');return false">' + esc(p.name) + '</a>' +
+        '<div class="rush-sub">' + rushContact(p) + '</div></td>' +
+      '<td style="font-size:0.85rem">' + esc(p.year || '') + '</td>' +
+      '<td style="font-size:0.85rem">' + p.visits.length + (p.visits.length === 1 ? ' day' : ' days') + '<div class="rush-sub">' + esc(last) + '</div></td>' +
+      '<td>' + here + '</td>' +
+      '<td style="font-size:0.85rem">' + p.comments.length + '</td>' +
+      '<td style="white-space:nowrap"><button class="qa-btn" onclick="rushOpenPnm(\'' + id + '\')">Open</button> ' +
+        '<button class="action-btn btn-verify" onclick="rushStartBid(\'' + id + '\')">' + esc(rushWord('label_bid', 'Bid')) + '</button> ' +
+        '<button class="action-btn btn-fail" onclick="rushDoAct(\'' + id + '\',\'flush\')">' + esc(rushWord('label_flush', 'Flush')) + '</button></td></tr>';
+  }).join('') : '<tr><td colspan="6" class="empty-state">' + (rushData.pnms.some(function(p) { return p.status === 'active'; }) ? 'Nobody matches this filter.' : 'Nobody on the list yet. Open check-in or add someone by hand.') + '</td></tr>';
+}
+
+function rushMarkHere(id) {
+  fmRun(rushAction(null, 'Marked as here today.')).rushSetVisit(correctPin, id, rushData.today, true, rushBy());
+}
+
+// ---- Visits matrix ----
+function rushDays() {
+  var set = {};
+  rushData.pnms.forEach(function(p) { p.visits.forEach(function(v) { set[v.date] = true; }); });
+  rushExtraDays.forEach(function(x) { set[x] = true; });
+  if (!rushReadOnly()) set[rushData.today] = true;
+  return Object.keys(set).sort();
+}
+function rushAddDay() {
+  var v = rEl('rush-mx-day').value;
+  if (!v) { showToast('Pick a day first.'); return; }
+  if (v > rushData.today) { showToast('That day is in the future.'); return; }
+  if (rushExtraDays.indexOf(v) === -1) rushExtraDays.push(v);
+  renderRushMatrix();
+}
+function renderRushMatrix() {
+  var days = rushDays(), ro = rushReadOnly();
+  var rows = rushData.pnms.filter(function(p) { return rushMxAll || (p.status !== 'flushed' && p.status !== 'declined'); })
+    .sort(function(a, b) { return a.name.localeCompare(b.name); });
+  if (!rows.length) { rEl('rush-matrix').innerHTML = '<div class="empty-state">No people yet.</div>'; return; }
+  var totals = days.map(function(d) { return rows.filter(function(p) { return p.visits.some(function(v) { return v.date === d; }); }).length; });
+  var h = '<table class="rush-mx"><thead><tr><th>' + rows.length + ' people</th>' +
+    days.map(function(d, i) { return '<th>' + esc(rushDay(d)) + '<div style="font-weight:600;color:var(--text)">' + totals[i] + ' here</div></th>'; }).join('') +
+    '<th>Days</th></tr></thead><tbody>';
+  rows.forEach(function(p) {
+    var id = esc(p.id), have = {};
+    p.visits.forEach(function(v) { have[v.date] = true; });
+    var st = p.status === 'active' ? '' : ' <span class="badge badge-pending" style="font-size:0.65rem">' + esc(p.status) + '</span>';
+    h += '<tr><td>' + esc(p.name) + st + '</td>' + days.map(function(d) {
+      var on = !!have[d];
+      return '<td><button class="rush-cell' + (on ? ' on' : '') + '"' + (ro ? ' disabled' : '') + ' onclick="rushToggleVisit(\'' + id + '\',\'' + d + '\',' + (on ? 'false' : 'true') + ')">✓</button></td>';
+    }).join('') + '<td>' + p.visits.length + '</td></tr>';
+  });
+  rEl('rush-matrix').innerHTML = h + '</tbody></table>';
+}
+function rushToggleVisit(id, date, present) {
+  var p = rushById(id);
+  if (p) {
+    if (present) p.visits.push({ id: '', date: date, at: new Date().toISOString(), source: 'manual', by: rushBy() });
+    else p.visits = p.visits.filter(function(v) { return v.date !== date; });
+    renderRushMatrix();
+  }
+  fmRun(rushAction(null, '')).rushSetVisit(correctPin, id, date, present, rushBy());
+}
+
+// ---- Bids / accepted / closed ----
+function renderRushBids() {
+  var list = rushData.pnms.filter(function(p) { return p.status === 'bid'; }).sort(function(a, b) { return a.bidAt < b.bidAt ? 1 : -1; });
+  rEl('rush-bids-tbody').innerHTML = list.length ? list.map(function(p) {
+    var id = esc(p.id);
+    return '<tr><td><a href="#" style="font-weight:700;color:var(--primary);text-decoration:none" onclick="rushOpenPnm(\'' + id + '\');return false">' + esc(p.name) + '</a><div class="rush-sub">' + rushContact(p) + '</div></td>' +
+      '<td style="font-size:0.85rem">' + esc(p.year || '') + '</td>' +
+      '<td style="font-size:0.85rem">' + (p.bidOwner ? esc(p.bidOwner) : '<span class="rush-sub">Nobody yet</span>') + ' <button class="qa-btn" onclick="rushChangeHolder(\'' + id + '\')">' + (p.bidOwner ? 'Change' : 'Assign') + '</button></td>' +
+      '<td style="font-size:0.82rem">' + esc(rushStamp(p.bidAt)) + '</td>' +
+      '<td style="white-space:nowrap"><button class="action-btn btn-verify" onclick="rushDoAct(\'' + id + '\',\'accept\')">Accepted</button> ' +
+        '<button class="action-btn btn-fail" onclick="rushDoAct(\'' + id + '\',\'decline\')">Declined</button> ' +
+        '<button class="qa-btn" onclick="rushDoAct(\'' + id + '\',\'take_back\')">Take back</button></td></tr>';
+  }).join('') : '<tr><td colspan="5" class="empty-state">No ' + esc(rushWord('label_bid', 'Bid').toLowerCase()) + 's out. Give one from the ' + esc(rushWord('label_pnm', 'PNM')) + ' list.</td></tr>';
+}
+
+function renderRushAccepted() {
+  var list = rushData.pnms.filter(function(p) { return p.status === 'accepted'; }).sort(function(a, b) { return a.responseAt < b.responseAt ? 1 : -1; });
+  rEl('rush-acc-tbody').innerHTML = list.length ? list.map(function(p) {
+    var id = esc(p.id);
+    var w = p.welcomeSentAt ? '<span class="badge badge-passed">Sent</span><div class="rush-sub">' + esc(rushStamp(p.welcomeSentAt)) + '</div>' : '<span class="badge badge-flagged">Not sent</span>';
+    return '<tr><td style="font-weight:700">' + esc(p.name) + '</td>' +
+      '<td style="font-size:0.85rem">' + esc(p.year || '') + '</td>' +
+      '<td class="rush-sub">' + (rushContact(p) || 'No contact info') + '</td>' +
+      '<td style="font-size:0.82rem">' + esc(rushStamp(p.responseAt)) + '</td>' +
+      '<td>' + w + '</td>' +
+      '<td style="white-space:nowrap"><button class="btn-primary" style="padding:5px 12px;font-size:0.78rem" onclick="rushOpenWelcome(\'' + id + '\')">' + (p.welcomeSentAt ? 'Resend / view' : 'Send welcome') + '</button> ' +
+        '<button class="qa-btn" onclick="rushOpenPnm(\'' + id + '\')">Open</button> ' +
+        '<button class="qa-btn" onclick="rushDoAct(\'' + id + '\',\'reopen\')">Reopen ' + esc(rushWord('label_bid', 'bid').toLowerCase()) + '</button></td></tr>';
+  }).join('') : '<tr><td colspan="6" class="empty-state">Nobody has accepted yet.</td></tr>';
+}
+
+function renderRushClosed() {
+  var list = rushData.pnms.filter(function(p) { return p.status === 'flushed' || p.status === 'declined'; }).sort(function(a, b) { return a.name.localeCompare(b.name); });
+  rEl('rush-closed-tbody').innerHTML = list.length ? list.map(function(p) {
+    var id = esc(p.id), declined = p.status === 'declined';
+    return '<tr><td><a href="#" style="font-weight:700;color:var(--primary);text-decoration:none" onclick="rushOpenPnm(\'' + id + '\');return false">' + esc(p.name) + '</a></td>' +
+      '<td><span class="badge ' + (declined ? 'badge-flagged' : 'badge-rejected') + '">' + esc(declined ? 'Declined' : rushWord('label_flushed', 'Flushed')) + '</span></td>' +
+      '<td style="font-size:0.85rem">' + esc(p.year || '') + '</td>' +
+      '<td style="font-size:0.85rem">' + p.visits.length + '</td>' +
+      '<td style="white-space:nowrap">' + (declined ? '<button class="qa-btn" onclick="rushDoAct(\'' + id + '\',\'reopen\')">Reopen ' + esc(rushWord('label_bid', 'bid').toLowerCase()) + '</button> ' : '') +
+        '<button class="qa-btn" onclick="rushDoAct(\'' + id + '\',\'restore\')">Back to the list</button></td></tr>';
+  }).join('') : '<tr><td colspan="5" class="empty-state">Nobody here.</td></tr>';
+}
+
+// ---- actions ----
+var RUSH_ACT_MSG = { flush: 'Removed from the list.', restore: 'Back on the list.', bid_owner: 'Updated.', take_back: 'Back on the list.', accept: 'Marked as accepted.', decline: 'Marked as declined.', reopen: 'Reopened.' };
+function rushDoAct(id, action, extra) {
+  fmRun(rushAction(null, RUSH_ACT_MSG[action] || 'Done.')).rushAct(correctPin, id, action, JSON.stringify(extra || {}), rushBy());
+}
+
+function rushStartBid(id) { rushOpenBid(id, 'give'); }
+function rushChangeHolder(id) { rushOpenBid(id, 'owner'); }
+function rushOpenBid(id, mode) {
+  var p = rushById(id); if (!p) return;
+  rushBidId = id; rushBidMode = mode;
+  var B = rushWord('label_bid', 'Bid');
+  rEl('rush-bid-title').textContent = mode === 'give' ? 'Give a ' + B.toLowerCase() + ' to ' + p.name : 'Who holds the ' + B.toLowerCase() + ' for ' + p.name + '?';
+  rEl('rush-bid-ok').textContent = mode === 'give' ? 'Give ' + B.toLowerCase() : 'Save';
+  rEl('rush-bid-owner').value = mode === 'owner' ? p.bidOwner : '';
+  rEl('rush-bid-names').innerHTML = rushData.roster.map(function(m) { return '<option value="' + esc(m.name) + '">'; }).join('');
+  rEl('rush-bid-modal').classList.add('open');
+  setTimeout(function() { rEl('rush-bid-owner').focus(); }, 50);
+}
+function rushCloseBid() { rEl('rush-bid-modal').classList.remove('open'); }
+function rushConfirmBid() {
+  var owner = rEl('rush-bid-owner').value.trim(), id = rushBidId, mode = rushBidMode;
+  rushCloseBid();
+  if (mode === 'give') rushDoAct(id, 'bid', { owner: owner });
+  else rushDoAct(id, 'bid_owner', { owner: owner });
+}
+
+// ---- add / edit person ----
+function rushFillYears(cur) {
+  var opts = rushData.settings.yearOptions.slice();
+  if (cur && opts.indexOf(cur) === -1) opts.push(cur);
+  rEl('rp-year').innerHTML = '<option value="">—</option>' + opts.map(function(y) { return '<option' + (y === cur ? ' selected' : '') + '>' + esc(y) + '</option>'; }).join('');
+}
+function rushOpenPnm(id) {
+  rushDetailId = id;
+  var p = id ? rushById(id) : null;
+  if (id && !p) return;
+  rEl('rush-pnm-title').textContent = p ? p.name : 'Add ' + rushWord('label_pnm_full', 'Possible New Member');
+  rEl('rp-name').value = p ? p.name : '';
+  rushFillYears(p ? p.year : '');
+  rEl('rp-phone').value = p ? p.phone : '';
+  rEl('rp-ig').value = p ? p.instagram : '';
+  rEl('rp-email').value = p ? p.email : '';
+  rEl('rp-today-wrap').style.display = p ? 'none' : 'block';
+  rEl('rp-today').checked = true;
+  rEl('rp-delete').style.display = p ? '' : 'none';
+  rEl('rush-pnm-dyn').innerHTML = '';
+  if (p) renderRushDyn();
+  rEl('rush-pnm-modal').classList.add('open');
+  if (!p) setTimeout(function() { rEl('rp-name').focus(); }, 50);
+}
+function rushClosePnm() { rEl('rush-pnm-modal').classList.remove('open'); rushDetailId = ''; }
+
+function rushSavePnm() {
+  var payload = { name: rEl('rp-name').value.trim(), year: rEl('rp-year').value, phone: rEl('rp-phone').value.trim(), instagram: rEl('rp-ig').value.trim(), email: rEl('rp-email').value.trim() };
+  if (payload.name.length < 2) { showToast('Enter the full name.'); return; }
+  if (!rushDetailId) {
+    if (rushReadOnly()) { showToast('You can only add people in ' + rushData.currentSemester + '.'); return; }
+    payload.markToday = rEl('rp-today').checked;
+    fmRun(function(r) {
+      if (!r.success) { showToast('Error: ' + r.error); return; }
+      showToast(r.name + ' added.');
+      rushClosePnm(); loadRush(true);
+    }).rushAddPnm(correctPin, JSON.stringify(payload), rushBy());
+  } else {
+    fmRun(function(r) {
+      if (!r.success) { showToast('Error: ' + r.error); return; }
+      showToast('Saved.');
+      rushClosePnm(); loadRush(true);
+    }).rushUpdatePnm(correctPin, rushDetailId, JSON.stringify(payload), rushBy());
+  }
+}
+
+function rushDeletePerson() {
+  var p = rushById(rushDetailId); if (!p) return;
+  if (!confirm('Delete ' + p.name + ' for good? Their visits and comments are deleted too. To just remove them from the list, use ' + rushWord('label_flush', 'Flush') + ' instead.')) return;
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    showToast('Deleted.');
+    rushClosePnm(); loadRush(true);
+  }).rushDeletePnm(correctPin, p.id, rushBy());
+}
+
+function renderRushDyn() {
+  var host = rEl('rush-pnm-dyn'), p = rushById(rushDetailId);
+  if (!p) { host.innerHTML = '<div class="rush-sub">This person is no longer here.</div>'; return; }
+  var id = esc(p.id), B = rushWord('label_bid', 'Bid'), ro = rushReadOnly();
+  var keepDay = rEl('rush-dyn-day') ? rEl('rush-dyn-day').value : rushData.today;
+  var STATUS = { active: 'On the list', bid: B + ' out', accepted: 'Accepted', declined: 'Declined', flushed: rushWord('label_flushed', 'Flushed') };
+  var info = STATUS[p.status] || p.status;
+  if (p.status === 'bid') info += p.bidOwner ? ' · held by ' + p.bidOwner : ' · nobody assigned';
+  var btns = [];
+  if (p.status === 'active') btns.push('<button class="action-btn btn-verify" onclick="rushStartBid(\'' + id + '\')">' + esc(B) + '</button>', '<button class="action-btn btn-fail" onclick="rushDoAct(\'' + id + '\',\'flush\')">' + esc(rushWord('label_flush', 'Flush')) + '</button>');
+  if (p.status === 'bid') btns.push('<button class="action-btn btn-verify" onclick="rushDoAct(\'' + id + '\',\'accept\')">Accepted</button>', '<button class="action-btn btn-fail" onclick="rushDoAct(\'' + id + '\',\'decline\')">Declined</button>', '<button class="qa-btn" onclick="rushChangeHolder(\'' + id + '\')">Change holder</button>', '<button class="qa-btn" onclick="rushDoAct(\'' + id + '\',\'take_back\')">Take back</button>');
+  if (p.status === 'accepted') btns.push('<button class="btn-primary" style="padding:5px 12px;font-size:0.78rem" onclick="rushOpenWelcome(\'' + id + '\')">Welcome message</button>', '<button class="qa-btn" onclick="rushDoAct(\'' + id + '\',\'reopen\')">Reopen ' + esc(B.toLowerCase()) + '</button>');
+  if (p.status === 'declined') btns.push('<button class="qa-btn" onclick="rushDoAct(\'' + id + '\',\'reopen\')">Reopen ' + esc(B.toLowerCase()) + '</button>');
+  if (p.status === 'declined' || p.status === 'flushed') btns.push('<button class="qa-btn" onclick="rushDoAct(\'' + id + '\',\'restore\')">Back to the list</button>');
+
+  var h = '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="badge badge-pending">' + esc(info) + '</span>' + btns.join(' ') + '</div>';
+  h += '<div class="rush-h">Visits (' + p.visits.length + ')</div>';
+  h += p.visits.length ? p.visits.map(function(v) {
+    return '<span class="rush-chip">' + esc(rushDay(v.date)) + (v.at ? ' · ' + esc(rushTime(v.at)) : '') + ' · ' + (v.source === 'form' ? 'form' : 'manual') +
+      (ro ? '' : ' <button title="Remove this visit" onclick="rushRemoveVisit(\'' + id + '\',\'' + esc(v.date) + '\')">✕</button>') + '</span>';
+  }).join('') : '<div class="rush-sub">No visits yet.</div>';
+  if (!ro) h += '<div style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="date" class="inline-input" id="rush-dyn-day" max="' + esc(rushData.today) + '" value="' + esc(keepDay) + '"><button class="qa-btn" onclick="rushAddVisitDay(\'' + id + '\')">Add visit</button></div>';
+  h += '<div class="rush-h">Comments (' + p.comments.length + ')</div>';
+  h += p.comments.length ? p.comments.map(function(c) {
+    return '<div class="rush-cm"><div class="rush-cm-top"><span><b>' + esc(c.author) + '</b> · ' + esc(rushStamp(c.at)) + '</span><button class="qa-btn" onclick="rushDeleteComment(\'' + esc(c.id) + '\')">Delete</button></div><div class="rush-cm-text">' + esc(c.text) + '</div></div>';
+  }).join('') : '<div class="rush-sub">No comments yet.</div>';
+  host.innerHTML = h;
+}
+function rushRemoveVisit(id, date) { fmRun(rushAction(null, 'Visit removed.')).rushSetVisit(correctPin, id, date, false, rushBy()); }
+function rushAddVisitDay(id) {
+  var d = rEl('rush-dyn-day').value;
+  if (!d) { showToast('Pick a day first.'); return; }
+  fmRun(rushAction(null, 'Visit added.')).rushSetVisit(correctPin, id, d, true, rushBy());
+}
+function rushDeleteComment(cid) {
+  if (!confirm('Delete this comment?')) return;
+  fmRun(rushAction(null, 'Comment deleted.')).rushDeleteComment(correctPin, cid);
+}
+
+// ---- door toggle / settings ----
+function rushSetOpen(open) {
+  fmRun(rushAction(null, open ? 'Check-in is open.' : 'Check-in is closed.')).rushSaveSettings(correctPin, JSON.stringify({ open: open }), rushBy());
+}
+function rushOpenSettings() {
+  var s = rushData.settings;
+  rEl('rs-code').value = s.code || '';
+  rEl('rs-years').value = s.yearOptions.join(', ');
+  rEl('rs-subject').value = s.customSubject || '';
+  rEl('rs-subject').placeholder = s.welcomeSubject || '';
+  rEl('rs-body').value = s.customTemplate || '';
+  rEl('rs-body').placeholder = s.welcomeTemplate || '';
+  rEl('rush-settings-modal').classList.add('open');
+}
+function rushCloseSettings() { rEl('rush-settings-modal').classList.remove('open'); }
+function rushSaveSettings() {
+  var payload = { code: rEl('rs-code').value.trim(), yearOptions: rEl('rs-years').value, welcomeSubject: rEl('rs-subject').value.trim(), welcomeTemplate: rEl('rs-body').value.trim() };
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    showToast('Settings saved.');
+    rushCloseSettings(); loadRush(true);
+  }).rushSaveSettings(correctPin, JSON.stringify(payload), rushBy());
+}
+
+// ---- QR ----
+function rushShowQr(kind) {
+  var url = BASE_URL + (kind === 'door' ? '?app=rushdoor' : '?app=rush');
+  rushQrUrl = url;
+  rEl('rush-qr-title').textContent = kind === 'door' ? 'Door check-in QR' : 'Brothers board QR';
+  rEl('rush-qr-sub').textContent = url;
+  var wrap = rEl('rush-qr-wrap');
+  wrap.innerHTML = '';
+  new QRCode(wrap, { text: url, width: 220, height: 220, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  rEl('rush-qr-modal').classList.add('open');
+}
+function rushDownloadQr() {
+  var cv = rEl('rush-qr-wrap').querySelector('canvas');
+  var a = document.createElement('a');
+  a.download = 'rush-qr.png';
+  a.href = cv ? cv.toDataURL('image/png') : (rEl('rush-qr-wrap').querySelector('img') || {}).src;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ---- welcome message ----
+function rushOpenWelcome(id) {
+  rushWelcomeId = id; rushWelcomeInfo = null;
+  rEl('rush-w-note').textContent = 'Loading...';
+  rEl('rush-w-subject').value = ''; rEl('rush-w-body').value = '';
+  rEl('rush-welcome-modal').classList.add('open');
+  fmRun(function(r) {
+    if (!r.success) { rEl('rush-welcome-modal').classList.remove('open'); showToast('Error: ' + r.error); return; }
+    rushWelcomeInfo = r;
+    rEl('rush-w-title').textContent = 'Welcome message for ' + r.name;
+    rEl('rush-w-subject').value = r.subject; rEl('rush-w-body').value = r.body;
+    var notes = [];
+    notes.push(r.email ? 'Will be emailed to <b>' + esc(r.email) + '</b>.' : '<span style="color:var(--red)">No email on file for this person. Use Copy message and send it yourself, then Mark as sent.</span>');
+    if (r.linkIsPlaceholder) notes.push('<span style="color:#b45309">The ' + esc(rushWord('label_new_member', 'new member')) + ' form link is still a placeholder. Set the real link in Forms, Semester forms (Google Forms), before sending.</span>');
+    if (r.sentAt) notes.push('Already sent on ' + esc(rushStamp(r.sentAt)) + '.');
+    rEl('rush-w-note').innerHTML = notes.join('<br>');
+    rEl('rush-w-send').disabled = !r.email;
+  }).rushPrepareWelcome(correctPin, id);
+}
+function rushCloseWelcome() { rEl('rush-welcome-modal').classList.remove('open'); rushWelcomeId = ''; }
+function rushSendWelcome() {
+  var subject = rEl('rush-w-subject').value.trim(), body = rEl('rush-w-body').value.trim();
+  if (body.indexOf(RUSH_PLACEHOLDER) !== -1 && !confirm('The message still contains the placeholder for the form link. Send it anyway?')) return;
+  var btn = rEl('rush-w-send'); btn.disabled = true;
+  fmRun(function(r) {
+    btn.disabled = false;
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    showToast('Email sent.');
+    rushCloseWelcome(); loadRush(true);
+  }).rushSendWelcome(correctPin, rushWelcomeId, subject, body, rushBy());
+}
+function rushMarkWelcomed() {
+  fmRun(function(r) {
+    if (!r.success) { showToast('Error: ' + r.error); return; }
+    showToast('Marked as sent.');
+    rushCloseWelcome(); loadRush(true);
+  }).rushMarkWelcomed(correctPin, rushWelcomeId, rushBy());
+}
+function rushCopyWelcome() {
+  var text = rEl('rush-w-subject').value.trim() + '\n\n' + rEl('rush-w-body').value;
+  var fallback = function() {
+    var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showToast('Message copied.'); } catch (e) { showToast('Could not copy. Select the text by hand.'); }
+    document.body.removeChild(ta);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(function() { showToast('Message copied.'); }, fallback);
+  else fallback();
+}
+
+// ---- chapter reading view ----
+function rushChOpen() { rEl('rush-chapter').classList.add('open'); rEl('rush-ch-only').checked = true; rushCh.id = ''; rushCh.i = 0; rushChBuild(true); }
+function rushChClose() { rEl('rush-chapter').classList.remove('open'); }
+function rushChBuild(reset) {
+  var only = rEl('rush-ch-only').checked;
+  var cur = reset ? '' : rushCh.id;
+  rushCh.list = rushData.pnms.filter(function(p) { return (p.status === 'active' || p.status === 'bid') && (!only || p.comments.length); })
+    .sort(function(a, b) { return a.name.localeCompare(b.name); });
+  var idx = cur ? rushCh.list.map(function(p) { return p.id; }).indexOf(cur) : -1;
+  rushCh.i = idx >= 0 ? idx : Math.min(reset ? 0 : rushCh.i, Math.max(rushCh.list.length - 1, 0));
+  rushChRender();
+}
+function rushChStep(n) {
+  if (!rushCh.list.length) return;
+  rushCh.i = (rushCh.i + n + rushCh.list.length) % rushCh.list.length;
+  rushChRender();
+  rEl('rush-ch-main').scrollTop = 0;
+}
+function rushChRender() {
+  var p = rushCh.list[rushCh.i], main = rEl('rush-ch-main');
+  if (!p) { rushCh.id = ''; rEl('rush-ch-pos').textContent = ''; main.innerHTML = '<div class="rush-ch-name">Nothing to read</div><div class="rush-ch-meta">Nobody has comments yet.</div>'; return; }
+  rushCh.id = p.id;
+  rEl('rush-ch-pos').textContent = (rushCh.i + 1) + ' / ' + rushCh.list.length;
+  var meta = [];
+  if (p.year) meta.push(esc(p.year));
+  meta.push(p.visits.length + (p.visits.length === 1 ? ' visit' : ' visits'));
+  if (p.status === 'bid') meta.push(esc(rushWord('label_bid', 'Bid')) + ' out');
+  main.innerHTML = '<div class="rush-ch-name">' + esc(p.name) + '</div><div class="rush-ch-meta">' + meta.join(' · ') + '</div>' +
+    (p.comments.length ? p.comments.map(function(c) { return '<div class="rush-ch-cm">' + esc(c.text) + '<small>' + esc(c.author) + ' · ' + esc(rushStamp(c.at)) + '</small></div>'; }).join('') : '<div class="rush-ch-meta">No comments.</div>');
+}
+document.addEventListener('keydown', function(e) {
+  if (!rEl('rush-chapter').classList.contains('open')) return;
+  if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); rushChStep(1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); rushChStep(-1); }
+  else if (e.key === 'Escape') rushChClose();
+});
 </script>
 </body>
 </html>

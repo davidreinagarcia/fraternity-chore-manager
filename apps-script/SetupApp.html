@@ -966,7 +966,15 @@ var VOCAB_FIELDS = [
   { key: 'label_university_email', label: 'What\'s the university-issued email called?', def: 'University Email',  hint: 'e.g. University Email, School Email, .edu Email' },
   { key: 'label_suspension',   label: 'Academic suspension label',                       def: 'Suspension',        hint: 'e.g. Academic Suspension, Academic Hold' },
   { key: 'label_probation',    label: 'Probation label',                                 def: 'Probation',         hint: 'e.g. Probation, Social Probation, Conduct Hold' },
-  { key: 'label_semester',     label: 'What do you call a semester/term?',               def: 'Semester',          hint: 'e.g. Semester, Quarter, Term' }
+  { key: 'label_semester',     label: 'What do you call a semester/term?',               def: 'Semester',          hint: 'e.g. Semester, Quarter, Term' },
+  { key: 'label_rush',         label: 'What do you call recruitment?',                   def: 'Rush',              hint: 'e.g. Rush, Recruitment, Intake' },
+  { key: 'label_rush_chair',   label: 'Officer who runs recruitment',                    def: 'Rush Chair',        hint: 'e.g. Rush Chair, Recruitment Chair, VP of Recruitment' },
+  { key: 'label_pnm',          label: 'Short term for a recruit',                        def: 'PNM',               hint: 'e.g. PNM, Rushee, Recruit' },
+  { key: 'label_pnm_full',     label: 'Full term for a recruit',                         def: 'Possible New Member', hint: 'e.g. Possible New Member, Potential New Member, Rushee' },
+  { key: 'label_bid',          label: 'What is the invitation to join called?',          def: 'Bid',               hint: 'e.g. Bid, Invitation, Offer' },
+  { key: 'label_flush',        label: 'Removing a recruit from the list (action)',       def: 'Flush',             hint: 'e.g. Flush, Cut, Drop' },
+  { key: 'label_flushed',      label: 'Removed from the list (state)',                   def: 'Flushed',           hint: 'e.g. Flushed, Cut, Dropped' },
+  { key: 'label_chapter_meeting', label: 'What do you call the weekly meeting?',         def: 'Chapter',           hint: 'e.g. Chapter, General Meeting, Church' }
 ];
 
 var MODULE_FIELDS = [
@@ -976,7 +984,8 @@ var MODULE_FIELDS = [
   { key: 'module_signatures',          label: 'Signatures',           desc: 'AMs log activities with brothers for points.', def: true },
   { key: 'module_university_fields',   label: 'University Fields',    desc: 'University ID, campus card, and university username fields on member profiles.', def: false },
   { key: 'module_academic_suspension', label: 'Academic Suspension',  desc: 'Separate academic suspension flag on member.', def: true },
-  { key: 'module_officer_roles',       label: 'Officer Roles',        desc: 'Track officer role on member roster.', def: true }
+  { key: 'module_officer_roles',       label: 'Officer Roles',        desc: 'Track officer role on member roster.', def: true },
+  { key: 'module_rush',                label: 'Rush',                 desc: 'Recruitment tools: door check-in, live board with comments, bids, accepted list.', def: true }
 ];
 
 var currentStep = 1;
