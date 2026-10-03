@@ -55,6 +55,7 @@ Si no lo tiene, créalo desde [`_template.md`](./_template.md) y añade la fila 
 |---|---|---|---|
 | Check-in de puerta (PNMs) | Hecho (sin probar en real) | `RushDoorApp.html` (`?app=rushdoor`) + `Rush.gs` → `rushSubmitCheckin()` | [rush.md](./rush.md) |
 | Tablero de hermanos + comentarios | Hecho (sin probar en real) | `RushApp.html` (`?app=rush`) + `Rush.gs` → `rushPoll()` | [rush.md](./rush.md) |
+| Rush en pantalla grande | Hecho (sin probar en real) | `RushTvApp.html` (`?app=rushtv`) | [rush.md](./rush.md) |
 | Dashboard Rush (visitas, bids, aceptados, welcome) | Hecho (sin probar en real) | `OfficerDashboard.html` → Rush + `Rush.gs` | [rush.md](./rush.md) |
 
 ## Forms
@@ -62,6 +63,7 @@ Si no lo tiene, créalo desde [`_template.md`](./_template.md) y añade la fila 
 | Sistema | Estado | Fuente | Doc |
 |---|---|---|---|
 | Form builder nativo | Hecho | `Forms.gs` + `OfficerDashboard.html` → Forms | [forms.md](./forms.md) |
+| Home page (bandas + forms abiertos por categoría) | Hecho | `HomeApp.html` + `Forms.gs` → `fmListOpenForms()` | [forms.md](./forms.md) |
 | Forms public page | Hecho | `FormApp.html` (`?app=form&f=<id>`) | [forms.md](./forms.md) |
 | Absence request form | Hecho | `Forms.gs` → `_fmExcusesForEvent()` | [forms.md](./forms.md) |
 | Philanthropy hours (form + página) | Hecho | `Forms.gs` → `fmPhilanthropySummary()` + `OfficerDashboard.html` → Philanthropy | [forms.md](./forms.md) |

@@ -61,7 +61,7 @@ Link de acceso: `?app=officer` (el dashboard que David usa).
 | param | app | notas |
 |---|---|---|
 | `officer` | OfficerDashboard | lo que David usa, PIN-gated |
-| `home` | HomeApp | 4 links estáticos, stale |
+| `home` | HomeApp | bandas: Forms abiertos (auto, por categoría), Chores, Specific forms, Admin, Big screen |
 | `member` | MemberView | vista individual |
 | `submit` | SubmitApp | photo submission de chores |
 | `signature` | SignatureApp | AM signature self-service |
@@ -69,6 +69,7 @@ Link de acceso: `?app=officer` (el dashboard que David usa).
 | `setup` | SetupApp | setup wizard nuevas instalaciones |
 | `draft` | DraftApp | Draft Night board |
 | `rush` | RushApp | tablero de hermanos de Rush (PNMs + comentarios en vivo) |
+| `rushtv` | RushTvApp | Rush en pantalla grande (solo lectura) |
 | `rushdoor` | RushDoorApp | formulario de check-in de PNMs en la puerta |
 
 ## Reglas de código

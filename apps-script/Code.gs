@@ -397,6 +397,9 @@ function doGet(e) {
       case 'rush':
         tmpl = HtmlService.createTemplateFromFile('RushApp');
         break;
+      case 'rushtv':
+        tmpl = HtmlService.createTemplateFromFile('RushTvApp');
+        break;
       case 'rushdoor':
         tmpl = HtmlService.createTemplateFromFile('RushDoorApp');
         break;
@@ -1552,7 +1555,8 @@ var LABEL_DEFAULTS = {
   label_bid:          'Bid',
   label_flush:        'Flush',
   label_flushed:      'Flushed',
-  label_chapter_meeting: 'Chapter'
+  label_chapter_meeting: 'Chapter',
+  label_chairs:       'Chairs'
 };
 
 var MODULE_DEFAULTS = {

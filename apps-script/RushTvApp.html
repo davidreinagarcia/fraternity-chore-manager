@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><?= cfg.labels.label_rush ?> live — <?= cfg.chapter.chapter_name ?></title>
+<style>
+  :root {
+    --primary: <?= cfg.chapter.primary_color ?>;
+    --gold: <?= cfg.chapter.accent_color ?>;
+    --green: #16a34a;
+    --red: #dc2626;
+    --muted: #94a3b8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--primary); color: #fff; min-height: 100vh;
+    font-family: 'Segoe UI', -apple-system, Arial, sans-serif;
+    padding: 2vh 2vw;
+  }
+  .top { display: flex; align-items: center; gap: 16px; margin-bottom: 2vh; }
+  .top img { height: 7vh; width: auto; }
+  .top h1 { font-size: clamp(1.4rem, 3.4vw, 3rem); font-weight: 800; line-height: 1.1; }
+  .top .sub { font-size: clamp(0.9rem, 1.5vw, 1.4rem); opacity: 0.8; }
+  .top .grow { flex: 1; }
+  .top .count { font-size: clamp(1.4rem, 3.4vw, 3rem); font-weight: 800; color: var(--gold); text-align: right; line-height: 1; }
+  .top .count small { display: block; font-size: clamp(0.7rem, 1.1vw, 1rem); font-weight: 600; color: #fff; opacity: 0.8; margin-top: 4px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 1.4vh 1.2vw; }
+  .card { background: #fff; color: #1a202c; border-radius: 14px; padding: 18px 20px; box-shadow: 0 6px 24px rgba(0,0,0,0.25); display: flex; flex-direction: column; min-height: 0; }
+  .card.fresh { box-shadow: 0 0 0 4px var(--gold), 0 6px 24px rgba(0,0,0,0.25); }
+  .name { font-size: clamp(1.2rem, 2vw, 1.9rem); font-weight: 800; line-height: 1.15; overflow-wrap: anywhere; }
+  .meta { font-size: clamp(0.8rem, 1.1vw, 1.05rem); color: #64748b; margin-top: 4px; display: flex; flex-wrap: wrap; gap: 2px 12px; }
+  .chip { display: inline-block; font-size: 0.7em; font-weight: 800; padding: 2px 9px; border-radius: 999px; margin-left: 8px; vertical-align: middle; }
+  .chip.new { background: #dcfce7; color: #166534; }
+  .chip.back { background: #fef3c7; color: #92400e; }
+  .cms { margin-top: 12px; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .cm { background: #f1f5f9; border-radius: 8px; padding: 8px 12px; }
+  .cm-top { font-size: clamp(0.7rem, 0.95vw, 0.9rem); color: #64748b; margin-bottom: 2px; }
+  .cm-top b { color: #1a202c; }
+  .cm-text { font-size: clamp(0.9rem, 1.25vw, 1.2rem); line-height: 1.35; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .more { font-size: clamp(0.7rem, 0.95vw, 0.9rem); color: #64748b; font-weight: 700; }
+  .nocm { font-size: clamp(0.8rem, 1.1vw, 1rem); color: #94a3b8; margin-top: 12px; }
+
+  .msg { text-align: center; padding: 18vh 4vw 0; font-size: clamp(1.2rem, 2.4vw, 2.2rem); line-height: 1.4; opacity: 0.9; }
+  .gate { max-width: 420px; margin: 18vh auto 0; background: #fff; color: #1a202c; border-radius: 14px; padding: 24px; }
+  .gate label { display: block; font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 8px; }
+  .gate input { width: 100%; padding: 12px 14px; border: 2px solid #e2e8f0; border-radius: 4px; font-size: 1.1rem; }
+  .gate button { width: 100%; margin-top: 12px; padding: 13px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: 1rem; font-weight: 800; cursor: pointer; }
+  .gate button:disabled { background: #94a3b8; }
+  .gate .err { display: none; margin-top: 10px; color: var(--red); font-weight: 600; font-size: 0.88rem; }
+  .status { position: fixed; right: 14px; bottom: 10px; font-size: 0.8rem; opacity: 0.7; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #4ade80; margin-right: 6px; }
+  .dot.off { background: #f59e0b; }
+</style>
+<?!= include('ButtonFeedback') ?>
+<?!= include('Theme') ?>
+<style>
+  body { background: var(--primary) !important; color: #fff !important; }
+  .gate, .card { background: #fff !important; color: #1a202c !important; }
+</style>
+</head>
+<body>
+<?!= includeHome() ?>
+
+<div id="loading" class="msg">Loading...</div>
+
+<div id="gate" class="gate" style="display:none">
+  <label for="code-in">Access code</label>
+  <input type="password" id="code-in" autocomplete="off" onkeydown="if(event.key==='Enter')submitCode()">
+  <div class="err" id="gate-err"></div>
+  <button id="code-btn" onclick="submitCode()">Open</button>
+</div>
+
+<div id="tv" style="display:none">
+  <div class="top">
+    <? if (cfg.chapter.logo_url) { ?>
+    <img src="<?= cfg.chapter.logo_url ?>" alt="" onerror="this.style.display='none'">
+    <? } ?>
+    <div class="grow">
+      <h1><?= cfg.labels.label_rush ?> live</h1>
+      <div class="sub"><?= cfg.chapter.chapter_name ?></div>
+    </div>
+    <div class="count"><span id="n-today">0</span><small id="n-label">here today</small></div>
+  </div>
+  <div id="grid" class="grid"></div>
+  <div id="empty" class="msg" style="display:none"></div>
+</div>
+<div class="status" id="status"></div>
+
+<script>
+var POLL_MS = 10000, MAX_CM = 4;
+var LS_CODE = 'rush_code';
+var code = '', today = '', token = '', pnms = [], pollTimer = null, polling = false, ready = false, seen = null;
+
+function el(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function lsGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
+function lsSet(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) {} }
+function show(id, on) { el(id).style.display = on ? '' : 'none'; }
+function setErr(msg) { var e = el('gate-err'); e.textContent = msg || ''; e.style.display = msg ? 'block' : 'none'; }
+function fmtTime(iso) { try { return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } }
+
+function start() {
+  code = lsGet(LS_CODE);
+  google.script.run
+    .withSuccessHandler(function(json) { handleAccess(JSON.parse(json), false); })
+    .withFailureHandler(function() { el('loading').textContent = 'Could not load. Check the connection and refresh.'; })
+    .rushBoardAccess(code);
+}
+
+function submitCode() {
+  var v = el('code-in').value.trim();
+  if (!v) { setErr('Enter the access code.'); return; }
+  code = v;
+  var btn = el('code-btn'); btn.disabled = true; setErr('');
+  google.script.run
+    .withSuccessHandler(function(json) { btn.disabled = false; handleAccess(JSON.parse(json), true); })
+    .withFailureHandler(function() { btn.disabled = false; setErr('Could not reach the server. Try again.'); })
+    .rushBoardAccess(code);
+}
+
+function handleAccess(r, fromGate) {
+  show('loading', false);
+  if (!r.success) { show('loading', true); el('loading').textContent = r.error || 'Could not load.'; return; }
+  if (!r.authorized) {
+    lsSet(LS_CODE, '');
+    show('tv', false); show('gate', true);
+    if (fromGate) setErr('Wrong access code.');
+    return;
+  }
+  lsSet(LS_CODE, code);
+  show('gate', false); show('tv', true);
+  ready = true; token = '';
+  poll(true);
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(function() { poll(false); }, POLL_MS);
+}
+
+function poll(force) {
+  if (polling) return;
+  polling = true;
+  google.script.run
+    .withSuccessHandler(function(json) {
+      polling = false;
+      var r = JSON.parse(json);
+      if (!r.success) {
+        if (/access code/i.test(r.error || '')) { lsSet(LS_CODE, ''); ready = false; show('tv', false); show('gate', true); setErr('The access code changed. Enter the new one.'); return; }
+        setStatus(false); return;
+      }
+      setStatus(true);
+      if (!r.changed) return;
+      token = r.token; today = r.today; pnms = r.pnms || [];
+      render();
+    })
+    .withFailureHandler(function() { polling = false; setStatus(false); })
+    .rushPoll(code, force ? '' : token);
+}
+function setStatus(ok) {
+  el('status').innerHTML = '<span class="dot' + (ok ? '' : ' off') + '"></span>' + (ok ? 'Live' : 'Reconnecting...');
+}
+
+function lastArrival(p) { var v = p.visits[p.visits.length - 1]; return v ? v.at : ''; }
+
+function render() {
+  var list = pnms.filter(function(p) { return p.visits.some(function(v) { return v.date === today; }); });
+  list.sort(function(a, b) { var x = lastArrival(a), y = lastArrival(b); return x < y ? 1 : x > y ? -1 : 0; });
+  el('n-today').textContent = list.length;
+  var firstLoad = seen === null;
+  var now = {};
+  var html = list.map(function(p) {
+    now[p.id] = true;
+    var todayVisits = p.visits.filter(function(v) { return v.date === today; });
+    var first = p.visits.length && p.visits[0].date === today && p.visits.length === todayVisits.length;
+    var fresh = !firstLoad && !seen[p.id];
+    var cms = p.comments.slice(-MAX_CM).reverse();
+    var extra = p.comments.length - cms.length;
+    var h = '<div class="card' + (fresh ? ' fresh' : '') + '">' +
+      '<div class="name">' + esc(p.name) + '<span class="chip ' + (first ? 'new' : 'back') + '">' + (first ? 'NEW' : 'BACK') + '</span></div>' +
+      '<div class="meta">' + (p.year ? '<span>' + esc(p.year) + '</span>' : '') +
+      '<span>Arrived ' + esc(fmtTime(todayVisits[0].at)) + '</span></div>';
+    if (cms.length) {
+      h += '<div class="cms">' + cms.map(function(c) {
+        return '<div class="cm"><div class="cm-top"><b>' + esc(c.author) + '</b> · ' + esc(fmtTime(c.at)) + '</div><div class="cm-text">' + esc(c.text) + '</div></div>';
+      }).join('') + (extra > 0 ? '<div class="more">+' + extra + ' earlier</div>' : '') + '</div>';
+    } else {
+      h += '<div class="nocm">No comments yet</div>';
+    }
+    return h + '</div>';
+  }).join('');
+  seen = now;
+  el('grid').innerHTML = html;
+  var empty = el('empty');
+  if (!list.length) {
+    empty.textContent = 'Nobody has checked in yet today.';
+    empty.style.display = '';
+  } else empty.style.display = 'none';
+}
+
+window.addEventListener('load', start);
+</script>
+</body>
+</html>

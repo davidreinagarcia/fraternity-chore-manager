@@ -13,7 +13,7 @@ Hecho.
 
 Devuelve un objeto con tres secciones:
 - `chapter` — ajustes generales: `semester`, `week_start`, `officer_emails`, `fine_amount`, colores, etc.
-- `labels` — vocabulario del chapter: `label_chore`, `label_fine`, `label_am_group`, `label_am_short`, `label_active_member`, `label_brotherhood`, `label_new_member`, etc.
+- `labels` — vocabulario del chapter: `label_chore`, `label_fine`, `label_chairs` (nombre del grupo Rush/Finance/Philanthropy en el sidebar del dashboard, por defecto "Chairs"), `label_am_group`, `label_am_short`, `label_active_member`, `label_brotherhood`, `label_new_member`, etc.
 - `modules` — flags booleanos de activación: `module_housing`, `module_associates`, `module_signatures`, etc.
 
 ### Config Editor (officer UI)

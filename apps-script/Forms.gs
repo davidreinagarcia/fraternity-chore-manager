@@ -14,7 +14,8 @@
 // hours are summed per member by fmPhilanthropySummary for the Philanthropy page.
 // ============================================================
 
-var FM_HEADERS = ['form_id', 'title', 'description', 'status', 'audience', 'fields', 'due_date', 'requires_review', 'allow_multiple', 'action', 'created_by', 'created_at', 'updated_at'];
+var FM_HEADERS = ['form_id', 'title', 'description', 'status', 'audience', 'fields', 'due_date', 'requires_review', 'allow_multiple', 'action', 'created_by', 'created_at', 'updated_at', 'category'];
+var FM_CATEGORIES = ['general', 'finance', 'philanthropy', 'rush', 'events'];
 var FM_RESP_HEADERS = ['response_id', 'form_id', 'member_id', 'member_type', 'member_name', 'answers', 'submitted_at', 'review_status', 'reviewed_by', 'reviewed_at', 'review_note'];
 var FM_FIELD_TYPES = ['text', 'textarea', 'choice', 'multi', 'number', 'date', 'yesno', 'event', 'photo', 'list', 'info'];
 var FM_AUDIENCES = ['brothers', 'novatos', 'everyone'];
@@ -36,6 +37,21 @@ function _fmSheet(ss, name, headers) {
   return sheet;
 }
 
+// Sheets created before the category column existed get it appended once.
+function _fmEnsureColumns(sheet) {
+  try {
+    var lc = sheet.getLastColumn();
+    if (lc < 1) return;
+    var head = sheet.getRange(1, 1, 1, lc).getValues()[0].map(String);
+    FM_HEADERS.forEach(function(h) {
+      if (head.indexOf(h) !== -1) return;
+      head.push(h);
+      sheet.getRange(1, head.length, sheet.getMaxRows(), 1).setNumberFormat('@');
+      sheet.getRange(1, head.length).setValue(h);
+    });
+  } catch (e) { logError('_fmEnsureColumns', e); }
+}
+
 function _fmJson(s, fallback) {
   try { var v = JSON.parse(String(s || '')); return v === null || v === undefined ? fallback : v; } catch (e) { return fallback; }
 }
@@ -50,6 +66,10 @@ function _fmFormFromRow(r, cm, rowNum) {
   function g(k) { return cm[k] === undefined ? '' : r[cm[k]]; }
   var audience = String(g('audience'));
   var action = _fmJson(g('action'), { type: 'none' });
+  var category = String(g('category'));
+  if (FM_CATEGORIES.indexOf(category) === -1 || category === 'general') {
+    category = action && (action.type === 'philanthropy' || action.type === 'service_event') ? 'philanthropy' : 'general';
+  }
   return {
     formId: String(g('form_id')),
     title: String(g('title')),
@@ -64,6 +84,7 @@ function _fmFormFromRow(r, cm, rowNum) {
     createdBy: String(g('created_by')),
     createdAt: String(g('created_at')),
     updatedAt: String(g('updated_at')),
+    category: category,
     _rowNum: rowNum
   };
 }
@@ -71,6 +92,7 @@ function _fmFormFromRow(r, cm, rowNum) {
 function _fmReadForms(ss) {
   var data = _fmSheet(ss, 'forms', FM_HEADERS).getDataRange().getValues();
   var cm = _buildColMap(data[0]);
+  if (cm['category'] === undefined) _fmEnsureColumns(_fmSheet(ss, 'forms', FM_HEADERS));
   var out = [];
   for (var i = 1; i < data.length; i++) {
     if (data[i][cm['form_id']]) out.push(_fmFormFromRow(data[i], cm, i + 1));
@@ -367,7 +389,7 @@ function fmListForms(pin) {
       rs.forEach(function(r) { who[r.memberType + ':' + r.memberId] = true; });
       return {
         formId: f.formId, title: f.title, status: f.status, audience: f.audience, dueDate: f.dueDate,
-        requiresReview: f.requiresReview, actionType: f.action.type,
+        requiresReview: f.requiresReview, actionType: f.action.type, category: f.category,
         responses: rs.length, responders: Object.keys(who).length, audienceSize: sizes[f.audience],
         pending: rs.filter(function(r) { return r.reviewStatus === 'pending'; }).length,
         accepting: _fmIsAccepting(f).ok, url: _fmFormUrl(f.formId)
@@ -375,6 +397,16 @@ function fmListForms(pin) {
     });
     return JSON.stringify({ success: true, forms: out });
   } catch (err) { logError('fmListForms', err); return JSON.stringify({ success: false, error: err.toString() }); }
+}
+
+// Public (no PIN): every form members can fill right now, for the Home page.
+function fmListOpenForms() {
+  try {
+    var forms = _fmReadForms(getSpreadsheet()).filter(function(f) { return _fmIsAccepting(f).ok; });
+    return JSON.stringify({ success: true, forms: forms.map(function(f) {
+      return { formId: f.formId, title: f.title, description: f.description.substring(0, 160), audience: f.audience, dueDate: f.dueDate, category: f.category };
+    }) });
+  } catch (err) { logError('fmListOpenForms', err); return JSON.stringify({ success: false, error: 'Could not load the forms.' }); }
 }
 
 function fmGetForm(pin, formId) {
@@ -430,6 +462,8 @@ function fmSaveForm(pin, payloadJson, performedBy) {
     if (FM_AUDIENCES.indexOf(audience) === -1) return JSON.stringify({ success: false, error: 'Pick who the form is for.' });
     var dueDate = String(p.dueDate || '').trim();
     if (dueDate && (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || _dFmt(_dParse(dueDate)) !== dueDate)) return JSON.stringify({ success: false, error: 'The deadline is not a valid date.' });
+    var category = String(p.category || 'general');
+    if (FM_CATEGORIES.indexOf(category) === -1) return JSON.stringify({ success: false, error: 'Pick a valid category.' });
     var cf = _fmCleanFields(p.fields);
     if (cf.error) return JSON.stringify({ success: false, error: cf.error });
 
@@ -466,6 +500,7 @@ function fmSaveForm(pin, payloadJson, performedBy) {
 
     var ss = getSpreadsheet();
     var sheet = _fmSheet(ss, 'forms', FM_HEADERS);
+    _fmEnsureColumns(sheet);
     var who = performedBy || 'Officer';
     var now = new Date().toISOString();
     var existing = p.formId ? _fmFindForm(ss, p.formId) : null;
@@ -474,7 +509,7 @@ function fmSaveForm(pin, payloadJson, performedBy) {
       existing ? existing.formId : _fmNewId('FM'), title, String(p.description || '').trim().substring(0, 2000),
       existing ? existing.status : 'open', audience, JSON.stringify(cf.fields), dueDate,
       p.requiresReview ? 'Y' : 'N', p.allowMultiple ? 'Y' : 'N', JSON.stringify(action),
-      existing ? existing.createdBy : who, existing ? existing.createdAt : now, now
+      existing ? existing.createdBy : who, existing ? existing.createdAt : now, now, category
     ];
     if (existing) sheet.getRange(existing._rowNum, 1, 1, FM_HEADERS.length).setValues([row]);
     else sheet.appendRow(row);

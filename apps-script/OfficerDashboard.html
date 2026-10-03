@@ -534,9 +534,9 @@
       <button class="ni on" data-s="members" onclick="showSection('members',this)"><span class="ni-ic">👥</span><span class="ni-lbl">Members</span></button>
       <button class="ni" data-s="chores" onclick="showSection('chores',this)"><span class="ni-ic">📋</span><span class="ni-lbl">Chores</span></button>
       <button class="ni" data-s="events" onclick="showSection('events',this)"><span class="ni-ic">📅</span><span class="ni-lbl">Events</span></button>
-      <button class="ni mod-rush" data-s="rush" onclick="showSection('rush',this)"><span class="ni-ic">🚪</span><span class="ni-lbl"><?= cfg.labels.label_rush ?></span></button>
     </div>
-    <div class="ng"><div class="nl">FINANCE</div>
+    <div class="ng"><div class="nl"><?= String(cfg.labels.label_chairs || 'Chairs').toUpperCase() ?></div>
+      <button class="ni mod-rush" data-s="rush" onclick="showSection('rush',this)"><span class="ni-ic">🚪</span><span class="ni-lbl"><?= cfg.labels.label_rush ?></span></button>
       <button class="ni" data-s="finance" onclick="showSection('finance',this)"><span class="ni-ic">💰</span><span class="ni-lbl">Finance</span></button>
       <button class="ni" data-s="philanthropy" onclick="showSection('philanthropy',this)"><span class="ni-ic">🤝</span><span class="ni-lbl">Philanthropy</span></button>
     </div>
@@ -2108,6 +2108,11 @@
             <select id="fm-f-audience" class="inline-input" style="width:100%"></select>
           </div>
           <div>
+            <label class="ev-lbl">Home page group</label>
+            <select id="fm-f-category" class="inline-input" style="width:100%"></select>
+            <div style="font-size:0.74rem;color:var(--muted);margin-top:4px">Open forms are listed on the Home page under this group.</div>
+          </div>
+          <div>
             <label class="ev-lbl">Deadline (optional)</label>
             <input type="date" id="fm-f-due" class="inline-input" style="width:100%">
           </div>
@@ -2746,7 +2751,7 @@ var CHAPTER_IDENTITY_LABELS = {
 var VOCAB_KEYS = ['label_chore','label_fine','label_am_group','label_new_member','label_am_short','label_active_member','label_brotherhood','label_bid_number','label_am_officer','label_am_points',
                   'label_pledge_class','label_member_id','label_university_email',
                   'label_suspension','label_probation','label_semester',
-                  'label_rush','label_rush_chair','label_pnm','label_pnm_full','label_bid','label_flush','label_flushed','label_chapter_meeting'];
+                  'label_rush','label_rush_chair','label_pnm','label_pnm_full','label_bid','label_flush','label_flushed','label_chapter_meeting','label_chairs'];
 var VOCAB_KEY_LABELS = {
   label_chore:        { label: 'Chore',               help: 'What a task is called. Default: "Chore".' },
   label_fine:         { label: 'Fine',                help: 'What a penalty is called. Default: "Fine".' },
@@ -2771,7 +2776,8 @@ var VOCAB_KEY_LABELS = {
   label_bid:          { label: 'Bid',                 help: 'The invitation to join. Default: "Bid".' },
   label_flush:        { label: 'Flush (action)',      help: 'Removing a recruit from the list. Default: "Flush".' },
   label_flushed:      { label: 'Flushed (state)',     help: 'Past tense of the above. Default: "Flushed".' },
-  label_chapter_meeting: { label: 'Chapter Meeting',  help: 'Weekly meeting where comments are read aloud. Default: "Chapter".' }
+  label_chapter_meeting: { label: 'Chapter Meeting',  help: 'Weekly meeting where comments are read aloud. Default: "Chapter".' },
+  label_chairs:       { label: 'Chairs (sidebar group)', help: 'Group name for Rush, Finance and Philanthropy in the sidebar. Default: "Chairs".' }
 };
 var MODULE_KEYS = ['module_housing','module_meal_plan','module_associates','module_signatures',
                    'module_university_fields','module_academic_suspension','module_officer_roles','module_rush'];
@@ -2799,6 +2805,7 @@ function initShareLinks() {
     { label: 'Officer Dashboard',  url: base + '?app=officer',   desc: 'Officers only — keep private' },
     { label: 'Draft Night Board',  url: base + '?app=draft&mode=display', desc: 'TV display mode' },
     { label: 'Rush Door Check-in', url: base + '?app=rushdoor',  desc: 'Open on the laptop at the door during rush' },
+    { label: 'Rush Live (TV)',      url: base + '?app=rushtv',    desc: 'Big-screen view of who is here and the comments' },
     { label: 'Rush Brothers Board', url: base + '?app=rush',     desc: 'Brothers see who walked in and comment' }
   ];
   var html = links.map(function(l) {
@@ -4719,6 +4726,11 @@ function renderEvList() {
   }).join('');
 }
 
+function fmCategoryOptions() {
+  var L = CHAPTER_CONFIG.labels;
+  return [['general', 'General'], ['finance', 'Finance'], ['philanthropy', 'Philanthropy'], ['rush', L.label_rush || 'Rush'], ['events', 'Events']];
+}
+
 function evAudienceLabels() {
   var L = CHAPTER_CONFIG.labels;
   var bros = (L.label_active_member || 'Brother') + 's';
@@ -6548,6 +6560,7 @@ function fmLoadIntoModal(t) {
   document.getElementById('fm-f-title').value = t.title;
   document.getElementById('fm-f-desc').value = t.description;
   document.getElementById('fm-f-audience').value = t.audience;
+  document.getElementById('fm-f-category').value = t.category || (t.action === 'philanthropy' ? 'philanthropy' : 'general');
   document.getElementById('fm-f-due').value = t.dueDate || '';
   document.getElementById('fm-f-review').checked = !!t.requiresReview;
   document.getElementById('fm-f-multi').checked = !!t.allowMultiple;
@@ -6564,6 +6577,9 @@ function openFmModal(formId) {
   document.getElementById('fm-f-audience').innerHTML = ['brothers', 'novatos', 'everyone'].map(function(a) {
     return '<option value="' + a + '">' + esc(labels[a]) + '</option>';
   }).join('');
+  document.getElementById('fm-f-category').innerHTML = fmCategoryOptions().map(function(c) {
+    return '<option value="' + c[0] + '">' + esc(c[1]) + '</option>';
+  }).join('');
   fmEditingId = formId || '';
   document.getElementById('fm-modal-title').textContent = formId ? 'Edit form' : 'New form';
   document.getElementById('fm-f-templates').style.display = formId ? 'none' : 'flex';
@@ -6577,7 +6593,7 @@ function openFmModal(formId) {
   fmRun(function(r) {
     if (!r.success) { showToast('Error: ' + r.error); return; }
     var f = r.form;
-    fmLoadIntoModal({ title: f.title, description: f.description, audience: f.audience, dueDate: f.dueDate, requiresReview: f.requiresReview,
+    fmLoadIntoModal({ title: f.title, description: f.description, audience: f.audience, category: f.category, dueDate: f.dueDate, requiresReview: f.requiresReview,
       allowMultiple: f.allowMultiple, action: f.action.type, fields: f.fields });
     document.getElementById('fm-modal').classList.add('open');
   }).fmGetForm(correctPin, formId);
@@ -6655,6 +6671,7 @@ function saveFmFromModal() {
     title: document.getElementById('fm-f-title').value.trim(),
     description: document.getElementById('fm-f-desc').value,
     audience: document.getElementById('fm-f-audience').value,
+    category: document.getElementById('fm-f-category').value,
     dueDate: document.getElementById('fm-f-due').value,
     requiresReview: document.getElementById('fm-f-review').checked,
     allowMultiple: document.getElementById('fm-f-multi').checked,
@@ -6766,7 +6783,7 @@ function phCreateForm() {
   if (_phCreating) return;
   _phCreating = true;
   var t = fmPhilanthropyTemplate();
-  var payload = { formId: '', title: t.title, description: t.description, audience: t.audience, dueDate: '',
+  var payload = { formId: '', title: t.title, description: t.description, audience: t.audience, dueDate: '', category: 'philanthropy',
     requiresReview: t.requiresReview, allowMultiple: t.allowMultiple, action: { type: t.action }, fields: t.fields };
   google.script.run
     .withSuccessHandler(function(json) {

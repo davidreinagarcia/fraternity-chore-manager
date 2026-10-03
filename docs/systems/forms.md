@@ -10,7 +10,7 @@ Hecho — `Forms.gs` + `FormApp.html` + sección `sec-forms` en `OfficerDashboar
 
 ### Almacenamiento
 
-- Tab `forms`: una fila por form. Columnas: `form_id`, `title`, `description`, `status` (`open`|`closed`), `audience` (`brothers`|`novatos`|`everyone`), `fields` (JSON), `due_date` (texto `yyyy-MM-dd`, inclusivo), `requires_review` (`Y`/`N`), `allow_multiple` (`Y`/`N`), `action` (JSON, p. ej. `{type:'absence',eventField,reasonField}`), `created_by`, `created_at`, `updated_at`.
+- Tab `forms`: una fila por form. Columnas: `form_id`, `title`, `description`, `status` (`open`|`closed`), `audience` (`brothers`|`novatos`|`everyone`), `fields` (JSON), `due_date` (texto `yyyy-MM-dd`, inclusivo), `requires_review` (`Y`/`N`), `allow_multiple` (`Y`/`N`), `action` (JSON, p. ej. `{type:'absence',eventField,reasonField}`), `created_by`, `created_at`, `updated_at`, `category` (`general`|`finance`|`philanthropy`|`rush`|`events`; agrupa el form en la Home). Los sheets antiguos reciben la columna automáticamente (`_fmEnsureColumns`); si falta o es `general`, los forms con acción `philanthropy`/`service_event` se tratan como `philanthropy`. El form builder la elige en "Home page group".
 - Tab `form_responses`: `response_id`, `form_id`, `member_id`, `member_type`, `member_name` (snapshot), `answers` (JSON por id de campo), `submitted_at`, `review_status` (`pending`|`approved`|`denied`), `reviewed_by`, `reviewed_at`, `review_note`.
 - Todas las columnas son texto (`@`) por la regla de fechas del proyecto. Los booleanos son `Y`/`N`.
 
@@ -31,6 +31,10 @@ Sin login de Google (mismo patrón que `?app=signature`). El miembro busca su no
 Todas las funciones reciben el PIN como primer argumento y lo validan en servidor con `_checkOfficerPin`, porque las respuestas contienen datos personales. El dashboard pasa su `correctPin`.
 
 `fmListForms`, `fmGetForm`, `fmSaveForm`, `fmSetStatus`, `fmDeleteForm` (borra en cascada sus respuestas), `fmGetResponses`, `fmReviewResponse` (approve/deny/undo + nota), `fmDeleteResponse`, `fmSendReminders` (email por GmailApp a quien no ha respondido; se omiten miembros sin email).
+
+### Listado público para la Home
+
+`fmListOpenForms()` (sin PIN): forms que aceptan respuestas ahora (`_fmIsAccepting`) con `formId, title, description (160), audience, dueDate, category`. `HomeApp` los agrupa por categoría; un form nuevo aparece solo.
 
 ### Review
 

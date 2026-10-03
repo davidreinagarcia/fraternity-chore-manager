@@ -99,6 +99,30 @@
   .nav-card .sub   { font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
   .nav-card .arrow { color: var(--muted); font-size: 1.3rem; flex-shrink: 0; }
 
+  /* ---- Bands (accordion) ---- */
+  .band { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; }
+  .band-head {
+    display: flex; align-items: center; gap: 14px; padding: 16px 18px; cursor: pointer; user-select: none;
+    -webkit-tap-highlight-color: transparent; border-left: 5px solid var(--primary);
+  }
+  .band-head:hover { background: #f8f9fa; }
+  .band-head .b-icon { font-size: 1.4rem; width: 40px; height: 40px; line-height: 40px; text-align: center; border-radius: 8px; background: color-mix(in srgb, var(--gold) 22%, #fff); flex-shrink: 0; }
+  .band-head .b-text { flex: 1; min-width: 0; }
+  .band-head .b-title { font-size: 1.02rem; font-weight: 700; color: var(--primary); }
+  .band-head .b-sub { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
+  .band-head .b-count { background: var(--primary); color: #fff; font-size: 0.72rem; font-weight: 700; border-radius: 999px; padding: 2px 9px; flex-shrink: 0; }
+  .band-head .b-arrow { color: var(--muted); font-size: 1.3rem; transition: transform 0.15s; flex-shrink: 0; }
+  .band.open .band-head .b-arrow { transform: rotate(90deg); }
+  .band-body { display: none; padding: 4px 14px 12px; border-top: 1px solid var(--border); background: #fcfcfd; }
+  .band.open .band-body { display: block; }
+  .band-body .nav-card { margin-bottom: 8px; padding: 14px 16px; }
+  .band-body .nav-card .icon { width: 40px; height: 40px; line-height: 40px; font-size: 1.3rem; }
+  .nav-card.going { opacity: 0.55; pointer-events: none; }
+  .grp-label { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.6px; color: var(--muted); margin: 14px 0 8px; }
+  .tag { display: inline-block; font-size: 0.66rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; background: #e8eaed; color: var(--muted); margin-right: 6px; }
+  .tag.due { background: #fef3c7; color: #92400e; }
+  .empty { text-align: center; padding: 22px 8px; color: var(--muted); font-size: 0.88rem; line-height: 1.5; }
+
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -121,71 +145,200 @@
 
 <div class="container">
 
-  <div class="section-label">Members</div>
-
-  <div class="nav-card" onclick="go('?app=submit')">
-    <div class="icon">📸</div>
-    <div class="text">
-      <div class="title">Submit a <?= cfg.labels.label_chore ?></div>
-      <div class="sub">Upload your photo proof for this week's <?= cfg.labels.label_chore.toLowerCase() ?></div>
+  <div class="band open" id="band-forms">
+    <div class="band-head" onclick="toggleBand('band-forms')">
+      <div class="b-icon">📝</div>
+      <div class="b-text"><div class="b-title">Forms</div><div class="b-sub">Everything open right now</div></div>
+      <div class="b-count" id="forms-count" style="display:none"></div>
+      <div class="b-arrow">›</div>
     </div>
-    <div class="arrow">›</div>
+    <div class="band-body" id="forms-body"><div class="empty">Loading...</div></div>
   </div>
 
-  <div class="nav-card" onclick="go('?app=member')">
-    <div class="icon">📊</div>
-    <div class="text">
-      <div class="title">My Compliance</div>
-      <div class="sub">See your submission history and <?= cfg.labels.label_fine.toLowerCase() ?> count</div>
+  <div class="band" id="band-chores">
+    <div class="band-head" onclick="toggleBand('band-chores')">
+      <div class="b-icon">🧹</div>
+      <div class="b-text"><div class="b-title"><?= cfg.labels.label_chore ?>s</div><div class="b-sub">Submit yours and check your standing</div></div>
+      <div class="b-arrow">›</div>
     </div>
-    <div class="arrow">›</div>
+    <div class="band-body">
+      <div class="nav-card" onclick="go('?app=member', this)">
+        <div class="icon">📊</div>
+        <div class="text">
+          <div class="title">My Compliance</div>
+          <div class="sub">See your submission history and <?= cfg.labels.label_fine.toLowerCase() ?> count</div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+      <div class="nav-card" onclick="go('?app=submit', this)">
+        <div class="icon">📸</div>
+        <div class="text">
+          <div class="title">Submit a <?= cfg.labels.label_chore ?></div>
+          <div class="sub">Upload your photo proof for this week's <?= cfg.labels.label_chore.toLowerCase() ?></div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+    </div>
   </div>
 
-  <? if (cfg.modules.module_signatures) { ?>
-  <div class="nav-card" onclick="go('?app=signature')">
-    <div class="icon">✍️</div>
-    <div class="text">
-      <div class="title">Submit a Signature</div>
-      <div class="sub"><?= cfg.labels.label_am_group ?>: log an activity you did with a brother</div>
+  <div class="band" id="band-specific">
+    <div class="band-head" onclick="toggleBand('band-specific')">
+      <div class="b-icon">🗂️</div>
+      <div class="b-text"><div class="b-title">Specific forms</div><div class="b-sub">Member forms, signatures, <?= cfg.labels.label_rush.toLowerCase() ?></div></div>
+      <div class="b-arrow">›</div>
     </div>
-    <div class="arrow">›</div>
+    <div class="band-body" id="specific-body">
+      <? if (cfg.modules.module_signatures) { ?>
+      <div class="nav-card" onclick="go('?app=signature', this)">
+        <div class="icon">✍️</div>
+        <div class="text">
+          <div class="title">Submit a Signature</div>
+          <div class="sub"><?= cfg.labels.label_am_group ?>: log an activity you did with a brother</div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+      <? } ?>
+      <? if (cfg.modules.module_rush) { ?>
+      <div class="nav-card" onclick="go('?app=rush', this)">
+        <div class="icon">👀</div>
+        <div class="text">
+          <div class="title"><?= cfg.labels.label_rush ?> comments</div>
+          <div class="sub">See who walked in and leave your comments</div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+      <div class="nav-card" onclick="go('?app=rushdoor', this)">
+        <div class="icon">🚪</div>
+        <div class="text">
+          <div class="title"><?= cfg.labels.label_rush ?> check-in</div>
+          <div class="sub">Sign-in form for the door laptop</div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+      <? } ?>
+      <div id="custom-forms"></div>
+    </div>
   </div>
-  <? } ?>
 
-  <div class="section-label">🔒 Officers</div>
-
-  <div class="nav-card" onclick="go('?app=officer')">
-    <div class="icon">🎛️</div>
-    <div class="text">
-      <div class="title">Officer Dashboard</div>
-      <div class="sub">Review submissions, manage <?= cfg.labels.label_fine.toLowerCase() ?>s, admin tools</div>
+  <div class="band" id="band-admin">
+    <div class="band-head" onclick="go('?app=officer', this)">
+      <div class="b-icon">🎛️</div>
+      <div class="b-text"><div class="b-title">Admin dashboard</div><div class="b-sub">Officers only, PIN required</div></div>
+      <div class="b-arrow" style="transform:none">›</div>
     </div>
-    <div class="arrow">›</div>
   </div>
 
-  <div class="nav-card" onclick="go('?app=draft&mode=display')">
-    <div class="icon">📺</div>
-    <div class="text">
-      <div class="title">Draft Night Board</div>
-      <div class="sub">TV display showing <?= cfg.labels.label_chore.toLowerCase() ?> assignments live</div>
+  <div class="band" id="band-tv">
+    <div class="band-head" onclick="toggleBand('band-tv')">
+      <div class="b-icon">📺</div>
+      <div class="b-text"><div class="b-title">Big screen</div><div class="b-sub">Live views for the TV</div></div>
+      <div class="b-arrow">›</div>
     </div>
-    <div class="arrow">›</div>
-  </div>
-
-  <div class="nav-card" onclick="go('?app=draft&mode=manage')">
-    <div class="icon">⚙️</div>
-    <div class="text">
-      <div class="title">Manager Mode</div>
-      <div class="sub">Assign members to <?= cfg.labels.label_chore.toLowerCase() ?>s during draft night</div>
+    <div class="band-body">
+      <div class="nav-card" onclick="go('?app=draft&mode=display', this)">
+        <div class="icon">📺</div>
+        <div class="text">
+          <div class="title">Draft Night Board</div>
+          <div class="sub"><?= cfg.labels.label_chore ?> assignments live on the TV</div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+      <div class="nav-card" onclick="go('?app=draft&mode=manage', this)">
+        <div class="icon">⚙️</div>
+        <div class="text">
+          <div class="title">Draft Night Manager</div>
+          <div class="sub">Assign members to <?= cfg.labels.label_chore.toLowerCase() ?>s during the draft</div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+      <? if (cfg.modules.module_rush) { ?>
+      <div class="nav-card" onclick="go('?app=rushtv', this)">
+        <div class="icon">🎯</div>
+        <div class="text">
+          <div class="title"><?= cfg.labels.label_rush ?> live</div>
+          <div class="sub">Who is here and what the brothers think, on the TV</div>
+        </div>
+        <div class="arrow">›</div>
+      </div>
+      <? } ?>
     </div>
-    <div class="arrow">›</div>
   </div>
 
 </div>
 
 <script>
 var BASE = '<?= baseUrl ?>';
-function go(path) { window.location.href = BASE + path; }
+var LABELS = <?!= JSON.stringify(cfg.labels).replace(/</g, '\\u003c') ?>;
+var CATS = [
+  { id: 'finance', name: 'Finance' },
+  { id: 'philanthropy', name: 'Philanthropy' },
+  { id: 'rush', name: LABELS.label_rush || 'Rush' },
+  { id: 'events', name: 'Events' },
+  { id: 'general', name: 'General' }
+];
+
+function el(id) { return document.getElementById(id); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function go(path, card) {
+  if (card && card.classList) card.classList.add('going');
+  window.location.href = BASE + path;
+}
+function toggleBand(id) { el(id).classList.toggle('open'); }
+
+function audienceTag(a) {
+  if (a === 'brothers') return (LABELS.label_active_member || 'Brother') + 's';
+  if (a === 'novatos') return LABELS.label_am_group || 'Associate Members';
+  return 'Everyone';
+}
+function fmtDue(d) {
+  try { var p = String(d).split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString([], { month: 'short', day: 'numeric' }); } catch (e) { return d; }
+}
+function formCard(f) {
+  var tags = '<span class="tag">' + esc(audienceTag(f.audience)) + '</span>' + (f.dueDate ? '<span class="tag due">Due ' + esc(fmtDue(f.dueDate)) + '</span>' : '');
+  return '<div class="nav-card" onclick="go(\'?app=form&f=' + encodeURIComponent(f.formId) + '\', this)">' +
+    '<div class="icon">📄</div><div class="text"><div class="title">' + esc(f.title) + '</div>' +
+    '<div class="sub">' + tags + esc(f.description) + '</div></div><div class="arrow">›</div></div>';
+}
+
+function loadForms() {
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json), body = el('forms-body'), cnt = el('forms-count');
+      if (!r.success) { body.innerHTML = '<div class="empty">' + esc(r.error || 'Could not load the forms.') + '</div>'; return; }
+      var forms = r.forms || [];
+      if (!forms.length) { body.innerHTML = '<div class="empty">No forms are open right now.<br>Check back soon.</div>'; return; }
+      cnt.textContent = forms.length; cnt.style.display = '';
+      var known = {};
+      CATS.forEach(function(c) { known[c.id] = true; });
+      var html = '';
+      CATS.forEach(function(c) {
+        var list = forms.filter(function(f) { return (known[f.category] ? f.category : 'general') === c.id; });
+        if (!list.length) return;
+        html += '<div class="grp-label">' + esc(c.name) + '</div>' + list.map(formCard).join('');
+      });
+      body.innerHTML = html;
+    })
+    .withFailureHandler(function() { el('forms-body').innerHTML = '<div class="empty">Could not load the forms. Check your connection and refresh.</div>'; })
+    .fmListOpenForms();
+}
+
+function loadCustomForms() {
+  google.script.run
+    .withSuccessHandler(function(json) {
+      var r = JSON.parse(json);
+      if (!r.success) return;
+      var items = [];
+      if (r.returningMemberFormOpen && r.returningMemberFormUrl) items.push({ url: r.returningMemberFormUrl, icon: '🔁', title: 'Returning member form', sub: 'Confirm your info for the new semester' });
+      if (r.newMemberFormOpen && r.newMemberFormUrl) items.push({ url: r.newMemberFormUrl, icon: '🆕', title: (LABELS.label_new_member || 'New member') + ' form', sub: 'Intake form for new members' });
+      el('custom-forms').innerHTML = items.map(function(i) {
+        return '<a class="nav-card" href="' + esc(i.url) + '" target="_blank" rel="noopener"><div class="icon">' + i.icon + '</div>' +
+          '<div class="text"><div class="title">' + esc(i.title) + '</div><div class="sub">' + esc(i.sub) + '</div></div><div class="arrow">›</div></a>';
+      }).join('');
+    })
+    .getCustomFormUrls();
+}
+
+window.addEventListener('load', function() { loadForms(); loadCustomForms(); });
 </script>
 </body>
 </html>

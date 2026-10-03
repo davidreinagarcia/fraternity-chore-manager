@@ -12,6 +12,7 @@ Hecho, sin probar contra la Sheet ni Gmail reales. Backend probado con mocks (48
 - `Rush.gs` — todo el backend.
 - `RushDoorApp.html` (`?app=rushdoor`) — formulario de puerta (kiosk): nombre, año, teléfono, Instagram/social, email opcional. Tras enviar enseña "Welcome" y se resetea a los 4 s. Cerrado por defecto ("Check-in is closed") hasta que el officer lo abre.
 - `RushApp.html` (`?app=rush`) — tablero de hermanos, sin login de Google. Elige su nombre con NamePicker (se guarda en localStorage `rush_who`), filtro Hoy/Todos, buscador, tarjetas expandibles con visitas y comentarios. Sondea `rushPoll` cada 15 s (pausa con la pestaña oculta). No muestra teléfono ni email.
+- `RushTvApp.html` (`?app=rushtv`) — pantalla grande: PNMs que han venido hoy con sus últimos 4 comentarios, contador, borde dorado en los recién llegados. Mismo acceso que `RushApp` (código opcional en localStorage `rush_code`, `rushBoardAccess` + `rushPoll` cada 10 s), solo lectura. Enlazado desde la Home (banda Big screen) y desde Admin → Share links.
 - `OfficerDashboard.html` → sección Rush (`sec-rush`): interruptor del check-in, links con Copy/Open/QR, stats y pestañas PNMs, Visits by day (matriz PNM × día, clic para marcar), Bids, Accepted, Flushed/Declined. Modales: añadir/editar/detalle, bid, welcome, settings, QR, y "Chapter view" a pantalla completa para leer los comentarios en voz alta (flechas/espacio/Escape).
 
 ## Datos
