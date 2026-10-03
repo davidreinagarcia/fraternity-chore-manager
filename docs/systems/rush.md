@@ -41,6 +41,9 @@ Estados: `active` → `bid` → `accepted` | `declined`; `flushed` desde `active
 
 ## Casos borde conocidos
 
+- Un PNM `flushed` o `declined` que vuelve a hacer check-in pasa a `active` (si no, se registraba la visita pero no salía en el tablero, que solo muestra `active`/`bid`). `accepted` y `bid` no cambian.
+- El token de `rushPoll` = versión en caché + semestre + nº de filas de las 3 tabs, y los clientes fuerzan una recarga completa cada 4º poll: un fallo de la caché no puede dejar el tablero desactualizado más de ~1 min.
+- `_rushRows` normaliza a `yyyy-MM-dd` la columna `date` si Sheets la convirtió a fecha.
 - La primera llamada concurrente a `rushPoll` puede competir por crear los tabs; se arregla sola en el siguiente poll.
 - `rushUpdatePnm` rechaza un año que ya no esté en `rush_year_options`.
 - Bajo carga alta de brothers sondeando, cada poll con cambios lee las tres tabs; con 50-100 usuarios a 15 s debería aguantar, pero no está medido.

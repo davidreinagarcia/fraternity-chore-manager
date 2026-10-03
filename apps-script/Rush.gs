@@ -17,7 +17,7 @@
 // Config keys: rush_open (door form accepts check-ins), rush_code (optional
 // access code for the brothers board), rush_year_options, rush_welcome_subject,
 // rush_welcome_template. The brothers board polls rushPoll(), which compares a
-// cached version stamp (bumped by every write) before it reads any sheet.
+// cached version stamp (bumped by every write) plus the sheets' row counts before it reads any rows.
 // ============================================================
 
 var RUSH_PNM_HEADERS = ['pnm_id', 'name', 'year', 'instagram', 'phone', 'email', 'status', 'semester', 'bid_owner', 'bid_at', 'response_at', 'welcome_sent_at', 'source', 'created_at', 'updated_at'];
@@ -136,7 +136,9 @@ function _rushRows(sheet) {
     var o = { _row: i + 1 };
     for (var j = 0; j < headers.length; j++) {
       var v = data[i][j];
-      o[headers[j]] = v instanceof Date ? v.toISOString() : String(v == null ? '' : v);
+      if (v instanceof Date) {
+        o[headers[j]] = headers[j] === 'date' ? Utilities.formatDate(v, getSpreadsheet().getSpreadsheetTimeZone(), 'yyyy-MM-dd') : v.toISOString();
+      } else o[headers[j]] = String(v == null ? '' : v);
     }
     out.push(o);
   }
@@ -247,6 +249,7 @@ function _rushUpsert(ss, rec, opts) {
     var upd = {};
     ['year', 'instagram', 'phone', 'email'].forEach(function(k) { if (!match[k] && rec[k]) upd[k] = rec[k]; });
     if (match.status === 'flushed') upd.status = 'active';
+    if (match.status === 'declined') { upd.status = 'active'; upd.bid_owner = ''; upd.bid_at = ''; upd.response_at = ''; }
     if (Object.keys(upd).length) { upd.updated_at = now; _rushUpdate(sh.pnm, match._row, upd); Object.keys(upd).forEach(function(k) { match[k] = upd[k]; }); }
     p = match;
   } else {
@@ -349,9 +352,10 @@ function rushPoll(code, knownToken) {
     var s = _rushSettings();
     if (!_rushCodeOk(s, code)) return _rushFail('Wrong access code.');
     var sem = _rushSemester();
-    var token = _rushVersion() + '|' + sem;
+    var ss = getSpreadsheet(), sh0 = _rushSheets(ss);
+    var token = _rushVersion() + '|' + sem + '|' + sh0.pnm.getLastRow() + '.' + sh0.visit.getLastRow() + '.' + sh0.comment.getLastRow();
     if (knownToken && String(knownToken) === token) return JSON.stringify({ success: true, changed: false, token: token });
-    var L = _rushLoad(getSpreadsheet(), sem);
+    var L = _rushLoad(ss, sem);
     var pnms = _rushAssemble(L, false);
     var status = {};
     L.pnms.forEach(function(p) { status[p.pnm_id] = p.status; });

@@ -257,9 +257,11 @@ function schedulePoll() {
 }
 document.addEventListener('visibilitychange', function() { if (!document.hidden && boardReady) poll(false); });
 
+var pollN = 0, lastSnap = '';
 function poll(force) {
   if (polling) return;
   polling = true;
+  if (++pollN % 4 === 0) force = true;
   google.script.run
     .withSuccessHandler(function(json) {
       polling = false;
@@ -271,7 +273,10 @@ function poll(force) {
       lastOk = Date.now();
       setStatus(true);
       if (!r.changed) return;
-      token = r.token; today = r.today; pnms = r.pnms || [];
+      var snap = r.today + JSON.stringify(r.pnms || []);
+      token = r.token;
+      if (snap === lastSnap) return;
+      lastSnap = snap; today = r.today; pnms = r.pnms || [];
       render();
     })
     .withFailureHandler(function() { polling = false; setStatus(false); })
