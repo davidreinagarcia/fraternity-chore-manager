@@ -1,10 +1,10 @@
 # Theme (estilo visual)
 
-Capa visual compartida estilo apps de Google (admin console / Forms): superficies planas blancas, bordes 1px `#dadce0`, controles 4px, cards 8px, tabs con subrayado, Roboto, sombra solo en overlays.
+Capa visual compartida estilo SaaS enterprise denso (Stripe/Datadog/GitHub Enterprise): superficies panel con borde 1px, sin sombras flotantes, badges con dot indicator, tabs con subrayado, tabular-nums en métricas, Roboto, elevación solo en overlays.
 
 ## Estado
 
-Hecho (2026-10-02). Solo estilo, el layout de cada app no cambió.
+Actualizado (2026-10-03). Refactorización visual completa eliminando el look "vibecoded" (tarjetas flotantes, pasteles, píldoras). Solo estilo — sin cambios de layout, jerarquía ni JS.
 
 ## Cómo funciona
 
@@ -14,10 +14,27 @@ Hecho (2026-10-02). Solo estilo, el layout de cada app no cambió.
 - Formularios públicos móviles: card con borde superior de 8px del color primary (look Google Forms).
 - `ButtonFeedback.html`: barra de progreso sólida 2px en `--primary`.
 
+## Tokens actuales
+
+| Token | Valor | Nota |
+|---|---|---|
+| `--border` | `#e2e8f0` | slate-200, frío y limpio |
+| `--text` | `#1e293b` | slate-800 |
+| `--muted` | `#64748b` | slate-500 |
+| `--radius` | `4px` | máximo de cards y controles |
+| `--shadow` | `none` | cards sin sombra |
+| `--elev-3` | `0 2px 8px rgba(0,0,0,.1)` | solo modales/paneles/toast |
+| `--green` | `#15803d` | semántico, solo estados |
+| `--red` | `#dc2626` | semántico, solo estados |
+| `--yellow` | `#b45309` | semántico, solo estados |
+
 ## Reglas para UI nueva
 
-- Toda app clara nueva incluye `Theme`. Usar los tokens (`--border`, `--muted`, `--tint`, `--hover`, `--green/--red/--yellow` y sus `-bg`).
-- Nada de gradientes, radios grandes (>8px) ni sombras en cards. Texto sobre fondo primary en blanco, no en gold.
+- Toda app clara nueva incluye `Theme`. Usar tokens; nada de colores hardcoded salvo semánticos de estado.
+- Cero `box-shadow` en cards o botones. Sin `border-radius` > 6px (modales pueden usar 6px, el resto 4px).
+- Badges de estado: clase `badge badge-*`, representados como dot (6px `::before`) + texto semántico, sin background pastel.
+- Chips de métricas (`mm-stat-chip`): outlined con borde semántico, sin relleno.
+- Números en tablas y stat-cards: siempre `font-variant-numeric: tabular-nums`.
 
 ## Botón Home y marca
 

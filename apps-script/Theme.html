@@ -1,5 +1,5 @@
-<!-- Shared Google-style visual layer. Included last in <head> of every light app via <?!= include('Theme') ?>
-     so it overrides each page's own tokens. Style only: no layout changes. Chapter colour stays as --primary. -->
+<!-- Shared enterprise design system. Included last in <head> of every light app via <?!= include('Theme') ?>
+     Overrides per-app tokens. Style only — no layout or behaviour changes. Chapter colour stays as --primary. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
@@ -8,18 +8,18 @@
     --bg: #f8f9fa;
     --card: #ffffff;
     --card-bg: #ffffff;
-    --border: #dadce0;
-    --text: #202124;
-    --muted: #5f6368;
-    --green: #188038;   --green-bg: #e6f4ea;
-    --red: #d93025;     --red-bg: #fce8e6;
-    --yellow: #b06000;  --yellow-bg: #fef7e0;
-    --radius: 8px;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+    --green: #15803d;   --green-bg: #f0fdf4;
+    --red: #dc2626;     --red-bg: #fef2f2;
+    --yellow: #b45309;  --yellow-bg: #fffbeb;
+    --radius: 4px;
     --shadow: none;
-    --elev-1: 0 1px 2px rgba(60,64,67,.3), 0 1px 3px 1px rgba(60,64,67,.15);
-    --elev-3: 0 4px 8px 3px rgba(60,64,67,.15), 0 1px 3px rgba(60,64,67,.3);
-    --tint: color-mix(in srgb, var(--primary) 10%, #ffffff);
-    --hover: #f1f3f4;
+    --elev-1: none;
+    --elev-3: 0 2px 8px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+    --tint: color-mix(in srgb, var(--primary) 8%, #ffffff);
+    --hover: #f1f5f9;
     --font: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   }
   html, body { font-family: var(--font); -webkit-font-smoothing: antialiased; }
@@ -34,65 +34,108 @@
   .top-btn { background: #fff; color: var(--primary); border: 1px solid var(--border); border-radius: 4px; font-weight: 500; }
   .top-btn:hover { background: var(--hover); }
 
-  /* ---- Sidebar ---- */
+  /* ---- Sidebar: white panel, hairline border ---- */
   #sb, #sb-admin { background: #fff; border-right: 1px solid var(--border); }
   #sb-admin .sb-back { border: 1px solid var(--border); color: var(--primary); font-weight: 500; }
   .sb-hdr { border-bottom: 1px solid var(--border); }
-  .sb-chapter { color: var(--text); font-weight: 500; font-size: .85rem; }
-  .nl { color: var(--muted); font-weight: 500; letter-spacing: .06em; text-transform: uppercase; }
-  .ni { color: #3c4043; font-weight: 500; border-radius: 4px; }
+  .sb-chapter { color: var(--text); font-weight: 600; font-size: .83rem; }
+  .nl { color: var(--muted); font-weight: 500; letter-spacing: .07em; text-transform: uppercase; font-size: 0.62rem; }
+  .ni { color: #374151; font-weight: 500; border-radius: 4px; }
   .ni:hover { background: var(--hover); color: var(--text); }
-  .ni.on { background: var(--tint); color: var(--primary); font-weight: 700; }
+  .ni.on { background: var(--tint); color: var(--primary); font-weight: 600; }
   .tog { background: #fff; border-top: 1px solid var(--border); color: var(--muted); }
   .tog:hover { background: var(--hover); }
 
-  /* ---- Section tabs: Google underline tabs ---- */
-  .sub-nav { background: transparent; box-shadow: none; border-radius: 0; padding: 0; gap: 0; border-bottom: 1px solid var(--border); }
-  .sub-btn { flex: 0 0 auto; border-radius: 0; padding: 12px 16px; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  /* ---- Section tabs: underline indicator, no floating pill ---- */
+  .sub-nav {
+    background: transparent; box-shadow: none; border-radius: 0;
+    padding: 0; gap: 0; border-bottom: 1px solid var(--border);
+    margin-bottom: 16px; overflow-x: auto;
+  }
+  .sub-btn {
+    flex: 0 0 auto; border-radius: 0; padding: 10px 16px;
+    font-weight: 500; font-size: 0.82rem; color: var(--muted);
+    border-bottom: 2px solid transparent; border-left: none; border-right: none; border-top: none;
+    margin-bottom: -1px; background: transparent; white-space: nowrap;
+  }
   .sub-btn:hover:not(.active) { background: var(--hover); color: var(--text); }
   .sub-btn.active { background: transparent; color: var(--primary); border-bottom-color: var(--primary); }
 
-  /* ---- Surfaces ---- */
+  /* ---- Surfaces: hairline-border panels, no floating shadows ---- */
   .card, .stat-card, .admin-card, .admin-section, .pin-card, .ev-card, .chore-card {
-    background: #fff; border: 1px solid var(--border); border-radius: 8px; box-shadow: none;
+    background: #fff; border: 1px solid var(--border); border-radius: 4px; box-shadow: none;
   }
-  .card-header, .admin-section-header { background: #fff; }
-  .card-header h2, .admin-section-header h2 { font-weight: 500; font-size: 1rem; }
-  .stat-card .label { text-transform: none; font-weight: 500; letter-spacing: 0; font-size: .8rem; }
-  .stat-card .value { font-weight: 400; font-size: 1.75rem; color: var(--text); }
-  .admin-card h3 { font-weight: 500; }
+  .card-header, .admin-section-header { background: #fff; border-bottom: 1px solid var(--border); }
+  .card-header h2, .admin-section-header h2 { font-weight: 600; font-size: 0.9rem; }
+  .admin-card h3 { font-weight: 600; font-size: 0.88rem; }
   .chore-card, .chore-card:hover { transform: none; box-shadow: none; }
 
-  /* ---- Tables ---- */
-  .data-table th { background: #fff; color: var(--muted); font-weight: 500; text-transform: none; letter-spacing: 0; font-size: .8rem; border-bottom: 1px solid var(--border); }
+  /* ---- Stat cards: dense, tabular numbers ---- */
+  .stat-card { padding: 14px 16px; }
+  .stat-card .label {
+    text-transform: uppercase; font-weight: 500; letter-spacing: 0.05em;
+    font-size: 0.68rem; color: var(--muted); margin-bottom: 4px;
+  }
+  .stat-card .value {
+    font-weight: 700; font-size: 1.5rem; color: var(--text);
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .stat-card .sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+
+  /* ---- Tables: tight rows, tabular alignment ---- */
+  .data-table th {
+    background: #f8fafc; color: var(--muted);
+    font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border); padding: 8px 12px; white-space: nowrap;
+  }
   .data-table th:hover { background: var(--hover); }
+  .data-table td { border-bottom: 1px solid #f1f5f9; padding: 9px 12px; font-size: 0.83rem; font-variant-numeric: tabular-nums; }
+  .data-table tr:last-child td { border-bottom: none; }
   .data-table tr:hover td { background: var(--hover); }
-  .data-table td { border-bottom: 1px solid #ebedf0; }
 
-  /* ---- Chips / badges ---- */
-  .badge { border-radius: 4px; text-transform: none; font-weight: 500; font-size: .75rem; padding: 2px 8px; letter-spacing: 0; }
-  .badge-pending, .badge-inactive-m { background: #f1f3f4; color: var(--muted); }
-  .badge-associate, .badge-assoc-m, .mm-stat-blue { background: #e8f0fe; color: #1967d2; }
-  .badge-active-m { background: var(--green-bg); color: var(--green); }
-  .badge-alumni-m, .mm-stat-gold { background: var(--yellow-bg); color: var(--yellow); }
-  .mm-stat-chip, .summary-pill { border-radius: 4px; font-weight: 500; }
+  /* ---- Badges: dot indicator + semantic text, no pastel pills ---- */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    border-radius: 3px; text-transform: none; font-weight: 500;
+    font-size: 0.72rem; padding: 0; background: transparent; letter-spacing: 0;
+  }
+  .badge::before {
+    content: ''; width: 6px; height: 6px; border-radius: 50%;
+    flex-shrink: 0; background: currentColor; display: block;
+  }
+  /* No dot for these badge types */
+  .badge-none::before, .header .badge::before { content: none; display: none; }
+  /* Semantic text colors, transparent backgrounds */
+  .badge-passed,    .badge-verified   { color: var(--green);  background: transparent; }
+  .badge-flagged                       { color: var(--yellow); background: transparent; }
+  .badge-rejected,  .badge-failed     { color: var(--red);    background: transparent; }
+  .badge-pending,   .badge-inactive-m { color: var(--muted);  background: transparent; }
+  .badge-associate, .badge-assoc-m    { color: #2563eb;       background: transparent; }
+  .badge-active-m                     { color: var(--green);  background: transparent; }
+  .badge-alumni-m                     { color: var(--yellow); background: transparent; }
+  .badge-susp-m                       { color: var(--red);    background: transparent; }
+  .badge-prob-m                       { color: var(--yellow); background: transparent; }
 
-  /* ---- Buttons: flat, 4px, 500 weight ---- */
+  /* ---- Buttons: flat, 4px, 500 weight, no hover elevation ---- */
   .btn-primary, .btn-danger, .btn-outline, .action-btn, .btn-filter, .btn-gold {
     border-radius: 4px; font-weight: 500; letter-spacing: .01em; box-shadow: none;
   }
   .btn-primary { background: var(--primary); color: #fff; border: 1px solid var(--primary); }
-  .btn-primary:hover { filter: brightness(1.12); box-shadow: var(--elev-1); }
+  .btn-primary:hover { filter: brightness(1.08); box-shadow: none; }
   .btn-danger { background: var(--red); color: #fff; border: 1px solid var(--red); }
   .btn-outline { background: #fff; color: var(--primary); border: 1px solid var(--border); }
   .btn-outline:hover { background: var(--tint); border-color: var(--primary); }
   .btn-filter { background: #fff; color: var(--muted); border: 1px solid var(--border); }
   .btn-filter:hover { background: var(--hover); }
   .btn-filter.active { background: var(--tint); color: var(--primary); border-color: var(--primary); }
+  /* MemberView uses .filter-btn (not .btn-filter) */
+  .filter-btn { background: #fff; color: var(--muted); border: 1px solid var(--border); border-radius: 4px; font-size: 0.8rem; font-weight: 500; }
+  .filter-btn:hover { background: var(--hover); }
+  .filter-btn.active { background: var(--tint); color: var(--primary); border-color: var(--primary); }
   .action-btn:hover { opacity: 1; filter: brightness(.96); }
-  .btn-verify { border-color: #ceead6; }
-  .btn-fail { border-color: #f6c5c0; }
-  .btn-photo { background: #e8f0fe; color: #1967d2; border-color: #d2e3fc; }
+  .btn-verify { background: transparent; color: var(--green); border: 1px solid #bbf7d0; }
+  .btn-fail   { background: transparent; color: var(--red);   border: 1px solid #fecaca; }
+  .btn-photo  { background: transparent; color: #2563eb;      border: 1px solid #bfdbfe; }
   #pin-btn { background: var(--primary); color: #fff; border-radius: 4px; font-weight: 500; }
 
   /* ---- Inputs ---- */
@@ -106,31 +149,92 @@
   }
   #pin-input { border: 1px solid var(--border); border-radius: 4px; }
 
-  /* ---- Overlays ---- */
-  .modal-overlay { background: rgba(32,33,36,.6); }
-  .modal { border-radius: 8px; box-shadow: var(--elev-3); }
-  .modal h3 { font-weight: 500; }
-  .ctx-menu { border: none; border-radius: 4px; box-shadow: var(--elev-3); }
+  /* ---- Overlays: tight radius, minimal elevation ---- */
+  .modal-overlay { background: rgba(15,23,42,.5); }
+  .modal { border-radius: 6px; box-shadow: var(--elev-3); }
+  .modal h3 { font-weight: 600; }
+  .ctx-menu { border: 1px solid var(--border); border-radius: 4px; box-shadow: var(--elev-3); }
   .ctx-item:hover { background: var(--hover); }
   .notes-panel { border-left: 1px solid var(--border); box-shadow: var(--elev-3); }
   .notes-panel-header { background: #fff; color: var(--text); border-bottom: 1px solid var(--border); }
-  .notes-panel-header h3 { font-weight: 500; }
+  .notes-panel-header h3 { font-weight: 600; }
   .notes-add-form { background: #fff; }
-  .note-item { border-radius: 4px; }
+  .note-item { border-radius: 3px; }
   .note-handoff { background: var(--yellow-bg); }
   .note-general { background: #f8f9fa; }
-  #toast { background: #323232; border-radius: 4px; font-weight: 400; box-shadow: var(--elev-3); }
+  #toast { background: #1e293b; border-radius: 4px; font-weight: 400; box-shadow: var(--elev-3); }
   .compliance-bar { border-radius: 2px; }
   .compliance-fill { border-radius: 2px; }
 
   /* ---- PIN screen ---- */
   #pin-screen { background: var(--bg); }
-  .pin-card { box-shadow: none; padding: 40px 32px; }
+  .pin-card { box-shadow: none; padding: 36px 28px; }
   .pin-card h2 { color: var(--text); }
 
-  /* ---- Public mobile forms (chore photo, signature, forms): Google Forms look ---- */
-  body > .card { border-top: 8px solid var(--primary); box-shadow: none; }
-  .header .badge { background: var(--tint); color: var(--primary); border-radius: 4px; text-transform: none; letter-spacing: 0; font-weight: 500; font-size: .75rem; }
+  /* ---- Public mobile forms ---- */
+  body > .card { border-top: 4px solid var(--primary); box-shadow: none; }
+  .header .badge { background: var(--tint); color: var(--primary); border-radius: 3px; text-transform: none; letter-spacing: 0; font-weight: 500; font-size: .75rem; }
   .header h1 { font-weight: 400; }
-  .header .due { border-radius: 4px; }
+  .header .due { border-radius: 3px; }
+
+  /* ---- Member manager stat chips: outlined, semantic color ---- */
+  .mm-stat-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 2px 8px; border-radius: 3px; font-size: 0.78rem; font-weight: 500;
+    background: transparent; border: 1px solid var(--border);
+  }
+  .mm-stat-chip.mm-stat-green  { color: var(--green);  border-color: #bbf7d0; background: transparent; }
+  .mm-stat-chip.mm-stat-blue   { color: #2563eb;       border-color: #bfdbfe; background: transparent; }
+  .mm-stat-chip.mm-stat-gold   { color: var(--yellow); border-color: #fde68a; background: transparent; }
+  .mm-stat-chip.mm-stat-red    { color: var(--red);    border-color: #fecaca; background: transparent; }
+  .mm-stat-chip.mm-stat-yellow { color: var(--yellow); border-color: #fde68a; background: transparent; }
+
+  /* ---- Philanthropy event chips ---- */
+  .ph-chip { border-radius: 3px; padding: 1px 6px; font-size: 0.7rem; background: #f1f5f9; color: var(--muted); }
+  .ph-chip.g { background: transparent; color: var(--green); border: 1px solid #bbf7d0; }
+  .ph-chip.r { background: transparent; color: var(--red);   border: 1px solid #fecaca; }
+  .ph-chip.y { background: transparent; color: var(--yellow); border: 1px solid #fde68a; }
+
+  /* ---- Chore group member cards: dot indicator, no pastel fill ---- */
+  .gm { border-radius: 3px; background: transparent; border: 1px solid var(--border); }
+  .gm.done    { background: transparent; border-color: #bbf7d0; }
+  .gm.review  { background: transparent; border-color: #fde68a; }
+  .gm.failed, .gm.missing.need { background: transparent; border-color: #fecaca; }
+
+  /* ---- Chore group status badge: text + color, no pastel fill ---- */
+  .grp-badge { border-radius: 3px; }
+  .grp.st-done .grp-badge    { background: transparent; }
+  .grp.st-review .grp-badge  { background: transparent; }
+  .grp.st-missing .grp-badge { background: transparent; }
+  .grp.st-missing            { background: transparent; }
+
+  /* ---- Home app: neutral icon containers, no gold tint ---- */
+  .nav-card .icon, .band-head .b-icon { background: var(--hover); border-radius: 4px; }
+
+  /* ---- Band count badge: sharp rectangle, not pill ---- */
+  .band-head .b-count { border-radius: 3px; padding: 1px 7px; font-size: 0.7rem; font-weight: 600; }
+
+  /* ---- Form/audience tags: flat chip, no pill ---- */
+  .tag { border-radius: 3px; background: #f1f5f9; color: var(--muted); padding: 1px 6px; font-size: 0.68rem; }
+  .tag.due { background: transparent; color: var(--yellow); border: 1px solid currentColor; padding: 0 5px; }
+
+  /* ---- Chore view: member pills without pastel fill ---- */
+  .member-pill { background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 3px; padding: 2px 7px; }
+  .member-pill.submitted { background: transparent; color: var(--green); border-color: #bbf7d0; }
+
+  /* ---- Status ribbons on photo thumbnails ---- */
+  .status-ribbon { border-radius: 3px; font-size: 0.67rem; padding: 2px 7px; font-weight: 700; }
+
+  /* ---- Summary pills (chore weekly overview) ---- */
+  .summary-pill { border-radius: 4px; padding: 6px 12px; }
+  .summary-pill .num { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 0.95rem; }
+
+  /* ---- Rush components ---- */
+  .rush-chip { border-radius: 3px; background: #f1f5f9; }
+  .rush-cm   { border-radius: 4px; }
+
+  /* ---- Event editor: squared controls ---- */
+  .ev-card, .ph-ev { border-radius: 4px; box-shadow: none; }
+  .ev-seg button { border-radius: 4px !important; }
+  .ev-scope-opt { border-radius: 4px; }
 </style>
